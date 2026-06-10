@@ -18,4 +18,11 @@ describe('voxel water art-directable settings', () => {
     expect(voxelWaterStormPreset.foam).toBeGreaterThan(voxelWaterDefaults.foam);
     expect(voxelWaterStormPreset.clarity).toBeLessThan(voxelWaterDefaults.clarity);
   });
+
+  it('keeps the default room stable enough for first-view visual QA', () => {
+    expect(voxelWaterDefaults.rain).toBeLessThanOrEqual(0.36);
+    expect(voxelWaterDefaults.chop).toBeLessThanOrEqual(0.36);
+    expect(voxelWaterDefaults.foam).toBeLessThanOrEqual(0.4);
+    expect(voxelWaterDefaults.surfaceDetail).toBeLessThanOrEqual(0.45);
+  });
 });

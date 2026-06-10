@@ -16,9 +16,19 @@ varying vec3 vWorldPosition;
 varying vec3 vWaterNormal;
 
 float gridLine(vec2 uv) {
-  vec2 grid = abs(fract(uv * 34.0 - 0.5) - 0.5) / fwidth(uv * 34.0);
-  float line = 1.0 - min(min(grid.x, grid.y), 1.0);
-  return smoothstep(0.12, 0.85, line);
+  vec2 gridUv = uv * 28.0;
+  vec2 gridDerivativeX = dFdx(gridUv);
+  vec2 gridDerivativeY = dFdy(gridUv);
+  vec2 gridFootprint = vec2(
+    length(vec2(gridDerivativeX.x, gridDerivativeY.x)),
+    length(vec2(gridDerivativeX.y, gridDerivativeY.y))
+  );
+  vec2 lineWidth = clamp(vec2(0.075), gridFootprint, vec2(0.48));
+  vec2 lineAA = max(gridFootprint * 1.65, vec2(0.015));
+  vec2 gridUvDistance = abs(fract(gridUv - 0.5) - 0.5);
+  vec2 axisLines = smoothstep(lineWidth + lineAA, lineWidth - lineAA, gridUvDistance);
+  float footprintFade = 1.0 - smoothstep(0.18, 0.62, max(gridFootprint.x, gridFootprint.y));
+  return max(axisLines.x, axisLines.y) * footprintFade;
 }
 
 float hash(vec2 p) {
@@ -60,36 +70,52 @@ void main() {
   color = mix(color, stormTint, uStorm * 0.34 + uCloudCover * 0.17);
 
   float grid = gridLine(vUv);
-  color = mix(color, vec3(0.8, 1.0, 0.96), grid * (0.16 + uRain * 0.16) * (0.55 + vRawWave));
+  float gridDistanceFade = 1.0 - smoothstep(8.0, 15.0, length(cameraPosition - vWorldPosition));
+  grid *= gridDistanceFade;
+  float gridIntensity = grid * (0.07 + uRain * 0.08) * (0.45 + vRawWave * 0.45);
+  color = mix(color, vec3(0.5, 0.86, 0.88), gridIntensity);
 
-  float rainCell = hash(floor(vUv * vec2(120.0, 80.0)) + floor(uTime * 18.0));
-  float rainSpark = step(0.985 - uRain * 0.045, rainCell) * uRain;
+  vec2 rainSurfaceCells = vec2(72.0, 48.0);
+  float rainCell = hash(floor(vUv * rainSurfaceCells));
+  float rainPhase = fract(rainCell * 13.7 + uTime * (1.2 + uRain * 1.1));
+  float rainPulse = 1.0 - smoothstep(0.0, 0.24, abs(rainPhase - 0.12));
+  float rainChance = smoothstep(0.82 - uRain * 0.12, 0.96 - uRain * 0.04, rainCell);
+  float rainSpark = rainPulse * rainChance * uRain;
   float ripple = smoothstep(0.46, 0.5, abs(fract(length(vUv * 24.0 + rainCell) - uTime * 1.8) - 0.5));
-  color += rainSpark * vec3(0.42, 0.72, 1.0);
-  color += ripple * uRain * 0.035 * vec3(0.55, 0.88, 1.0);
+  color += rainSpark * vec3(0.28, 0.54, 0.78);
+  color += ripple * uRain * 0.026 * vec3(0.46, 0.78, 0.92);
 
   vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+  float normalDetailFade = (1.0 - smoothstep(6.5, 14.0, length(cameraPosition - vWorldPosition))) * uSurfaceDetail;
   vec3 normal = normalize(vWaterNormal + vec3(
-    (fbm(vUv * 24.0 + uTime * 0.12) - 0.5) * 0.28 * uSurfaceDetail,
+    (fbm(vUv * 16.0 + uTime * 0.1) - 0.5) * 0.18 * normalDetailFade,
     0.0,
-    (fbm(vUv * 21.0 - uTime * 0.1) - 0.5) * 0.28 * uSurfaceDetail
+    (fbm(vUv * 14.0 - uTime * 0.08) - 0.5) * 0.18 * normalDetailFade
   ));
   vec3 lightDir = normalize(vec3(-0.35, 0.82, 0.44));
   float fresnel = pow(1.0 - clamp(dot(normal, viewDir), 0.0, 1.0), 5.0);
   float specular = pow(max(dot(reflect(-lightDir, normal), viewDir), 0.0), mix(18.0, 62.0, uClarity));
-  float glitterMask = step(0.78, fbm(vUv * 55.0 + vec2(uTime * 0.55, -uTime * 0.22)));
+  float glitterDetailFade = (1.0 - smoothstep(6.0, 13.0, length(cameraPosition - vWorldPosition))) * uSurfaceDetail;
+  float glitterNoise = fbm(vUv * 34.0 + vec2(uTime * 0.38, -uTime * 0.16));
+  float glitterWidth = max(0.035, fwidth(glitterNoise) * 1.8);
+  float glitterMask = smoothstep(0.78 - glitterWidth, 0.78 + glitterWidth, glitterNoise);
   color += fresnel * mix(vec3(0.04, 0.16, 0.22), vec3(0.22, 0.58, 0.68), uClarity) * (0.14 + uSurfaceDetail * 0.18);
-  color += specular * glitterMask * (0.1 + uClarity * 0.22) * vec3(0.86, 1.0, 0.94);
+  color += specular * glitterMask * glitterDetailFade * (0.08 + uClarity * 0.18) * vec3(0.86, 1.0, 0.94);
 
-  float crestNoise = fbm(vUv * 18.0 + vec2(uTime * 0.2, -uTime * 0.12));
-  float crestFoam = smoothstep(0.66, 1.04, vFoam + crestNoise * 0.18 + vSlope * 0.18) * uFoam;
-  crestFoam += smoothstep(0.9, 1.08, grid + vRawWave * 0.12) * uFoam * 0.1;
+  float crestNoise = fbm(vUv * 14.0 + vec2(uTime * 0.16, -uTime * 0.1));
+  float crestGate = smoothstep(0.66, 0.94, vRawWave + vSlope * 0.16);
+  float crestFoam = smoothstep(0.72, 1.08, vFoam + crestNoise * 0.1 + vSlope * 0.14) * uFoam * crestGate;
+  crestFoam += smoothstep(0.94, 1.1, grid + vRawWave * 0.08) * uFoam * 0.06;
   color = mix(color, foamColor, clamp(crestFoam, 0.0, 0.48));
 
   float depthFade = smoothstep(10.0, -5.0, vWorldPosition.z);
   color *= 0.68 + depthFade * 0.22 + opticalDepth * 0.18;
   color *= 1.0 - uCloudCover * 0.08 - uStorm * 0.1;
 
-  float alpha = mix(0.86, 0.95, uClarity) - uStorm * 0.04;
-  gl_FragColor = vec4(color, alpha);
+  float edgeDistance = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
+  float edgeFade = smoothstep(0.015, 0.12, edgeDistance);
+  color = mix(vec3(0.006, 0.028, 0.045), color, edgeFade);
+
+  float surfaceAlpha = (mix(0.9, 0.97, uClarity) - uStorm * 0.03) * mix(0.72, 1.0, edgeFade);
+  gl_FragColor = vec4(color, surfaceAlpha);
 }

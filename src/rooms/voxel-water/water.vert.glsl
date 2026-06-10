@@ -29,7 +29,7 @@ WaveSample waveLayer(vec2 p, vec2 direction, float frequency, float amplitude, f
 }
 
 WaveSample waveField(vec2 p) {
-  float timeScale = 0.55 + uWind * 0.2;
+  float timeScale = 0.44 + uWind * 0.15;
   float chopShape = mix(1.2, 3.8, uChop);
   WaveSample a = waveLayer(p, vec2(0.92, 0.34), 1.35, 0.42 + uSwell * 0.2, uTime * timeScale * 1.05, chopShape);
   WaveSample b = waveLayer(p, vec2(-0.38, 0.93), 2.15, 0.24 + uChop * 0.12, -uTime * timeScale * 1.42, 1.6 + uChop * 2.1);

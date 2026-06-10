@@ -2,16 +2,16 @@ import type { VoxelWaterSettings } from '../types';
 
 export const voxelWaterDefaults: VoxelWaterSettings = {
   weather: 'rain',
-  wind: 1.15,
-  rain: 0.48,
-  waveHeight: 0.72,
+  wind: 0.98,
+  rain: 0.34,
+  waveHeight: 0.64,
   toonSteps: 5,
-  cloudCover: 0.5,
-  swell: 0.62,
-  chop: 0.44,
-  foam: 0.48,
-  clarity: 0.68,
-  surfaceDetail: 0.56,
+  cloudCover: 0.42,
+  swell: 0.54,
+  chop: 0.34,
+  foam: 0.36,
+  clarity: 0.74,
+  surfaceDetail: 0.42,
 };
 
 export const voxelWaterStormPreset: VoxelWaterSettings = {
