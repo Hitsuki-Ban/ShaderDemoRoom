@@ -6,6 +6,7 @@ import {
   SegmentedControl,
   SliderControl,
 } from '../../shared/ui/ControlPrimitives';
+import { voxelWaterCalmPreset, voxelWaterStormPreset } from './state';
 
 export default function VoxelWaterControls({
   settings,
@@ -42,6 +43,14 @@ export default function VoxelWaterControls({
           value={settings.cloudCover}
           onChange={(cloudCover) => onPatch({ cloudCover })}
         />
+        <SliderControl
+          label={t('rooms.voxelWater.controls.clarity')}
+          min={0}
+          max={1}
+          step={0.01}
+          value={settings.clarity}
+          onChange={(clarity) => onPatch({ clarity })}
+        />
       </ControlGroup>
 
       <ControlGroup title={t('rooms.voxelWater.controls.waveHeight')}>
@@ -62,6 +71,22 @@ export default function VoxelWaterControls({
           onChange={(waveHeight) => onPatch({ waveHeight })}
         />
         <SliderControl
+          label={t('rooms.voxelWater.controls.swell')}
+          min={0}
+          max={1.2}
+          step={0.01}
+          value={settings.swell}
+          onChange={(swell) => onPatch({ swell })}
+        />
+        <SliderControl
+          label={t('rooms.voxelWater.controls.chop')}
+          min={0}
+          max={1}
+          step={0.01}
+          value={settings.chop}
+          onChange={(chop) => onPatch({ chop })}
+        />
+        <SliderControl
           label={t('rooms.voxelWater.controls.toonSteps')}
           min={2}
           max={9}
@@ -71,11 +96,30 @@ export default function VoxelWaterControls({
         />
       </ControlGroup>
 
+      <ControlGroup title={t('rooms.voxelWater.controls.surfaceDetail')}>
+        <SliderControl
+          label={t('rooms.voxelWater.controls.foam')}
+          min={0}
+          max={1}
+          step={0.01}
+          value={settings.foam}
+          onChange={(foam) => onPatch({ foam })}
+        />
+        <SliderControl
+          label={t('rooms.voxelWater.controls.surfaceDetail')}
+          min={0}
+          max={1}
+          step={0.01}
+          value={settings.surfaceDetail}
+          onChange={(surfaceDetail) => onPatch({ surfaceDetail })}
+        />
+      </ControlGroup>
+
       <div className="control-actions">
-        <Button icon={<CloudRain size={16} />} onClick={() => onPatch({ weather: 'storm', rain: 0.8, cloudCover: 0.9 })}>
+        <Button icon={<CloudRain size={16} />} onClick={() => onPatch(voxelWaterStormPreset)}>
           Storm preset
         </Button>
-        <Button icon={<Waves size={16} />} onClick={() => onPatch({ weather: 'clear', rain: 0.05, cloudCover: 0.12 })}>
+        <Button icon={<Waves size={16} />} onClick={() => onPatch(voxelWaterCalmPreset)}>
           Calm preset
         </Button>
         <Button variant="ghost" icon={<RotateCcw size={16} />} onClick={onReset}>

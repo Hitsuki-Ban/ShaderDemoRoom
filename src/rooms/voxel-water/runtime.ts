@@ -78,6 +78,8 @@ export function createRoomRuntime(
   const waterMaterial = new ShaderMaterial({
     vertexShader,
     fragmentShader,
+    transparent: true,
+    depthWrite: false,
     uniforms: {
       uTime: { value: 0 },
       uWaveHeight: { value: settings.waveHeight },
@@ -86,6 +88,11 @@ export function createRoomRuntime(
       uStorm: { value: weatherStrength[settings.weather] },
       uCloudCover: { value: settings.cloudCover },
       uToonSteps: { value: settings.toonSteps },
+      uSwell: { value: settings.swell },
+      uChop: { value: settings.chop },
+      uFoam: { value: settings.foam },
+      uClarity: { value: settings.clarity },
+      uSurfaceDetail: { value: settings.surfaceDetail },
     },
   });
 
@@ -129,6 +136,24 @@ export function createRoomRuntime(
   const rain = new Points(rainGeometry, rainMaterial);
   root.add(rain);
 
+  const sprayGeometry = new BufferGeometry();
+  const sprayPositions = new Float32Array(220 * 3);
+  for (let i = 0; i < sprayPositions.length; i += 3) {
+    sprayPositions[i] = (Math.random() - 0.5) * 8.5;
+    sprayPositions[i + 1] = Math.random() * 1.4 + 0.05;
+    sprayPositions[i + 2] = (Math.random() - 0.5) * 8.5;
+  }
+  sprayGeometry.setAttribute('position', new BufferAttribute(sprayPositions, 3));
+  const sprayMaterial = new PointsMaterial({
+    color: 0xd6fbff,
+    size: 0.05,
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false,
+  });
+  const spray = new Points(sprayGeometry, sprayMaterial);
+  root.add(spray);
+
   const cloudMaterial = new MeshBasicMaterial({
     color: 0x385062,
     transparent: true,
@@ -150,16 +175,27 @@ export function createRoomRuntime(
     waterMaterial.uniforms.uStorm.value = weatherStrength[settings.weather];
     waterMaterial.uniforms.uCloudCover.value = settings.cloudCover;
     waterMaterial.uniforms.uToonSteps.value = settings.toonSteps;
+    waterMaterial.uniforms.uSwell.value = settings.swell;
+    waterMaterial.uniforms.uChop.value = settings.chop;
+    waterMaterial.uniforms.uFoam.value = settings.foam;
+    waterMaterial.uniforms.uClarity.value = settings.clarity;
+    waterMaterial.uniforms.uSurfaceDetail.value = settings.surfaceDetail;
 
     rainMaterial.opacity = Math.min(0.82, settings.rain * 0.9 + weatherStrength[settings.weather] * 0.28);
     rain.visible = settings.rain > 0.02 || settings.weather !== 'clear';
+    rainMaterial.size = 0.026 + settings.rain * 0.028 + settings.surfaceDetail * 0.008;
+    spray.visible = settings.foam > 0.28 || settings.weather !== 'clear';
+    sprayMaterial.opacity = Math.min(0.52, settings.foam * 0.34 + settings.rain * 0.18 + weatherStrength[settings.weather] * 0.18);
+    sprayMaterial.size = 0.03 + settings.foam * 0.05;
     cloudMaterial.opacity = 0.18 + settings.cloudCover * 0.54 + weatherStrength[settings.weather] * 0.14;
-    ambient.intensity = 1.55 - weatherStrength[settings.weather] * 0.55;
-    sun.intensity = 2.75 - weatherStrength[settings.weather] * 1.3;
+    ambient.intensity = 1.35 + settings.clarity * 0.34 - weatherStrength[settings.weather] * 0.46;
+    sun.intensity = 2.35 + settings.clarity * 0.75 - weatherStrength[settings.weather] * 1.24;
     scene.background = clockColor
       .set(0x07111b)
       .lerp(new Color(0x131924), weatherStrength[settings.weather] * 0.72 + settings.cloudCover * 0.18);
-    columnMaterial.color.set(settings.weather === 'storm' ? 0x39a8c1 : 0x26c9e4);
+    columnMaterial.color.set(settings.weather === 'storm' ? 0x3aa9bb : 0x25c2dd);
+    columnMaterial.roughness = 0.66 - settings.clarity * 0.18 + settings.rain * 0.1;
+    columnMaterial.emissiveIntensity = 0.2 + settings.clarity * 0.14 + settings.foam * 0.08;
   };
 
   updateUniforms();
@@ -168,19 +204,23 @@ export function createRoomRuntime(
     let index = 0;
     const spacing = 0.32;
     const offset = ((columnsPerSide - 1) * spacing) / 2;
-    const weather = weatherStrength[settings.weather];
 
     for (let z = 0; z < columnsPerSide; z += 1) {
       for (let x = 0; x < columnsPerSide; x += 1) {
         const px = x * spacing - offset;
         const pz = z * spacing - offset;
-        const wave =
-          Math.sin(px * 2.8 + elapsed * settings.wind) * 0.5 +
-          Math.cos((px + pz) * 1.5 - elapsed * (0.7 + weather)) * 0.35;
-        const stepped = Math.floor((wave + 1.0) * settings.toonSteps) / settings.toonSteps;
-        const height = 0.16 + Math.max(0.04, stepped * settings.waveHeight * 0.82);
+        const timeScale = 0.55 + settings.wind * 0.2;
+        const chopShape = 1.2 + settings.chop * 2.6;
+        const layerA = Math.pow(Math.max(0.0001, Math.sin((px * 0.92 + pz * 0.34) * 1.35 + elapsed * timeScale * 1.05) * 0.5 + 0.5), chopShape) * (0.42 + settings.swell * 0.2);
+        const layerB = Math.pow(Math.max(0.0001, Math.sin((px * -0.38 + pz * 0.93) * 2.15 - elapsed * timeScale * 1.42) * 0.5 + 0.5), 1.6 + settings.chop * 2.1) * (0.24 + settings.chop * 0.12);
+        const layerC = Math.pow(Math.max(0.0001, Math.sin((px * 0.55 + pz * -0.83) * 3.7 + elapsed * timeScale * 2.15) * 0.5 + 0.5), 1.2 + settings.surfaceDetail * 2.0) * (0.12 + settings.surfaceDetail * 0.1);
+        const layerD = Math.pow(Math.max(0.0001, Math.sin((px * -0.98 + pz * -0.18) * 0.72 - elapsed * timeScale * 0.68) * 0.5 + 0.5), 1.4) * (0.3 * settings.swell);
+        const normalized = Math.min(1, Math.max(0, (layerA + layerB + layerC + layerD) / Math.max(1, 1.08 + settings.swell * 0.62)));
+        const stepped = Math.floor(normalized * settings.toonSteps) / settings.toonSteps;
+        const crestLift = normalized > 0.76 ? settings.foam * 0.12 : 0;
+        const height = 0.22 + Math.max(0.06, stepped * settings.waveHeight * (0.96 + settings.swell * 0.34) + crestLift);
 
-        columnPosition.set(px, -0.52 + height * 0.5, pz);
+        columnPosition.set(px, -0.36 + height * 0.5, pz);
         columnScale.set(1, height, 1);
         matrix.compose(columnPosition, columns.quaternion, columnScale);
         columns.setMatrixAt(index, matrix);
@@ -207,16 +247,19 @@ export function createRoomRuntime(
       if (rain.position.y < -4) {
         rain.position.y = 1.5;
       }
+      spray.rotation.y += delta * (0.18 + settings.wind * 0.04);
+      spray.position.y = Math.sin(elapsed * 0.45) * 0.05;
       cloudDeck.position.x = Math.sin(elapsed * 0.08) * 0.6;
       root.rotation.y = Math.sin(elapsed * 0.08) * 0.05;
       renderer.render(scene, camera);
     },
     dispose() {
       disposeObject(root);
-      [waterMaterial, columnMaterial, rainMaterial, cloudMaterial].forEach((material: Material) =>
+      [waterMaterial, columnMaterial, rainMaterial, sprayMaterial, cloudMaterial].forEach((material: Material) =>
         material.dispose(),
       );
       rainGeometry.dispose();
+      sprayGeometry.dispose();
       renderer.info.reset();
     },
   };

@@ -10,6 +10,11 @@ export interface VoxelWaterSettings {
   waveHeight: number;
   toonSteps: number;
   cloudCover: number;
+  swell: number;
+  chop: number;
+  foam: number;
+  clarity: number;
+  surfaceDetail: number;
 }
 
 export interface GlassOpticsSettings {
