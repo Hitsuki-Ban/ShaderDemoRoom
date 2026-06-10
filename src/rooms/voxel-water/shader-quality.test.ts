@@ -65,7 +65,7 @@ describe('voxel water shader stability', () => {
     expect(fragmentShader).toContain('surfaceAlpha');
     expect(fragmentShader).toContain('weatherTransparency');
     expect(fragmentShader).toContain('foregroundStormWindow');
-    expect(fragmentShader).toContain('mix(0.82, 0.94, uClarity)');
+    expect(fragmentShader).toContain('mix(0.66, 0.82, uClarity)');
   });
 
   it('uses seeded layout randomness for repeatable visual QA', () => {
@@ -82,17 +82,37 @@ describe('voxel water shader stability', () => {
     expect(runtimeSource).toContain('new PerspectiveCamera(45, 1, 0.3, 72)');
   });
 
+  it('uses an elevated showroom camera that looks down into the voxel surface', () => {
+    expect(runtimeSource).toContain('camera.position.set(5.8, 7.2, 13.8)');
+    expect(runtimeSource).toContain('camera.lookAt(0, -0.08, -5)');
+  });
+
   it('keeps rain particles sparse enough for a refined default view', () => {
     expect(runtimeSource).toContain('RAIN_DROP_COUNT = 420');
     expect(runtimeSource).not.toContain('new Float32Array(640 * 3)');
   });
 
   it('uses less emissive voxel column material for a refined water read', () => {
-    expect(runtimeSource).toContain('0x32cddd');
+    expect(runtimeSource).toContain('0x8efff0');
     expect(runtimeSource).toContain('columnTint');
     expect(runtimeSource).toContain(
-      '0.36 + settings.clarity * 0.18 + settings.foam * 0.04 + weatherLook.rainCurtain * 0.04',
+      '0.52 + settings.clarity * 0.24 + settings.foam * 0.06 + weatherLook.rainCurtain * 0.08',
     );
+  });
+
+  it('keeps voxel blocks luminous through weather-specific top tint and light floor controls', () => {
+    expect(runtimeSource).toContain('columnTopTint');
+    expect(runtimeSource).toContain('columnEmissive');
+    expect(runtimeSource).toContain('columnLightFloor');
+    expect(runtimeSource).toContain('columnOpacity');
+    expect(runtimeSource).toContain('columnValueLift');
+    expect(runtimeSource).toContain('foregroundColumnGlow');
+    expect(runtimeSource).toContain('weatherLook.columnTopTint');
+    expect(runtimeSource).toContain('columnMaterial.emissive.copy(weatherLook.columnEmissive)');
+    expect(runtimeSource).toContain('columnMaterial.opacity = weatherLook.columnOpacity');
+    expect(runtimeSource).toContain('toneMapped: false');
+    expect(runtimeSource).toContain('transparent: true');
+    expect(runtimeSource).toContain('opacity: 1');
   });
 
   it('reserves spray particles for high-foam or storm conditions', () => {
@@ -108,7 +128,7 @@ describe('voxel water shader stability', () => {
   });
 
   it('defines a fine viewport-scale voxel ocean budget instead of a small center island', () => {
-    expect(runtimeSource).toContain('VOXEL_GRID_SIDE = 96');
+    expect(runtimeSource).toContain('VOXEL_GRID_SIDE = 144');
     expect(runtimeSource).toContain('WATER_PLANE_SIZE = 104');
     expect(runtimeSource).toContain('VOXEL_SPACING = 0.26');
   });
@@ -189,6 +209,8 @@ describe('voxel water shader stability', () => {
     expect(fragmentShader).toContain('stormSurfaceContour');
     expect(fragmentShader).toContain('stormRainSheet');
     expect(fragmentShader).toContain('stormGridInk');
+    expect(fragmentShader).toContain('rainyForegroundGrade');
+    expect(fragmentShader).toContain('stormForegroundGrade');
     expect(fragmentShader).toContain('rainCurtain');
     expect(fragmentShader).toContain('lightningRim');
   });

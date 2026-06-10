@@ -143,3 +143,32 @@ Implementation notes:
 - Weather art direction is centralized in `WEATHER_LOOKS`, including water tint, fog color, sky tint, rim color, ambient/sun color, rain curtain, and lightning tint.
 - Transparent water uses shader-local stylized fog instead of relying only on scene fog, which keeps the GitHub Pages build static and avoids transparent sorting surprises.
 - Storm adds a foreground transparency window, world-space grid ink, rain-sheet shading, and lightning/rim tints so the darker state has motion and graphic separation rather than only lower brightness.
+
+## Palette And Camera Correction Pass
+
+Follow-up target:
+
+- Voxel blocks must be colored by the water body itself, not only by a brighter sky/background.
+- Clear, Rain, and Storm need visible water-body color separation in the near field.
+- The camera should keep a high showroom view without exposing the finite voxel field as a small island.
+
+Implementation notes:
+
+- Moved the showroom camera to a centered elevated oblique view: `camera.position.set(5.8, 7.2, 13.8)` looking toward `z = -5`.
+- Increased the near voxel ocean to `144 x 144` instances so viewport edges do not dominate the composition.
+- Added weather-specific `columnEmissive`, `columnTopTint`, light floor, opacity, and brightness controls. This fixed the fixed cyan emissive term that was pulling Rain and Storm back toward the Clear palette.
+- Lowered water surface alpha and adjusted weather foreground grading so the shader plane behaves like a transparent toon volume over the voxel body.
+
+Final local QA after this correction pass:
+
+| Label | Preset | Mean Delta | Strong Ratio | Sky Luma | Water Luma | Toon Band Separation | Voxel Local Contrast | Water Hue | Sky Hue |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `palette-camera-final-clear` | default | 3.672 | 0.03165 | 176.63 | 172.09 | 7.946 | 1.938 | 177.35 | 180.36 |
+| `palette-camera-final-rain` | rain | 2.562 | 0.00548 | 116.97 | 117.57 | 6.629 | 1.637 | 199.76 | 198.60 |
+| `palette-camera-final-storm` | storm | 0.840 | 0.00207 | 69.76 | 72.41 | 0.928 | 0.449 | 187.77 | 197.71 |
+
+Visual decision:
+
+- Clear is intentionally bright mint-cyan, with the voxel grid readable under a translucent toon water sheet.
+- Rain now shifts the whole body to blue-gray instead of only changing the sky.
+- Storm keeps a much darker deep-teal body, with rain particles, dim rim blocks, and far-field bands carrying the weather read. It remains lower-contrast by design, but no longer shares the Clear palette.

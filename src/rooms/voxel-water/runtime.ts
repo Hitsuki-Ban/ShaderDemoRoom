@@ -49,6 +49,8 @@ type WeatherLook = {
   cloudColor: Color;
   backgroundColor: Color;
   columnTint: Color;
+  columnTopTint: Color;
+  columnEmissive: Color;
   fogDensity: number;
   fogNear: number;
   fogFar: number;
@@ -58,6 +60,8 @@ type WeatherLook = {
   sunBase: number;
   columnTintMix: number;
   columnBrightness: number;
+  columnLightFloor: number;
+  columnOpacity: number;
   cloudOpacityBase: number;
 };
 
@@ -72,7 +76,9 @@ const WEATHER_LOOKS = {
     lightningTint: new Color(0xc8ffe8),
     cloudColor: new Color(0x91c8bf),
     backgroundColor: new Color(0x9ee8dc),
-    columnTint: new Color(0x9affe4),
+    columnTint: new Color(0xc8fff0),
+    columnTopTint: new Color(0xf4ffd9),
+    columnEmissive: new Color(0x54d8d3),
     fogDensity: 0.28,
     fogNear: 34,
     fogFar: 70,
@@ -80,8 +86,10 @@ const WEATHER_LOOKS = {
     lightningIntensity: 0,
     ambientBase: 1.58,
     sunBase: 3.08,
-    columnTintMix: 0.06,
-    columnBrightness: 1.28,
+    columnTintMix: 0.04,
+    columnBrightness: 1.16,
+    columnLightFloor: 0.12,
+    columnOpacity: 1,
     cloudOpacityBase: 0.06,
   },
   rain: {
@@ -94,7 +102,9 @@ const WEATHER_LOOKS = {
     lightningTint: new Color(0xd6f8ff),
     cloudColor: new Color(0x6d8395),
     backgroundColor: new Color(0x7598b0),
-    columnTint: new Color(0x4bbbe5),
+    columnTint: new Color(0x2e8dce),
+    columnTopTint: new Color(0xc6ecff),
+    columnEmissive: new Color(0x2a8fbd),
     fogDensity: 0.48,
     fogNear: 24,
     fogFar: 64,
@@ -102,8 +112,10 @@ const WEATHER_LOOKS = {
     lightningIntensity: 0.06,
     ambientBase: 1.46,
     sunBase: 2.18,
-    columnTintMix: 0.16,
-    columnBrightness: 1.16,
+    columnTintMix: 0.6,
+    columnBrightness: 0.98,
+    columnLightFloor: 0.02,
+    columnOpacity: 1,
     cloudOpacityBase: 0.16,
   },
   storm: {
@@ -116,7 +128,9 @@ const WEATHER_LOOKS = {
     lightningTint: new Color(0xd8ffff),
     cloudColor: new Color(0x465766),
     backgroundColor: new Color(0x546c78),
-    columnTint: new Color(0x32b2c0),
+    columnTint: new Color(0x0d6c77),
+    columnTopTint: new Color(0x7de0cd),
+    columnEmissive: new Color(0x0d6470),
     fogDensity: 0.62,
     fogNear: 20,
     fogFar: 58,
@@ -124,8 +138,10 @@ const WEATHER_LOOKS = {
     lightningIntensity: 0.42,
     ambientBase: 1.28,
     sunBase: 1.18,
-    columnTintMix: 0.18,
-    columnBrightness: 1.22,
+    columnTintMix: 0.62,
+    columnBrightness: 0.82,
+    columnLightFloor: 0.04,
+    columnOpacity: 1,
     cloudOpacityBase: 0.28,
   },
 } satisfies Record<VoxelWaterSettings['weather'], WeatherLook>;
@@ -135,7 +151,7 @@ const PRESENTATION_DRIFT_SPEED = 0.035;
 const RAIN_DROP_COUNT = 420;
 const WATER_PLANE_SIZE = 104;
 const WATER_PLANE_SEGMENTS = 192;
-const VOXEL_GRID_SIDE = 96;
+const VOXEL_GRID_SIDE = 144;
 const VOXEL_SPACING = 0.26;
 const VOXEL_SIZE = 0.25;
 const SKY_RADIUS = 62;
@@ -181,13 +197,13 @@ export function createRoomRuntime(
   const columnPosition = new Vector3();
   const columnScale = new Vector3();
   const columnColor = new Color();
-  const lowColumnColor = new Color(0x32cddd);
-  const troughColumnColor = new Color(0x1ba8c4);
-  const highColumnColor = new Color(0x83ffe2);
-  const foamColumnColor = new Color(0xebfff4);
-  const warmColumnColor = new Color(0x6be2c9);
-  const coolColumnColor = new Color(0x55c8ff);
-  const edgeMistColumnColor = new Color(0x6ab7c0);
+  const lowColumnColor = new Color(0x8efff0);
+  const troughColumnColor = new Color(0x60e4e4);
+  const highColumnColor = new Color(0xdffff1);
+  const foamColumnColor = new Color(0xfffff6);
+  const warmColumnColor = new Color(0xc8ffd6);
+  const coolColumnColor = new Color(0x91e4ff);
+  const edgeMistColumnColor = new Color(0xc8f5ee);
   const clockColor = new Color();
   const weatherColumnColor = new Color();
   const cameraRelativeOceanOffset = new Vector3();
@@ -197,8 +213,8 @@ export function createRoomRuntime(
 
   scene.add(root);
   scene.fog = new Fog(initialWeatherLook.fogColor, initialWeatherLook.fogNear, initialWeatherLook.fogFar);
-  camera.position.set(7.6, 4.8, 11.2);
-  camera.lookAt(0, 0.35, -5.8);
+  camera.position.set(5.8, 7.2, 13.8);
+  camera.lookAt(0, -0.08, -5);
 
   const ambient = new AmbientLight(initialWeatherLook.ambientColor, initialWeatherLook.ambientBase);
   const sun = new DirectionalLight(initialWeatherLook.sunColor, initialWeatherLook.sunBase);
@@ -276,9 +292,12 @@ export function createRoomRuntime(
     color: 0xffffff,
     roughness: 0.58,
     metalness: 0.03,
-    emissive: 0x147d8f,
-    emissiveIntensity: 0.42,
+    emissive: 0x54d8d3,
+    emissiveIntensity: 0.68,
     vertexColors: true,
+    toneMapped: false,
+    transparent: true,
+    opacity: 1,
   });
   const columnsPerSide = VOXEL_GRID_SIDE;
   const columnCount = columnsPerSide * columnsPerSide;
@@ -403,8 +422,10 @@ export function createRoomRuntime(
     }
     cloudMaterial.color.copy(weatherLook.cloudColor);
     columnMaterial.color.set(0xffffff);
+    columnMaterial.emissive.copy(weatherLook.columnEmissive);
+    columnMaterial.opacity = weatherLook.columnOpacity;
     columnMaterial.roughness = 0.72 - settings.clarity * 0.14 + settings.rain * 0.08;
-    columnMaterial.emissiveIntensity = 0.36 + settings.clarity * 0.18 + settings.foam * 0.04 + weatherLook.rainCurtain * 0.04;
+    columnMaterial.emissiveIntensity = 0.52 + settings.clarity * 0.24 + settings.foam * 0.06 + weatherLook.rainCurtain * 0.08;
   };
 
   updateUniforms();
@@ -447,10 +468,14 @@ export function createRoomRuntime(
         matrix.compose(columnPosition, columns.quaternion, columnScale);
         columns.setMatrixAt(index, matrix);
         columnColor.copy(lowColumnColor).lerp(highColumnColor, Math.min(1, columnColorBand * 1.18));
-        columnColor.lerp(troughColumnColor, Math.max(0, 0.55 - normalized) * 0.18);
+        columnColor.lerp(troughColumnColor, Math.max(0, 0.6 - normalized) * 0.26);
         columnColor.lerp(foamColumnColor, Math.min(0.5, crestAmount * 1.4));
         weatherColumnColor.copy(weatherLook.columnTint);
         columnColor.lerp(weatherColumnColor, weatherLook.columnTintMix + settings.cloudCover * 0.02);
+        const foregroundColumnGlow = depthFade * (0.08 + settings.clarity * 0.05) * (1 - storm * 0.72);
+        const columnValueLift =
+          weatherLook.columnLightFloor + Math.max(0, columnColorBand - 0.25) * 0.3 + crestAmount * 0.24 + foregroundColumnGlow;
+        columnColor.lerp(weatherLook.columnTopTint, Math.min(0.34, columnValueLift));
         columnColor.lerp(settings.colorTemperature >= 0 ? warmColumnColor : coolColumnColor, Math.abs(settings.colorTemperature) * 0.24);
         columnColor.lerp(edgeMistColumnColor, (1 - edgeFade) * 0.32);
         columnColor.offsetHSL(
@@ -458,7 +483,7 @@ export function createRoomRuntime(
           settings.voxelColorVariance * (0.08 + storm * 0.04),
           cellNoise * settings.voxelColorVariance * 0.08 + storm * (columnColorBand - 0.48) * 0.12,
         );
-        columnColor.multiplyScalar(weatherLook.columnBrightness + depthFade * 0.22 + edgeFade * 0.14 + storm * 0.06);
+        columnColor.multiplyScalar(weatherLook.columnBrightness + depthFade * 0.24 + edgeFade * 0.12 + storm * 0.06);
         columns.setColorAt(index, columnColor);
         index += 1;
       }

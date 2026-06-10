@@ -218,11 +218,15 @@ void main() {
   color = mix(color, vec3(0.006, 0.11, 0.15), stormRainSheet * 0.22);
   color += stormRainSheet * uWeatherRimColor * 0.035;
   float stormGridInk = voxelSurfaceGrid * uStorm;
-  color = mix(color, vec3(0.002, 0.08, 0.11), stormGridInk * 0.78);
-  color += stormGridInk * uWeatherRimColor * 0.08;
+  color = mix(color, vec3(0.002, 0.08, 0.11), stormGridInk * 0.36);
+  color += stormGridInk * (uWeatherRimColor * 0.18 + vec3(0.02, 0.16, 0.18) * nearToonRead);
 
   float foregroundStormWindow = (1.0 - smoothstep(18.0, 56.0, viewDistance)) * uStorm * uStorm;
+  float rainyForegroundGrade = rainBlueSignature * (1.0 - uStorm) * 0.34;
+  float stormForegroundGrade = foregroundStormWindow * 0.78 + uStorm * 0.34;
+  vec3 weatherForegroundColor = mix(vec3(0.08, 0.34, 0.58), vec3(0.012, 0.18, 0.22), uStorm);
+  color = mix(color, weatherForegroundColor, clamp(rainyForegroundGrade + stormForegroundGrade, 0.0, 0.88));
   float weatherTransparency = uStorm * 0.12 + foregroundStormWindow * 0.36 + uRainCurtain * 0.05;
-  float surfaceAlpha = clamp((mix(0.82, 0.94, uClarity) - weatherTransparency) * mix(0.9, 1.0, edgeFade), 0.38, 0.94);
+  float surfaceAlpha = clamp((mix(0.66, 0.82, uClarity) - weatherTransparency) * mix(0.86, 1.0, edgeFade), 0.28, 0.84);
   gl_FragColor = vec4(color, surfaceAlpha);
 }
