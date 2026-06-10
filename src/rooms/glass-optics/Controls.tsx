@@ -90,7 +90,7 @@ export default function GlassOpticsControls({
       <div className="control-actions">
         <Button
           icon={<Lightbulb size={16} />}
-          onClick={() => onPatch({ lightX: -4.4, lightY: 4.8, lightZ: 2.7, beamSpread: 0.22 })}
+          onClick={() => onPatch({ lightX: -0.28, lightY: 2.85, lightZ: 1.45, beamSpread: 0.18 })}
         >
           Focus beam
         </Button>

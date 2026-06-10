@@ -1,9 +1,9 @@
 import type { GlassOpticsSettings } from '../types';
 
 export const glassOpticsDefaults: GlassOpticsSettings = {
-  lightX: -3.2,
-  lightY: 3.4,
-  lightZ: 3.8,
+  lightX: -0.05,
+  lightY: 2.42,
+  lightZ: 2.05,
   beamSpread: 0.34,
   ior: 1.48,
   roughness: 0.04,
