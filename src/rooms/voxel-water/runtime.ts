@@ -38,11 +38,97 @@ import skyFragmentShader from './sky.frag.glsl?raw';
 import skyVertexShader from './sky.vert.glsl?raw';
 import vertexShader from './water.vert.glsl?raw';
 
-const weatherStrength = {
-  clear: 0,
-  rain: 0.45,
-  storm: 0.86,
-} satisfies Record<VoxelWaterSettings['weather'], number>;
+type WeatherLook = {
+  strength: number;
+  waterTint: Color;
+  fogColor: Color;
+  ambientColor: Color;
+  sunColor: Color;
+  rimColor: Color;
+  lightningTint: Color;
+  cloudColor: Color;
+  backgroundColor: Color;
+  columnTint: Color;
+  fogDensity: number;
+  fogNear: number;
+  fogFar: number;
+  rainCurtain: number;
+  lightningIntensity: number;
+  ambientBase: number;
+  sunBase: number;
+  columnTintMix: number;
+  columnBrightness: number;
+  cloudOpacityBase: number;
+};
+
+const WEATHER_LOOKS = {
+  clear: {
+    strength: 0,
+    waterTint: new Color(0x6dffdd),
+    fogColor: new Color(0xb2f4e7),
+    ambientColor: new Color(0xc0fff4),
+    sunColor: new Color(0xf4fff5),
+    rimColor: new Color(0xc8ffe8),
+    lightningTint: new Color(0xc8ffe8),
+    cloudColor: new Color(0x91c8bf),
+    backgroundColor: new Color(0x9ee8dc),
+    columnTint: new Color(0x9affe4),
+    fogDensity: 0.28,
+    fogNear: 34,
+    fogFar: 70,
+    rainCurtain: 0.02,
+    lightningIntensity: 0,
+    ambientBase: 1.58,
+    sunBase: 3.08,
+    columnTintMix: 0.06,
+    columnBrightness: 1.28,
+    cloudOpacityBase: 0.06,
+  },
+  rain: {
+    strength: 0.48,
+    waterTint: new Color(0x2c9fe2),
+    fogColor: new Color(0x90a8be),
+    ambientColor: new Color(0xb0d8ef),
+    sunColor: new Color(0xc4d7e9),
+    rimColor: new Color(0xa8ecff),
+    lightningTint: new Color(0xd6f8ff),
+    cloudColor: new Color(0x6d8395),
+    backgroundColor: new Color(0x7598b0),
+    columnTint: new Color(0x4bbbe5),
+    fogDensity: 0.48,
+    fogNear: 24,
+    fogFar: 64,
+    rainCurtain: 0.38,
+    lightningIntensity: 0.06,
+    ambientBase: 1.46,
+    sunBase: 2.18,
+    columnTintMix: 0.16,
+    columnBrightness: 1.16,
+    cloudOpacityBase: 0.16,
+  },
+  storm: {
+    strength: 0.88,
+    waterTint: new Color(0x127f92),
+    fogColor: new Color(0x607784),
+    ambientColor: new Color(0x94c7d3),
+    sunColor: new Color(0xa2bdc6),
+    rimColor: new Color(0x8dfcff),
+    lightningTint: new Color(0xd8ffff),
+    cloudColor: new Color(0x465766),
+    backgroundColor: new Color(0x546c78),
+    columnTint: new Color(0x32b2c0),
+    fogDensity: 0.62,
+    fogNear: 20,
+    fogFar: 58,
+    rainCurtain: 0.6,
+    lightningIntensity: 0.42,
+    ambientBase: 1.28,
+    sunBase: 1.18,
+    columnTintMix: 0.18,
+    columnBrightness: 1.22,
+    cloudOpacityBase: 0.28,
+  },
+} satisfies Record<VoxelWaterSettings['weather'], WeatherLook>;
 
 const PRESENTATION_DRIFT_AMPLITUDE = 0.018;
 const PRESENTATION_DRIFT_SPEED = 0.035;
@@ -99,22 +185,23 @@ export function createRoomRuntime(
   const troughColumnColor = new Color(0x1ba8c4);
   const highColumnColor = new Color(0x83ffe2);
   const foamColumnColor = new Color(0xebfff4);
-  const stormColumnColor = new Color(0x62c5cf);
   const warmColumnColor = new Color(0x6be2c9);
   const coolColumnColor = new Color(0x55c8ff);
   const edgeMistColumnColor = new Color(0x6ab7c0);
   const clockColor = new Color();
+  const weatherColumnColor = new Color();
   const cameraRelativeOceanOffset = new Vector3();
   const oceanUniformOrigin = new Vector2();
   const random = createSeededRandom(0x5ea9f1);
+  const initialWeatherLook = WEATHER_LOOKS[settings.weather];
 
   scene.add(root);
-  scene.fog = new Fog(0x9bdce6, 28, 68);
-  camera.position.set(8.2, 5.8, 12.2);
-  camera.lookAt(0, -0.1, -1.6);
+  scene.fog = new Fog(initialWeatherLook.fogColor, initialWeatherLook.fogNear, initialWeatherLook.fogFar);
+  camera.position.set(7.6, 4.8, 11.2);
+  camera.lookAt(0, 0.35, -5.8);
 
-  const ambient = new AmbientLight(0x9eeaff, 1.48);
-  const sun = new DirectionalLight(0xeaffff, 2.86);
+  const ambient = new AmbientLight(initialWeatherLook.ambientColor, initialWeatherLook.ambientBase);
+  const sun = new DirectionalLight(initialWeatherLook.sunColor, initialWeatherLook.sunBase);
   sun.position.set(-4, 7, 3);
   scene.add(ambient, sun);
 
@@ -126,10 +213,15 @@ export function createRoomRuntime(
     depthTest: false,
     uniforms: {
       uTime: { value: 0 },
-      uStorm: { value: weatherStrength[settings.weather] },
+      uStorm: { value: initialWeatherLook.strength },
       uCloudCover: { value: settings.cloudCover },
       uSkyTime: { value: settings.skyTime },
       uColorTemperature: { value: settings.colorTemperature },
+      uWeatherSkyTint: { value: initialWeatherLook.backgroundColor.clone() },
+      uWeatherHorizonTint: { value: initialWeatherLook.fogColor.clone() },
+      uWeatherCloudTint: { value: initialWeatherLook.cloudColor.clone() },
+      uWeatherLightningTint: { value: initialWeatherLook.lightningTint.clone() },
+      uLightningPulse: { value: 0 },
     },
   });
   const sky = new Mesh(new SphereGeometry(SKY_RADIUS, 36, 18), skyMaterial);
@@ -146,7 +238,7 @@ export function createRoomRuntime(
       uWaveHeight: { value: settings.waveHeight },
       uWind: { value: settings.wind },
       uRain: { value: settings.rain },
-      uStorm: { value: weatherStrength[settings.weather] },
+      uStorm: { value: initialWeatherLook.strength },
       uCloudCover: { value: settings.cloudCover },
       uToonSteps: { value: settings.toonSteps },
       uSwell: { value: settings.swell },
@@ -160,6 +252,13 @@ export function createRoomRuntime(
       uColorTemperature: { value: settings.colorTemperature },
       uVoxelColorVariance: { value: settings.voxelColorVariance },
       uOceanOriginXZ: { value: oceanUniformOrigin },
+      uWeatherWaterTint: { value: initialWeatherLook.waterTint.clone() },
+      uWeatherFogColor: { value: initialWeatherLook.fogColor.clone() },
+      uWeatherRimColor: { value: initialWeatherLook.rimColor.clone() },
+      uWeatherLightningTint: { value: initialWeatherLook.lightningTint.clone() },
+      uWeatherFogDensity: { value: initialWeatherLook.fogDensity },
+      uRainCurtain: { value: initialWeatherLook.rainCurtain },
+      uLightningPulse: { value: 0 },
     },
   });
 
@@ -245,10 +344,11 @@ export function createRoomRuntime(
   root.add(cloudDeck);
 
   const updateUniforms = () => {
+    const weatherLook = WEATHER_LOOKS[settings.weather];
     waterMaterial.uniforms.uWaveHeight.value = settings.waveHeight;
     waterMaterial.uniforms.uWind.value = settings.wind;
     waterMaterial.uniforms.uRain.value = settings.rain;
-    waterMaterial.uniforms.uStorm.value = weatherStrength[settings.weather];
+    waterMaterial.uniforms.uStorm.value = weatherLook.strength;
     waterMaterial.uniforms.uCloudCover.value = settings.cloudCover;
     waterMaterial.uniforms.uToonSteps.value = settings.toonSteps;
     waterMaterial.uniforms.uSwell.value = settings.swell;
@@ -261,37 +361,50 @@ export function createRoomRuntime(
     waterMaterial.uniforms.uSkyTime.value = settings.skyTime;
     waterMaterial.uniforms.uColorTemperature.value = settings.colorTemperature;
     waterMaterial.uniforms.uVoxelColorVariance.value = settings.voxelColorVariance;
-    skyMaterial.uniforms.uStorm.value = weatherStrength[settings.weather];
+    waterMaterial.uniforms.uWeatherWaterTint.value.copy(weatherLook.waterTint);
+    waterMaterial.uniforms.uWeatherFogColor.value.copy(weatherLook.fogColor);
+    waterMaterial.uniforms.uWeatherRimColor.value.copy(weatherLook.rimColor);
+    waterMaterial.uniforms.uWeatherLightningTint.value.copy(weatherLook.lightningTint);
+    waterMaterial.uniforms.uWeatherFogDensity.value = weatherLook.fogDensity;
+    waterMaterial.uniforms.uRainCurtain.value = Math.max(settings.rain * 0.42, weatherLook.rainCurtain);
+    skyMaterial.uniforms.uStorm.value = weatherLook.strength;
     skyMaterial.uniforms.uCloudCover.value = settings.cloudCover;
     skyMaterial.uniforms.uSkyTime.value = settings.skyTime;
     skyMaterial.uniforms.uColorTemperature.value = settings.colorTemperature;
+    skyMaterial.uniforms.uWeatherSkyTint.value.copy(weatherLook.backgroundColor);
+    skyMaterial.uniforms.uWeatherHorizonTint.value.copy(weatherLook.fogColor);
+    skyMaterial.uniforms.uWeatherCloudTint.value.copy(weatherLook.cloudColor);
+    skyMaterial.uniforms.uWeatherLightningTint.value.copy(weatherLook.lightningTint);
 
-    rainMaterial.opacity = Math.min(0.64, settings.rain * 0.62 + weatherStrength[settings.weather] * 0.2);
+    rainMaterial.opacity = Math.min(0.64, settings.rain * 0.62 + weatherLook.strength * 0.2);
     rain.visible = settings.rain > 0.02 || settings.weather !== 'clear';
     rainMaterial.size = 0.024 + settings.rain * 0.022 + settings.surfaceDetail * 0.006;
     spray.visible = settings.foam > 0.52 || settings.weather === 'storm';
-    sprayMaterial.opacity = Math.min(0.36, settings.foam * 0.24 + settings.rain * 0.12 + weatherStrength[settings.weather] * 0.16);
+    sprayMaterial.opacity = Math.min(0.36, settings.foam * 0.24 + settings.rain * 0.12 + weatherLook.strength * 0.16);
     sprayMaterial.size = 0.03 + settings.foam * 0.05;
-    cloudMaterial.opacity = 0.1 + settings.cloudCover * 0.46 + weatherStrength[settings.weather] * 0.18;
-    ambient.intensity = 1.28 + settings.clarity * 0.42 - weatherStrength[settings.weather] * 0.3 + settings.skyTime * 0.16;
-    sun.intensity = 2.18 + settings.clarity * 0.82 - weatherStrength[settings.weather] * 0.92 + settings.skyTime * 0.52;
+    cloudMaterial.opacity = weatherLook.cloudOpacityBase + settings.cloudCover * 0.44 + weatherLook.strength * 0.12;
+    ambient.color.copy(weatherLook.ambientColor);
+    sun.color.copy(weatherLook.sunColor);
+    ambient.intensity = weatherLook.ambientBase + settings.clarity * 0.28 + settings.skyTime * 0.14;
+    sun.intensity = weatherLook.sunBase + settings.clarity * 0.44 + settings.skyTime * 0.34 - settings.cloudCover * 0.3;
     sun.position.set(
       Math.cos(settings.skyTime * Math.PI * 2) * 5,
       3.2 + Math.sin(settings.skyTime * Math.PI) * 5.8,
       Math.sin(settings.skyTime * Math.PI * 2) * 5,
     );
     scene.background = clockColor
-      .set(0x90d9e8)
-      .lerp(new Color(0x6689a2), weatherStrength[settings.weather] * 0.5 + settings.cloudCover * 0.14);
+      .copy(weatherLook.backgroundColor)
+      .lerp(weatherLook.fogColor, settings.cloudCover * 0.16);
     if (scene.fog) {
-      scene.fog.color
-        .set(0x9bdce6)
-        .lerp(new Color(0x6e8798), weatherStrength[settings.weather] * 0.52 + settings.cloudCover * 0.12);
+      const fog = scene.fog as Fog;
+      fog.color.copy(weatherLook.fogColor);
+      fog.near = weatherLook.fogNear;
+      fog.far = weatherLook.fogFar;
     }
-    cloudMaterial.color.set(settings.weather === 'storm' ? 0x526574 : 0x75a9b3);
+    cloudMaterial.color.copy(weatherLook.cloudColor);
     columnMaterial.color.set(0xffffff);
     columnMaterial.roughness = 0.72 - settings.clarity * 0.14 + settings.rain * 0.08;
-    columnMaterial.emissiveIntensity = 0.42 + settings.clarity * 0.2 + settings.foam * 0.04;
+    columnMaterial.emissiveIntensity = 0.36 + settings.clarity * 0.18 + settings.foam * 0.04 + weatherLook.rainCurtain * 0.04;
   };
 
   updateUniforms();
@@ -303,7 +416,8 @@ export function createRoomRuntime(
     const currentAngle = (settings.currentDirection * Math.PI) / 180;
     const currentX = Math.cos(currentAngle);
     const currentZ = Math.sin(currentAngle);
-    const storm = weatherStrength[settings.weather];
+    const weatherLook = WEATHER_LOOKS[settings.weather];
+    const storm = weatherLook.strength;
 
     for (let z = 0; z < columnsPerSide; z += 1) {
       for (let x = 0; x < columnsPerSide; x += 1) {
@@ -335,11 +449,16 @@ export function createRoomRuntime(
         columnColor.copy(lowColumnColor).lerp(highColumnColor, Math.min(1, columnColorBand * 1.18));
         columnColor.lerp(troughColumnColor, Math.max(0, 0.55 - normalized) * 0.18);
         columnColor.lerp(foamColumnColor, Math.min(0.5, crestAmount * 1.4));
-        columnColor.lerp(stormColumnColor, storm * 0.16 + settings.cloudCover * 0.03);
+        weatherColumnColor.copy(weatherLook.columnTint);
+        columnColor.lerp(weatherColumnColor, weatherLook.columnTintMix + settings.cloudCover * 0.02);
         columnColor.lerp(settings.colorTemperature >= 0 ? warmColumnColor : coolColumnColor, Math.abs(settings.colorTemperature) * 0.24);
         columnColor.lerp(edgeMistColumnColor, (1 - edgeFade) * 0.32);
-        columnColor.offsetHSL(cellNoise * settings.voxelColorVariance * 0.045, settings.voxelColorVariance * 0.08, cellNoise * settings.voxelColorVariance * 0.08);
-        columnColor.multiplyScalar(1.2 + depthFade * 0.22 + edgeFade * 0.14 + storm * 0.06);
+        columnColor.offsetHSL(
+          cellNoise * settings.voxelColorVariance * (0.045 + storm * 0.02),
+          settings.voxelColorVariance * (0.08 + storm * 0.04),
+          cellNoise * settings.voxelColorVariance * 0.08 + storm * (columnColorBand - 0.48) * 0.12,
+        );
+        columnColor.multiplyScalar(weatherLook.columnBrightness + depthFade * 0.22 + edgeFade * 0.14 + storm * 0.06);
         columns.setColorAt(index, columnColor);
         index += 1;
       }
@@ -362,10 +481,20 @@ export function createRoomRuntime(
     },
     render({ elapsed, delta }: RoomFrame) {
       const animatedSkyTime = Math.min(1, Math.max(0, settings.skyTime + Math.sin(elapsed * 0.035) * 0.025));
+      const weatherLook = WEATHER_LOOKS[settings.weather];
+      const fogBreath = Math.sin(elapsed * 0.18 + weatherLook.rainCurtain * 2.0) * weatherLook.rainCurtain * 0.035;
+      const lightningPulse = weatherLook.lightningIntensity * Math.pow(
+        Math.max(0, Math.sin(elapsed * 0.72 + Math.sin(elapsed * 0.19) * 3.2)),
+        10,
+      );
       waterMaterial.uniforms.uTime.value = elapsed;
       waterMaterial.uniforms.uSkyTime.value = animatedSkyTime;
+      waterMaterial.uniforms.uWeatherFogDensity.value = Math.max(0.12, weatherLook.fogDensity + fogBreath);
+      waterMaterial.uniforms.uRainCurtain.value = Math.max(settings.rain * 0.42, weatherLook.rainCurtain);
+      waterMaterial.uniforms.uLightningPulse.value = lightningPulse;
       skyMaterial.uniforms.uTime.value = elapsed;
       skyMaterial.uniforms.uSkyTime.value = animatedSkyTime;
+      skyMaterial.uniforms.uLightningPulse.value = lightningPulse;
       cameraRelativeOceanOffset.set(
         Math.round(camera.position.x / OCEAN_SNAP_SIZE) * OCEAN_SNAP_SIZE,
         0,

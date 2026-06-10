@@ -121,3 +121,25 @@ The remaining deliberate tradeoff is Storm mode: it stays darker and less banded
 - `qa:water` now captures the full page after animation frames, so status labels do not show initial `0 FPS / 0 calls` values.
 - `QA_PRESET=rain` is supported for weather-button QA.
 - The water room keeps high-alpha/faked translucency instead of deep transparent sorting, matching the static lightweight deployment target.
+
+## Weather Color And Fog Pass
+
+Target:
+
+- Clear should read as bright transparent mint-cyan water with high sky luminance and crisp voxel bands.
+- Rain should shift toward cooler blue-gray sky and softer fog while keeping water detail readable.
+- Storm should keep a darker teal water mass, visible rain/fog motion, colder sky, and enough stylized surface ink to avoid a flat plane.
+
+Final local QA after the weather look pass:
+
+| Label | Preset | Mean Delta | Strong Ratio | Sky Luma | Water Luma | Toon Band Separation | Voxel Local Contrast | Water Hue | Sky Hue |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `verify-clear-final` | default | 6.424 | 0.06016 | 171.55 | 98.23 | 22.736 | 6.368 | 189.46 | 182.69 |
+| `verify-rain-final` | rain | 5.735 | 0.02648 | 114.02 | 90.53 | 6.913 | 3.988 | 190.76 | 200.06 |
+| `verify-storm-final` | storm | 5.438 | 0.05916 | 121.76 | 78.13 | 1.140 | 1.039 | 188.83 | 192.00 |
+
+Implementation notes:
+
+- Weather art direction is centralized in `WEATHER_LOOKS`, including water tint, fog color, sky tint, rim color, ambient/sun color, rain curtain, and lightning tint.
+- Transparent water uses shader-local stylized fog instead of relying only on scene fog, which keeps the GitHub Pages build static and avoids transparent sorting surprises.
+- Storm adds a foreground transparency window, world-space grid ink, rain-sheet shading, and lightning/rim tints so the darker state has motion and graphic separation rather than only lower brightness.

@@ -148,6 +148,30 @@ function saturation(r, g, b) {
   return (max - min) / (1 - Math.abs(2 * lightness - 1));
 }
 
+function hue(r, g, b) {
+  const red = r / 255;
+  const green = g / 255;
+  const blue = b / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+
+  if (delta === 0) {
+    return 0;
+  }
+
+  let value = 0;
+  if (max === red) {
+    value = ((green - blue) / delta) % 6;
+  } else if (max === green) {
+    value = (blue - red) / delta + 2;
+  } else {
+    value = (red - green) / delta + 4;
+  }
+
+  return (value * 60 + 360) % 360;
+}
+
 function measureRegion(frame, region) {
   const x0 = Math.floor(region.x0 * frame.width);
   const x1 = Math.floor(region.x1 * frame.width);
@@ -158,6 +182,12 @@ function measureRegion(frame, region) {
   let saturationMax = 0;
   let lumaMin = 255;
   let lumaMax = 0;
+  let redTotal = 0;
+  let greenTotal = 0;
+  let blueTotal = 0;
+  let saturationTotal = 0;
+  let hueX = 0;
+  let hueY = 0;
   let waterLike = 0;
   let localContrastTotal = 0;
   let localContrastCount = 0;
@@ -173,8 +203,16 @@ function measureRegion(frame, region) {
       const b = frame.pixels[index + 2];
       const pixelLuma = luma(r, g, b);
       const pixelSaturation = saturation(r, g, b);
+      const pixelHue = hue(r, g, b);
+      const hueRadians = (pixelHue * Math.PI) / 180;
 
+      redTotal += r;
+      greenTotal += g;
+      blueTotal += b;
       lumaTotal += pixelLuma;
+      saturationTotal += pixelSaturation;
+      hueX += Math.cos(hueRadians) * pixelSaturation;
+      hueY += Math.sin(hueRadians) * pixelSaturation;
       lumaMin = Math.min(lumaMin, pixelLuma);
       lumaMax = Math.max(lumaMax, pixelLuma);
       lumaSamples.push(pixelLuma);
@@ -202,6 +240,19 @@ function measureRegion(frame, region) {
   const p10 = lumaSamples[Math.floor(lumaSamples.length * 0.1)] ?? lumaMin;
   const p90 = lumaSamples[Math.floor(lumaSamples.length * 0.9)] ?? lumaMax;
   const activeLumaBands = lumaBands.filter((bandCount) => bandCount / count > 0.018).length;
+  const hueMean = (Math.atan2(hueY, hueX) * 180 / Math.PI + 360) % 360;
+  const redMean = redTotal / count;
+  const greenMean = greenTotal / count;
+  const blueMean = blueTotal / count;
+  const colorSignature = {
+    rMean: Number(redMean.toFixed(2)),
+    gMean: Number(greenMean.toFixed(2)),
+    bMean: Number(blueMean.toFixed(2)),
+    hueMean: Number(hueMean.toFixed(2)),
+    saturationMean: Number((saturationTotal / count).toFixed(4)),
+    cyanBias: Number(((greenMean + blueMean - redMean * 2) / 510).toFixed(4)),
+    warmCoolBias: Number(((redMean - blueMean) / 255).toFixed(4)),
+  };
 
   return {
     lumaMean: lumaTotal / count,
@@ -211,6 +262,8 @@ function measureRegion(frame, region) {
     waterSaturationRange: saturationMax - saturationMin,
     toonBandSeparation: (p90 - p10) / Math.max(1, activeLumaBands - 1),
     voxelLocalContrast: localContrastTotal / localContrastCount,
+    hueMean,
+    colorSignature,
   };
 }
 
@@ -224,11 +277,13 @@ function regionMetrics(frame) {
       lumaMean: Number(sky.lumaMean.toFixed(2)),
       skyLuma: Number(sky.lumaMean.toFixed(2)),
       saturationRange: Number(sky.saturationRange.toFixed(4)),
+      colorSignature: sky.colorSignature,
     },
     horizon: {
       lumaMean: Number(horizon.lumaMean.toFixed(2)),
       waterCoverage: Number(horizon.waterCoverage.toFixed(5)),
       saturationRange: Number(horizon.saturationRange.toFixed(4)),
+      colorSignature: horizon.colorSignature,
     },
     water: {
       lumaMean: Number(water.lumaMean.toFixed(2)),
@@ -238,6 +293,8 @@ function regionMetrics(frame) {
       waterSaturationRange: Number(water.waterSaturationRange.toFixed(4)),
       toonBandSeparation: Number(water.toonBandSeparation.toFixed(3)),
       voxelLocalContrast: Number(water.voxelLocalContrast.toFixed(3)),
+      hueMean: Number(water.hueMean.toFixed(2)),
+      colorSignature: water.colorSignature,
     },
   };
 }
@@ -319,6 +376,15 @@ const result = {
   waterLuma: regions.water.waterLuma,
   waterSaturationRange: regions.water.waterSaturationRange,
   toonBandSeparation: regions.water.toonBandSeparation,
+  hueMean: regions.water.hueMean,
+  colorSignature: regions.water.colorSignature,
+  weatherSeparation: {
+    preset,
+    waterHue: regions.water.hueMean,
+    skyHue: regions.sky.colorSignature.hueMean,
+    cyanBias: regions.water.colorSignature.cyanBias,
+    warmCoolBias: regions.water.colorSignature.warmCoolBias,
+  },
   skyLuma: regions.sky.skyLuma,
   voxelLocalContrast: regions.water.voxelLocalContrast,
   diffs: diffs.map((diff) => ({

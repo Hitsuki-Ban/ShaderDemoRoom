@@ -11,6 +11,13 @@ uniform float uCurrentStrength;
 uniform float uSkyTime;
 uniform float uColorTemperature;
 uniform float uVoxelColorVariance;
+uniform vec3 uWeatherWaterTint;
+uniform vec3 uWeatherFogColor;
+uniform vec3 uWeatherRimColor;
+uniform vec3 uWeatherLightningTint;
+uniform float uWeatherFogDensity;
+uniform float uRainCurtain;
+uniform float uLightningPulse;
 
 varying vec2 vUv;
 varying float vWave;
@@ -77,17 +84,25 @@ void main() {
   float opticalDepth = smoothstep(-1.0, 0.85, vWorldPosition.y);
   float skyFill = smoothstep(0.05, 0.82, sin(uSkyTime * 3.14159265));
   float viewDistance = length(cameraPosition - vWorldPosition);
-  float nearToonRead = 1.0 - smoothstep(9.0, 26.0, viewDistance);
+  float nearToonRead = 1.0 - smoothstep(12.0, 34.0, viewDistance);
   float smoothRamp = smoothstep(0.05, 0.95, vWave);
   float toonColorRamp = mix(smoothRamp, toonRamp, 0.42 + nearToonRead * 0.58);
   vec3 color = mix(deep, mid, smoothstep(0.08, 0.72, toonColorRamp));
   color = mix(color, shallow, smoothstep(0.42, 0.95, toonColorRamp) * (0.14 + nearToonRead * 0.44 + uClarity * 0.16));
   color = mix(color, lagoon, smoothstep(0.68, 0.98, toonColorRamp) * 0.18 * nearToonRead * (1.0 - uStorm * 0.5));
   color = mix(color, stormTint, uStorm * 0.14 + uCloudCover * 0.06);
+  color = mix(color, uWeatherWaterTint, (0.12 + uRainCurtain * 0.16 + uStorm * 0.08) * (0.55 + nearToonRead * 0.45));
+  float clearMintSignature = (1.0 - uStorm) * (1.0 - smoothstep(0.18, 0.56, uRainCurtain));
+  float rainBlueSignature = smoothstep(0.18, 0.54, uRainCurtain) * (1.0 - uStorm * 0.45);
+  color = mix(color, lagoon, clearMintSignature * smoothstep(0.34, 0.96, toonColorRamp) * (0.08 + nearToonRead * 0.07));
+  color = mix(color, vec3(0.16, 0.48, 0.74), rainBlueSignature * (0.08 + nearToonRead * 0.04));
   color = mix(color, deep * vec3(0.92, 1.05, 1.12), (1.0 - smoothRamp) * uClarity * 0.08);
   color += smoothRamp * uClarity * vec3(0.02, 0.08, 0.06);
   color = mix(color, color * vec3(0.74, 0.92, 0.96), toonEdgeAccent * nearToonRead * (0.12 + uClarity * 0.12));
   color += toonEdgeAccent * nearToonRead * smoothstep(0.45, 0.95, toonColorRamp) * vec3(0.04, 0.18, 0.16);
+  float stormToonContrast = uStorm * (0.28 + nearToonRead * 0.72);
+  color = mix(color, uWeatherRimColor, toonEdgeAccent * stormToonContrast * (0.06 + uRainCurtain * 0.05));
+  color += toonEdgeAccent * stormToonContrast * smoothstep(0.38, 0.96, toonColorRamp) * vec3(0.02, 0.12, 0.14);
 
   vec2 stableCell = floor(vWorldPosition.xz / 0.3);
   float cellTint = hash(stableCell) - 0.5;
@@ -98,10 +113,18 @@ void main() {
   color = mix(color, color * vec3(1.12, 0.98, 0.82), warmMix * 0.2);
 
   float grid = gridLine(vUv);
-  float gridDistanceFade = 1.0 - smoothstep(8.0, 15.0, viewDistance);
-  grid *= gridDistanceFade;
-  float gridIntensity = grid * (0.07 + uRain * 0.08) * (0.45 + vRawWave * 0.45);
+  float gridDistanceFade = 1.0 - smoothstep(14.0, 48.0 + uStorm * 20.0, viewDistance);
+  float voxelSurfaceGrid = gridLine(vWorldPosition.xz * 0.075);
+  voxelSurfaceGrid *= (1.0 - smoothstep(22.0, 68.0, viewDistance)) * (uStorm * 0.92 + rainBlueSignature * 0.22);
+  grid = max(grid * gridDistanceFade, voxelSurfaceGrid);
+  float gridIntensity = grid * (0.08 + uRain * 0.05 + uStorm * 0.07) * (0.45 + vRawWave * 0.45);
   color = mix(color, vec3(0.5, 0.86, 0.88), gridIntensity);
+  float stormContourPhase = vWave * (uToonSteps + 2.0) + fbm(vWorldPosition.xz * 0.18) * 0.38;
+  float stormContourDistance = min(fract(stormContourPhase), 1.0 - fract(stormContourPhase));
+  float stormSurfaceContour = 1.0 - smoothstep(0.035, 0.14 + fwidth(stormContourPhase), stormContourDistance);
+  stormSurfaceContour *= stormToonContrast * (1.0 - smoothstep(24.0, 72.0, viewDistance));
+  color = mix(color, vec3(0.02, 0.22, 0.27), stormSurfaceContour * 0.24);
+  color += stormSurfaceContour * smoothstep(0.58, 0.98, vRawWave) * uWeatherRimColor * 0.12;
 
   vec2 rainSurfaceCells = vec2(72.0, 48.0);
   float rainCell = hash(floor(vUv * rainSurfaceCells));
@@ -110,8 +133,14 @@ void main() {
   float rainChance = smoothstep(0.82 - uRain * 0.12, 0.96 - uRain * 0.04, rainCell);
   float rainSpark = rainPulse * rainChance * uRain;
   float ripple = smoothstep(0.46, 0.5, abs(fract(length(vUv * 24.0 + rainCell) - uTime * 1.8) - 0.5));
+  float rainCurtain = smoothstep(
+    0.5,
+    0.86,
+    fbm(vWorldPosition.xz * 0.055 + vec2(-uTime * 0.08, uTime * 0.035))
+  ) * uRainCurtain;
   color += rainSpark * vec3(0.28, 0.54, 0.78);
   color += ripple * uRain * 0.026 * vec3(0.46, 0.78, 0.92);
+  color = mix(color, uWeatherFogColor, rainCurtain * 0.16);
 
   float currentAngle = radians(uCurrentDirection);
   vec2 currentDirection = normalize(vec2(cos(currentAngle), sin(currentAngle)));
@@ -140,9 +169,11 @@ void main() {
   float glitterMask = smoothstep(0.78 - glitterWidth, 0.78 + glitterWidth, glitterNoise);
   float toonSpecular = smoothstep(0.46, 0.54, specular * glitterMask) * nearToonRead;
   color += translucentGlow * vec3(0.12, 0.42, 0.38);
-  color += fresnel * mix(vec3(0.08, 0.28, 0.34), vec3(0.34, 0.78, 0.84), uClarity) * (0.16 + uSurfaceDetail * 0.16);
+  color += fresnel * mix(vec3(0.08, 0.28, 0.34), uWeatherRimColor, uClarity) * (0.16 + uSurfaceDetail * 0.16);
   color += specular * glitterMask * glitterDetailFade * (0.06 + uClarity * 0.12) * vec3(0.86, 1.0, 0.94);
   color += toonSpecular * glitterDetailFade * (0.08 + uClarity * 0.14) * vec3(0.82, 1.0, 0.9);
+  float lightningRim = uLightningPulse * (0.2 + fresnel * 1.8) * (0.25 + nearToonRead * 0.75);
+  color += lightningRim * uWeatherLightningTint;
 
   float crestNoise = fbm(vUv * 14.0 + vec2(uTime * 0.16, -uTime * 0.1));
   float crestGate = smoothstep(0.62, 0.9, vRawWave + vSlope * 0.16);
@@ -154,13 +185,44 @@ void main() {
   color *= 0.88 + depthFade * 0.12 + opticalDepth * 0.12 + skyFill * 0.08;
   color *= 1.0 - uCloudCover * 0.04 - uStorm * 0.06;
   float horizonMist = smoothstep(18.0, 46.0, viewDistance);
-  vec3 horizonWaterColor = mix(vec3(0.5, 0.82, 0.86), vec3(0.58, 0.74, 0.82), uCloudCover + uStorm * 0.4);
-  color = mix(color, horizonWaterColor, horizonMist * (0.42 + uCloudCover * 0.12));
+  float stylizedFogBand = smoothstep(
+    0.38,
+    0.78,
+    fbm(vec2(viewDistance * 0.04, vWorldPosition.y * 1.8 + uTime * 0.035))
+  );
+  float fogDistanceWeight = smoothstep(14.0, 52.0, viewDistance);
+  float nearFogRelease = 1.0 - smoothstep(8.0, 24.0 + uStorm * 8.0, viewDistance);
+  float weatherFog = clamp(
+    horizonMist * uWeatherFogDensity * (0.74 + uRainCurtain * 0.12)
+      + stylizedFogBand * uRainCurtain * 0.14 * fogDistanceWeight
+      + rainCurtain * (0.1 + fogDistanceWeight * 0.12),
+    0.0,
+    0.58 + uRainCurtain * 0.16
+  );
+  weatherFog *= mix(0.76, 1.0, fogDistanceWeight);
+  weatherFog *= 1.0 - nearFogRelease * (0.32 + uStorm * 0.24);
+  vec3 horizonWaterColor = mix(uWeatherFogColor, vec3(0.5, 0.88, 0.9), max(0.0, 0.38 - uStorm));
+  color = mix(color, horizonWaterColor, weatherFog);
 
   float edgeDistance = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
   float edgeFade = smoothstep(0.004, 0.045, edgeDistance);
   color = mix(color * vec3(0.72, 0.86, 0.92), color, edgeFade);
+  float stormInk = stormSurfaceContour * (0.18 + uRainCurtain * 0.18);
+  color = mix(color, vec3(0.008, 0.16, 0.2), stormInk);
+  color += stormSurfaceContour * smoothstep(0.56, 1.0, vRawWave) * uWeatherRimColor * 0.1;
+  float stormRainSheet = smoothstep(
+    0.52,
+    0.78,
+    fbm(vWorldPosition.xz * vec2(0.06, 0.2) + vec2(-uTime * 0.035, uTime * 0.018))
+  ) * uStorm * (0.28 + uRainCurtain * 0.22);
+  color = mix(color, vec3(0.006, 0.11, 0.15), stormRainSheet * 0.22);
+  color += stormRainSheet * uWeatherRimColor * 0.035;
+  float stormGridInk = voxelSurfaceGrid * uStorm;
+  color = mix(color, vec3(0.002, 0.08, 0.11), stormGridInk * 0.78);
+  color += stormGridInk * uWeatherRimColor * 0.08;
 
-  float surfaceAlpha = (mix(0.9, 0.97, uClarity) - uStorm * 0.03) * mix(0.9, 1.0, edgeFade);
+  float foregroundStormWindow = (1.0 - smoothstep(18.0, 56.0, viewDistance)) * uStorm * uStorm;
+  float weatherTransparency = uStorm * 0.12 + foregroundStormWindow * 0.36 + uRainCurtain * 0.05;
+  float surfaceAlpha = clamp((mix(0.82, 0.94, uClarity) - weatherTransparency) * mix(0.9, 1.0, edgeFade), 0.38, 0.94);
   gl_FragColor = vec4(color, surfaceAlpha);
 }

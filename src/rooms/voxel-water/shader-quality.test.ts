@@ -61,9 +61,11 @@ describe('voxel water shader stability', () => {
     expect(fragmentShader).not.toContain('crestNoise * 0.18');
   });
 
-  it('uses an explicit high-opacity water volume alpha instead of a near-opaque magic expression', () => {
+  it('uses an explicit weather-responsive water volume alpha instead of an opaque magic expression', () => {
     expect(fragmentShader).toContain('surfaceAlpha');
-    expect(fragmentShader).toContain('mix(0.9, 0.97, uClarity)');
+    expect(fragmentShader).toContain('weatherTransparency');
+    expect(fragmentShader).toContain('foregroundStormWindow');
+    expect(fragmentShader).toContain('mix(0.82, 0.94, uClarity)');
   });
 
   it('uses seeded layout randomness for repeatable visual QA', () => {
@@ -87,8 +89,10 @@ describe('voxel water shader stability', () => {
 
   it('uses less emissive voxel column material for a refined water read', () => {
     expect(runtimeSource).toContain('0x32cddd');
-    expect(runtimeSource).toContain('stormColumnColor');
-    expect(runtimeSource).toContain('0.42 + settings.clarity * 0.2 + settings.foam * 0.04');
+    expect(runtimeSource).toContain('columnTint');
+    expect(runtimeSource).toContain(
+      '0.36 + settings.clarity * 0.18 + settings.foam * 0.04 + weatherLook.rainCurtain * 0.04',
+    );
   });
 
   it('reserves spray particles for high-foam or storm conditions', () => {
@@ -154,5 +158,44 @@ describe('voxel water shader stability', () => {
     expect(qaSource).toContain('toonBandSeparation');
     expect(qaSource).toContain('waterLuma');
     expect(qaSource).toContain('waterSaturationRange');
+  });
+
+  it('centralizes weather art direction in distinct look definitions', () => {
+    expect(runtimeSource).toContain('WEATHER_LOOKS');
+    expect(runtimeSource).toContain('waterTint');
+    expect(runtimeSource).toContain('fogColor');
+    expect(runtimeSource).toContain('ambientColor');
+    expect(runtimeSource).toContain('sunColor');
+    expect(runtimeSource).toContain('rimColor');
+    expect(runtimeSource).toContain('fogDensity');
+    expect(runtimeSource).toContain('lightningTint');
+    expect(runtimeSource).toMatch(/clear:\s*{/);
+    expect(runtimeSource).toMatch(/rain:\s*{/);
+    expect(runtimeSource).toMatch(/storm:\s*{/);
+  });
+
+  it('passes stylized weather fog and lighting uniforms to the water shader', () => {
+    expect(runtimeSource).toContain('uWeatherWaterTint');
+    expect(runtimeSource).toContain('uWeatherFogColor');
+    expect(runtimeSource).toContain('uWeatherRimColor');
+    expect(runtimeSource).toContain('uWeatherLightningTint');
+    expect(runtimeSource).toContain('uWeatherFogDensity');
+    expect(runtimeSource).toContain('uRainCurtain');
+    expect(runtimeSource).toContain('uLightningPulse');
+    expect(fragmentShader).toContain('stylizedFogBand');
+    expect(fragmentShader).toContain('weatherFog');
+    expect(fragmentShader).toContain('nearFogRelease');
+    expect(fragmentShader).toContain('stormToonContrast');
+    expect(fragmentShader).toContain('stormSurfaceContour');
+    expect(fragmentShader).toContain('stormRainSheet');
+    expect(fragmentShader).toContain('stormGridInk');
+    expect(fragmentShader).toContain('rainCurtain');
+    expect(fragmentShader).toContain('lightningRim');
+  });
+
+  it('tracks weather color signatures during visual QA', () => {
+    expect(qaSource).toContain('colorSignature');
+    expect(qaSource).toContain('hueMean');
+    expect(qaSource).toContain('weatherSeparation');
   });
 });
