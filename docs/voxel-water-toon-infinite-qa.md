@@ -172,3 +172,39 @@ Visual decision:
 - Clear is intentionally bright mint-cyan, with the voxel grid readable under a translucent toon water sheet.
 - Rain now shifts the whole body to blue-gray instead of only changing the sky.
 - Storm keeps a much darker deep-teal body, with rain particles, dim rim blocks, and far-field bands carrying the weather read. It remains lower-contrast by design, but no longer shares the Clear palette.
+
+## Performance And Surface Readability Pass
+
+Follow-up target:
+
+- Recover the visible frame-rate drop caused by the `144 x 144` near-field voxel budget.
+- Keep the voxel surface legible in Clear and Storm without returning to a small center island.
+- Preserve the static GitHub Pages deployment model: no worker, no backend solver, and no WebGPU-only path.
+
+Implementation notes:
+
+- Rebalanced the near field to `64 x 64` instances with larger `0.62` spacing and a slight camera-aligned offset/yaw, keeping the field viewport-scale while cutting instance count from `20,736` to `4,096`.
+- Reduced the far shader plane to `72` segments and expanded its size to `156`, hiding plane edges without adding vertex cost.
+- Precomputed static voxel cell position, depth, edge fade, and seeded noise data; geometry updates now run on an `8 FPS` cadence and color refreshes are throttled.
+- Capped Voxel Water's internal render scale to `0.6` and disabled MSAA for this fill-rate-heavy room; Glass keeps the normal renderer path.
+- Simplified fragment noise: clear weather skips storm/rain grid work, storm/rain branches use conditional noise, and high-frequency normal/glitter/crest detail now uses cheaper analytic waves.
+- Added a lightweight near-field `LineSegments` overlay for surface readability, with offscreen line endpoints to avoid visible edge seams.
+
+Final local QA after this performance/readability pass:
+
+| Label | Preset | Mean Delta | Strong Ratio | Sky Luma | Water Luma | Toon Band Separation | Voxel Local Contrast | Water Hue | Sky Hue |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `perf-readability-r17-clear` | default | 3.763 | 0.03852 | 176.68 | 162.38 | 8.556 | 1.879 | 177.32 | 180.85 |
+| `perf-readability-r17-storm` | storm | 5.074 | 0.07465 | 69.31 | 107.97 | 0.503 | 1.153 | 185.64 | 197.68 |
+
+No-screenshot RAF sample after the pass:
+
+- Clear: `17.82 FPS`, max frame delta `66.8 ms`.
+- Storm: `17.12 FPS`, max frame delta `66.8 ms`.
+- Canvas backing store: `517 x 501` for an `862 x 836` CSS viewport.
+
+Visual decision:
+
+- The pass prioritizes stable frame pacing and a readable toon voxel surface over the earlier ultra-dense grid.
+- Storm remains darker than Clear, but the body color is no longer black and the surface grid remains visible enough for inspection.
+- The remaining compromise is that the near-field grid is more graphic than physical; this is acceptable for the room's shader-showcase role and can later be replaced by a clipmap/LOD voxel field if free camera navigation is added.

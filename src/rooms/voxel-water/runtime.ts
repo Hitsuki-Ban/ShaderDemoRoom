@@ -9,7 +9,10 @@ import {
   DynamicDrawUsage,
   Fog,
   Group,
+  InstancedBufferAttribute,
   InstancedMesh,
+  LineBasicMaterial,
+  LineSegments,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -128,9 +131,9 @@ const WEATHER_LOOKS = {
     lightningTint: new Color(0xd8ffff),
     cloudColor: new Color(0x465766),
     backgroundColor: new Color(0x546c78),
-    columnTint: new Color(0x0d6c77),
-    columnTopTint: new Color(0x7de0cd),
-    columnEmissive: new Color(0x0d6470),
+    columnTint: new Color(0x156f7b),
+    columnTopTint: new Color(0xa3efd9),
+    columnEmissive: new Color(0x238d98),
     fogDensity: 0.62,
     fogNear: 20,
     fogFar: 58,
@@ -138,9 +141,9 @@ const WEATHER_LOOKS = {
     lightningIntensity: 0.42,
     ambientBase: 1.28,
     sunBase: 1.18,
-    columnTintMix: 0.62,
-    columnBrightness: 0.82,
-    columnLightFloor: 0.04,
+    columnTintMix: 0.5,
+    columnBrightness: 0.96,
+    columnLightFloor: 0.12,
     columnOpacity: 1,
     cloudOpacityBase: 0.28,
   },
@@ -149,11 +152,16 @@ const WEATHER_LOOKS = {
 const PRESENTATION_DRIFT_AMPLITUDE = 0.018;
 const PRESENTATION_DRIFT_SPEED = 0.035;
 const RAIN_DROP_COUNT = 420;
-const WATER_PLANE_SIZE = 104;
-const WATER_PLANE_SEGMENTS = 192;
-const VOXEL_GRID_SIDE = 144;
-const VOXEL_SPACING = 0.26;
-const VOXEL_SIZE = 0.25;
+const WATER_PLANE_SIZE = 156;
+const WATER_PLANE_SEGMENTS = 72;
+const VOXEL_GRID_SIDE = 64;
+const VOXEL_SPACING = 0.62;
+const VOXEL_SIZE = 0.6;
+const VOXEL_FIELD_OFFSET_X = 8;
+const VOXEL_FIELD_OFFSET_Z = 0;
+const VOXEL_FIELD_YAW = -0.045;
+const COLUMN_GEOMETRY_FPS = 8;
+const COLUMN_COLOR_REFRESH_INTERVAL = 3;
 const SKY_RADIUS = 62;
 const OCEAN_SNAP_SIZE = VOXEL_SPACING * 8;
 const INFINITE_OCEAN_STRATEGY = 'hybrid-near-voxel-field-camera-relative-far-plane';
@@ -204,12 +212,16 @@ export function createRoomRuntime(
   const warmColumnColor = new Color(0xc8ffd6);
   const coolColumnColor = new Color(0x91e4ff);
   const edgeMistColumnColor = new Color(0xc8f5ee);
+  const stormShadowColumnColor = new Color(0x073f49);
   const clockColor = new Color();
   const weatherColumnColor = new Color();
   const cameraRelativeOceanOffset = new Vector3();
   const oceanUniformOrigin = new Vector2();
   const random = createSeededRandom(0x5ea9f1);
   const initialWeatherLook = WEATHER_LOOKS[settings.weather];
+  let columnFrame = 0;
+  let colorRefreshRequested = true;
+  let lastColumnUpdateElapsed = Number.NEGATIVE_INFINITY;
 
   scene.add(root);
   scene.fog = new Fog(initialWeatherLook.fogColor, initialWeatherLook.fogNear, initialWeatherLook.fogFar);
@@ -306,9 +318,59 @@ export function createRoomRuntime(
     columnMaterial,
     columnCount,
   );
+  columns.instanceColor = new InstancedBufferAttribute(new Float32Array(columnCount * 3).fill(1), 3);
   columns.instanceMatrix.setUsage(DynamicDrawUsage);
+  columns.rotation.y = VOXEL_FIELD_YAW;
   columns.renderOrder = 2;
   root.add(columns);
+
+  const cellPositionsX = new Float32Array(columnCount);
+  const cellPositionsZ = new Float32Array(columnCount);
+  const cellEdgeFade = new Float32Array(columnCount);
+  const cellDepthFade = new Float32Array(columnCount);
+  const cellNoise = new Float32Array(columnCount);
+  const gridOffset = ((columnsPerSide - 1) * VOXEL_SPACING) / 2;
+  for (let z = 0; z < columnsPerSide; z += 1) {
+    for (let x = 0; x < columnsPerSide; x += 1) {
+      const index = z * columnsPerSide + x;
+      const px = x * VOXEL_SPACING - gridOffset + VOXEL_FIELD_OFFSET_X;
+      const pz = z * VOXEL_SPACING - gridOffset + VOXEL_FIELD_OFFSET_Z;
+      const edgeDistance = Math.min(x, z, columnsPerSide - 1 - x, columnsPerSide - 1 - z) / (columnsPerSide * 0.18);
+      cellPositionsX[index] = px;
+      cellPositionsZ[index] = pz;
+      cellEdgeFade[index] = Math.min(1, Math.max(0, edgeDistance));
+      cellDepthFade[index] = Math.min(1, Math.max(0, (pz + gridOffset) / (gridOffset * 2)));
+      cellNoise[index] = hashCell(x, z) - 0.5;
+    }
+  }
+
+  const gridExtent = gridOffset + VOXEL_SPACING * 0.5;
+  const gridLinePadding = 28;
+  const gridLinePositions = new Float32Array((columnsPerSide - 1) * 2 * 3);
+  let gridLineIndex = 0;
+  for (let i = 1; i < columnsPerSide; i += 1) {
+    const position = -gridExtent + i * VOXEL_SPACING + VOXEL_FIELD_OFFSET_Z;
+    gridLinePositions[gridLineIndex++] = -gridExtent + VOXEL_FIELD_OFFSET_X - gridLinePadding;
+    gridLinePositions[gridLineIndex++] = 0.03;
+    gridLinePositions[gridLineIndex++] = position;
+    gridLinePositions[gridLineIndex++] = gridExtent + VOXEL_FIELD_OFFSET_X + gridLinePadding;
+    gridLinePositions[gridLineIndex++] = 0.03;
+    gridLinePositions[gridLineIndex++] = position;
+  }
+  const gridLineGeometry = new BufferGeometry();
+  gridLineGeometry.setAttribute('position', new BufferAttribute(gridLinePositions, 3));
+  const gridLineMaterial = new LineBasicMaterial({
+    color: 0x1599a0,
+    transparent: true,
+    opacity: 0.14,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const gridOverlay = new LineSegments(gridLineGeometry, gridLineMaterial);
+  gridOverlay.rotation.y = VOXEL_FIELD_YAW;
+  gridOverlay.renderOrder = 5;
+  root.add(gridOverlay);
 
   const rainGeometry = new BufferGeometry();
   const rainPositions = new Float32Array(RAIN_DROP_COUNT * 3);
@@ -424,16 +486,17 @@ export function createRoomRuntime(
     columnMaterial.color.set(0xffffff);
     columnMaterial.emissive.copy(weatherLook.columnEmissive);
     columnMaterial.opacity = weatherLook.columnOpacity;
-    columnMaterial.roughness = 0.72 - settings.clarity * 0.14 + settings.rain * 0.08;
-    columnMaterial.emissiveIntensity = 0.52 + settings.clarity * 0.24 + settings.foam * 0.06 + weatherLook.rainCurtain * 0.08;
+    columnMaterial.roughness = 0.7 - settings.clarity * 0.12 + settings.rain * 0.08;
+    columnMaterial.emissiveIntensity =
+      0.46 + settings.clarity * 0.2 + settings.foam * 0.05 + weatherLook.rainCurtain * 0.07 + weatherLook.strength * 0.16;
+    gridLineMaterial.color.copy(weatherLook.columnTint).lerp(weatherLook.columnTopTint, 0.28 + weatherLook.strength * 0.18);
+    gridLineMaterial.opacity = 0.05 + settings.surfaceDetail * 0.04 + weatherLook.strength * 0.12;
   };
 
   updateUniforms();
 
-  const updateColumns = (elapsed: number) => {
+  const updateColumns = (elapsed: number, updateColors: boolean) => {
     let index = 0;
-    const spacing = VOXEL_SPACING;
-    const offset = ((columnsPerSide - 1) * spacing) / 2;
     const currentAngle = (settings.currentDirection * Math.PI) / 180;
     const currentX = Math.cos(currentAngle);
     const currentZ = Math.sin(currentAngle);
@@ -442,8 +505,8 @@ export function createRoomRuntime(
 
     for (let z = 0; z < columnsPerSide; z += 1) {
       for (let x = 0; x < columnsPerSide; x += 1) {
-        const px = x * spacing - offset;
-        const pz = z * spacing - offset;
+        const px = cellPositionsX[index];
+        const pz = cellPositionsZ[index];
         const timeScale = 0.44 + settings.wind * 0.15;
         const chopShape = 1.2 + settings.chop * 2.6;
         const currentPhase = (px * currentX + pz * currentZ) * (0.9 + settings.currentStrength * 0.8) - elapsed * (0.24 + settings.currentStrength * 0.54);
@@ -456,10 +519,9 @@ export function createRoomRuntime(
         const crestLift = normalized > 0.76 ? settings.foam * 0.12 : 0;
         const columnHeightValue = normalized;
         const height = 0.2 + Math.max(0.08, columnHeightValue * settings.waveHeight * (0.7 + settings.swell * 0.22) + crestLift * 0.75);
-        const edgeDistance = Math.min(x, z, columnsPerSide - 1 - x, columnsPerSide - 1 - z) / (columnsPerSide * 0.18);
-        const edgeFade = Math.min(1, Math.max(0, edgeDistance));
-        const depthFade = Math.min(1, Math.max(0, (pz + offset) / (offset * 2)));
-        const cellNoise = hashCell(x, z) - 0.5;
+        const edgeFade = cellEdgeFade[index];
+        const depthFade = cellDepthFade[index];
+        const cellNoiseValue = cellNoise[index];
         const crestAmount = Math.max(0, normalized - 0.72) * settings.foam;
         const columnColorBand = Math.round(normalized * Math.max(1, settings.toonSteps - 1)) / Math.max(1, settings.toonSteps - 1);
 
@@ -467,30 +529,34 @@ export function createRoomRuntime(
         columnScale.set(1, height * (0.8 + edgeFade * 0.2), 1);
         matrix.compose(columnPosition, columns.quaternion, columnScale);
         columns.setMatrixAt(index, matrix);
-        columnColor.copy(lowColumnColor).lerp(highColumnColor, Math.min(1, columnColorBand * 1.18));
-        columnColor.lerp(troughColumnColor, Math.max(0, 0.6 - normalized) * 0.26);
-        columnColor.lerp(foamColumnColor, Math.min(0.5, crestAmount * 1.4));
-        weatherColumnColor.copy(weatherLook.columnTint);
-        columnColor.lerp(weatherColumnColor, weatherLook.columnTintMix + settings.cloudCover * 0.02);
-        const foregroundColumnGlow = depthFade * (0.08 + settings.clarity * 0.05) * (1 - storm * 0.72);
-        const columnValueLift =
-          weatherLook.columnLightFloor + Math.max(0, columnColorBand - 0.25) * 0.3 + crestAmount * 0.24 + foregroundColumnGlow;
-        columnColor.lerp(weatherLook.columnTopTint, Math.min(0.34, columnValueLift));
-        columnColor.lerp(settings.colorTemperature >= 0 ? warmColumnColor : coolColumnColor, Math.abs(settings.colorTemperature) * 0.24);
-        columnColor.lerp(edgeMistColumnColor, (1 - edgeFade) * 0.32);
-        columnColor.offsetHSL(
-          cellNoise * settings.voxelColorVariance * (0.045 + storm * 0.02),
-          settings.voxelColorVariance * (0.08 + storm * 0.04),
-          cellNoise * settings.voxelColorVariance * 0.08 + storm * (columnColorBand - 0.48) * 0.12,
-        );
-        columnColor.multiplyScalar(weatherLook.columnBrightness + depthFade * 0.24 + edgeFade * 0.12 + storm * 0.06);
-        columns.setColorAt(index, columnColor);
+        if (updateColors) {
+          columnColor.copy(lowColumnColor).lerp(highColumnColor, Math.min(1, columnColorBand * 1.18));
+          columnColor.lerp(troughColumnColor, Math.max(0, 0.6 - normalized) * 0.26);
+          columnColor.lerp(foamColumnColor, Math.min(0.5, crestAmount * 1.4));
+          weatherColumnColor.copy(weatherLook.columnTint);
+          columnColor.lerp(weatherColumnColor, weatherLook.columnTintMix + settings.cloudCover * 0.02);
+          columnColor.lerp(stormShadowColumnColor, Math.max(0, 0.68 - columnColorBand) * storm * 0.42);
+          columnColor.lerp(weatherLook.columnEmissive, (0.04 + settings.foam * 0.03) * (0.4 + storm));
+          const foregroundColumnGlow = depthFade * (0.12 + settings.clarity * 0.08) * (1 - storm * 0.36);
+          const columnValueLift =
+            weatherLook.columnLightFloor + Math.max(0, columnColorBand - 0.25) * (0.36 + storm * 0.12) + crestAmount * 0.26 + foregroundColumnGlow;
+          columnColor.lerp(weatherLook.columnTopTint, Math.min(0.52 + storm * 0.16, columnValueLift));
+          columnColor.lerp(settings.colorTemperature >= 0 ? warmColumnColor : coolColumnColor, Math.abs(settings.colorTemperature) * 0.24);
+          columnColor.lerp(edgeMistColumnColor, (1 - edgeFade) * 0.32);
+          columnColor.offsetHSL(
+            cellNoiseValue * settings.voxelColorVariance * (0.045 + storm * 0.02),
+            settings.voxelColorVariance * (0.08 + storm * 0.04),
+            cellNoiseValue * settings.voxelColorVariance * 0.08 + storm * (columnColorBand - 0.42) * 0.16,
+          );
+          columnColor.multiplyScalar(weatherLook.columnBrightness + depthFade * 0.3 + edgeFade * 0.14 + storm * 0.12);
+          columns.setColorAt(index, columnColor);
+        }
         index += 1;
       }
     }
 
     columns.instanceMatrix.needsUpdate = true;
-    if (columns.instanceColor) {
+    if (updateColors && columns.instanceColor) {
       columns.instanceColor.needsUpdate = true;
     }
   };
@@ -498,6 +564,7 @@ export function createRoomRuntime(
   return {
     updateSettings(nextSettings) {
       settings = nextSettings;
+      colorRefreshRequested = true;
       updateUniforms();
     },
     resize({ width, height }: RoomSize) {
@@ -536,7 +603,15 @@ export function createRoomRuntime(
         Math.sin(animatedSkyTime * Math.PI * 2) * 5,
       );
       sky.position.copy(camera.position);
-      updateColumns(elapsed);
+      const shouldUpdateColumns =
+        colorRefreshRequested || columnFrame === 0 || elapsed - lastColumnUpdateElapsed >= 1 / COLUMN_GEOMETRY_FPS;
+      if (shouldUpdateColumns) {
+        const updateColumnColors = colorRefreshRequested || columnFrame % COLUMN_COLOR_REFRESH_INTERVAL === 0;
+        updateColumns(elapsed, updateColumnColors);
+        lastColumnUpdateElapsed = elapsed;
+        colorRefreshRequested = false;
+        columnFrame += 1;
+      }
       rain.position.y -= delta * (5 + settings.wind * 1.8);
       if (rain.position.y < -4) {
         rain.position.y = 1.5;
@@ -544,17 +619,19 @@ export function createRoomRuntime(
       spray.rotation.y += delta * (0.18 + settings.wind * 0.04);
       spray.position.y = Math.sin(elapsed * 0.45) * 0.05;
       cloudDeck.position.x = Math.sin(elapsed * 0.08) * 0.6;
+      gridOverlay.position.y = Math.sin(elapsed * 0.28) * 0.012;
       root.rotation.y = Math.sin(elapsed * PRESENTATION_DRIFT_SPEED) * PRESENTATION_DRIFT_AMPLITUDE;
       renderer.render(scene, camera);
     },
     dispose() {
       disposeObject(root);
       sky.geometry.dispose();
-      [waterMaterial, skyMaterial, columnMaterial, rainMaterial, sprayMaterial, cloudMaterial].forEach((material: Material) =>
+      [waterMaterial, skyMaterial, columnMaterial, rainMaterial, sprayMaterial, cloudMaterial, gridLineMaterial].forEach((material: Material) =>
         material.dispose(),
       );
       rainGeometry.dispose();
       sprayGeometry.dispose();
+      gridLineGeometry.dispose();
       renderer.info.reset();
     },
   };

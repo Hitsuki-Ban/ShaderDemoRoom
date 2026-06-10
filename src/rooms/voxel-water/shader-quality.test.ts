@@ -92,12 +92,15 @@ describe('voxel water shader stability', () => {
     expect(runtimeSource).not.toContain('new Float32Array(640 * 3)');
   });
 
-  it('uses less emissive voxel column material for a refined water read', () => {
+  it('uses a luminous toon voxel column material for a bright readable water surface', () => {
     expect(runtimeSource).toContain('0x8efff0');
     expect(runtimeSource).toContain('columnTint');
+    expect(runtimeSource).toContain('new MeshStandardMaterial');
+    expect(runtimeSource).toContain('new InstancedBufferAttribute');
     expect(runtimeSource).toContain(
-      '0.52 + settings.clarity * 0.24 + settings.foam * 0.06 + weatherLook.rainCurtain * 0.08',
+      'weatherLook.rainCurtain * 0.07 + weatherLook.strength * 0.16',
     );
+    expect(runtimeSource).toContain('toneMapped: false');
   });
 
   it('keeps voxel blocks luminous through weather-specific top tint and light floor controls', () => {
@@ -107,9 +110,11 @@ describe('voxel water shader stability', () => {
     expect(runtimeSource).toContain('columnOpacity');
     expect(runtimeSource).toContain('columnValueLift');
     expect(runtimeSource).toContain('foregroundColumnGlow');
+    expect(runtimeSource).toContain('stormShadowColumnColor');
     expect(runtimeSource).toContain('weatherLook.columnTopTint');
     expect(runtimeSource).toContain('columnMaterial.emissive.copy(weatherLook.columnEmissive)');
     expect(runtimeSource).toContain('columnMaterial.opacity = weatherLook.columnOpacity');
+    expect(runtimeSource).toContain('columnColor.lerp(weatherLook.columnEmissive');
     expect(runtimeSource).toContain('toneMapped: false');
     expect(runtimeSource).toContain('transparent: true');
     expect(runtimeSource).toContain('opacity: 1');
@@ -127,16 +132,53 @@ describe('voxel water shader stability', () => {
     expect(runtimeSource).toContain('0.44 + settings.wind * 0.15');
   });
 
-  it('defines a fine viewport-scale voxel ocean budget instead of a small center island', () => {
-    expect(runtimeSource).toContain('VOXEL_GRID_SIDE = 144');
-    expect(runtimeSource).toContain('WATER_PLANE_SIZE = 104');
-    expect(runtimeSource).toContain('VOXEL_SPACING = 0.26');
+  it('defines a viewport-scale voxel ocean budget that stays within the QA performance target', () => {
+    expect(runtimeSource).toContain('VOXEL_GRID_SIDE = 64');
+    expect(runtimeSource).toContain('WATER_PLANE_SIZE = 156');
+    expect(runtimeSource).toContain('WATER_PLANE_SEGMENTS = 72');
+    expect(runtimeSource).toContain('VOXEL_SPACING = 0.62');
+    expect(runtimeSource).toContain('VOXEL_SIZE = 0.6');
+    expect(runtimeSource).toContain('VOXEL_FIELD_OFFSET_X = 8');
+    expect(runtimeSource).toContain('VOXEL_FIELD_YAW = -0.045');
   });
 
   it('uses instanced voxel colors for per-cell art direction', () => {
     expect(runtimeSource).toContain('vertexColors: true');
     expect(runtimeSource).toContain('columns.setColorAt');
     expect(runtimeSource).toContain('columns.instanceColor.needsUpdate = true');
+  });
+
+  it('adds a lightweight near-field grid overlay so voxel cells stay readable in storm lighting', () => {
+    expect(runtimeSource).toContain('new LineSegments');
+    expect(runtimeSource).toContain('gridOverlay');
+    expect(runtimeSource).toContain('new LineBasicMaterial');
+    expect(runtimeSource).toContain('depthTest: false');
+    expect(runtimeSource).toContain('gridLineMaterial.opacity');
+    expect(runtimeSource).toContain('for (let i = 1; i < columnsPerSide; i += 1)');
+    expect(runtimeSource).toContain('gridLinePadding');
+  });
+
+  it('throttles expensive per-instance color refreshes while keeping geometry on a fixed cadence', () => {
+    expect(runtimeSource).toContain('colorRefreshRequested');
+    expect(runtimeSource).toContain('updateColumnColors');
+    expect(runtimeSource).toContain('updateColumns(elapsed, updateColumnColors)');
+    expect(runtimeSource).toContain('if (updateColors)');
+  });
+
+  it('caps voxel geometry refresh rate and precomputes static per-cell data', () => {
+    expect(runtimeSource).toContain('COLUMN_GEOMETRY_FPS = 8');
+    expect(runtimeSource).toContain('COLUMN_COLOR_REFRESH_INTERVAL = 3');
+    expect(runtimeSource).toContain('lastColumnUpdateElapsed');
+    expect(runtimeSource).toContain('cellPositionsX');
+    expect(runtimeSource).toContain('cellDepthFade');
+    expect(runtimeSource).toContain('cellNoise');
+  });
+
+  it('keeps fragment water noise within a lightweight two-octave budget', () => {
+    expect(fragmentShader).toContain('for (int i = 0; i < 2; i++)');
+    expect(fragmentShader).toContain('if (uStorm > 0.02)');
+    expect(fragmentShader).toContain('if (uRain > 0.02 || uRainCurtain > 0.02)');
+    expect(fragmentShader).not.toContain('for (int i = 0; i < 3; i++)');
   });
 
   it('adds dynamic sky uniforms without requiring volumetric cloud rendering', () => {

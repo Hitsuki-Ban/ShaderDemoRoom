@@ -13,6 +13,13 @@ interface ShaderCanvasProps {
   onStats: (stats: RoomStats) => void;
 }
 
+function getRenderPixelRatio(roomId: string) {
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const maxPixelRatio = roomId === 'voxel-water' ? 0.6 : 2;
+
+  return Math.min(devicePixelRatio, maxPixelRatio);
+}
+
 export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
@@ -35,7 +42,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
 
     const renderer = new WebGLRenderer({
       canvas,
-      antialias: true,
+      antialias: room.id !== 'voxel-water',
       alpha: false,
       powerPreference: 'high-performance',
     });
@@ -54,7 +61,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
       const rect = parent.getBoundingClientRect();
       const width = Math.max(1, Math.floor(rect.width));
       const height = Math.max(1, Math.floor(rect.height));
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      const pixelRatio = getRenderPixelRatio(room.id);
 
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height, false);
@@ -73,12 +80,13 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
 
     const tick = (timestamp?: number) => {
       timer.update(timestamp);
-      const delta = Math.min(timer.getDelta(), 0.05);
+      const rawDelta = timer.getDelta();
+      const delta = Math.min(rawDelta, 0.05);
       const elapsed = timer.getElapsed();
       runtimeRef.current?.render({ elapsed, delta });
 
       frames += 1;
-      fpsElapsed += delta;
+      fpsElapsed += rawDelta;
 
       if (fpsElapsed >= 0.5) {
         onStats({
@@ -105,7 +113,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
       renderer.dispose();
       rendererRef.current = null;
     };
-  }, [onStats]);
+  }, [onStats, room.id]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -136,7 +144,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
         runtime.resize({
           width: Math.max(1, Math.floor(rect.width)),
           height: Math.max(1, Math.floor(rect.height)),
-          pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+          pixelRatio: getRenderPixelRatio(room.id),
         });
       }
 
