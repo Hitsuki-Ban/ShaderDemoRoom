@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fragmentShader from './water.frag.glsl?raw';
 import runtimeSource from './runtime.ts?raw';
 import vertexShader from './water.vert.glsl?raw';
+import qaSource from '../../../scripts/water-qa.mjs?raw';
 
 describe('voxel water shader stability', () => {
   it('avoids hard fragment thresholds that create temporal sparkle popping', () => {
@@ -86,8 +87,8 @@ describe('voxel water shader stability', () => {
 
   it('uses less emissive voxel column material for a refined water read', () => {
     expect(runtimeSource).toContain('0x23b8ce');
-    expect(runtimeSource).toContain('0x328fa2');
-    expect(runtimeSource).toContain('0.16 + settings.clarity * 0.1 + settings.foam * 0.05');
+    expect(runtimeSource).toContain('stormColumnColor');
+    expect(runtimeSource).toContain('0.34 + settings.clarity * 0.16 + settings.foam * 0.05');
   });
 
   it('reserves spray particles for high-foam or storm conditions', () => {
@@ -100,5 +101,38 @@ describe('voxel water shader stability', () => {
     expect(runtimeSource).not.toContain('0.55 + settings.wind * 0.2');
     expect(vertexShader).toContain('0.44 + uWind * 0.15');
     expect(runtimeSource).toContain('0.44 + settings.wind * 0.15');
+  });
+
+  it('defines a fine viewport-scale voxel ocean budget instead of a small center island', () => {
+    expect(runtimeSource).toContain('VOXEL_GRID_SIDE = 72');
+    expect(runtimeSource).toContain('WATER_PLANE_SIZE = 68');
+    expect(runtimeSource).toContain('VOXEL_SPACING = 0.26');
+  });
+
+  it('uses instanced voxel colors for per-cell art direction', () => {
+    expect(runtimeSource).toContain('vertexColors: true');
+    expect(runtimeSource).toContain('columns.setColorAt');
+    expect(runtimeSource).toContain('columns.instanceColor.needsUpdate = true');
+  });
+
+  it('adds dynamic sky uniforms without requiring volumetric cloud rendering', () => {
+    expect(runtimeSource).toContain('skyMaterial');
+    expect(runtimeSource).toContain('uSkyTime');
+    expect(runtimeSource).toContain('uColorTemperature');
+    expect(runtimeSource).not.toContain('PMREMGenerator');
+  });
+
+  it('visualizes ocean current through flow ribbons rather than dense arrows', () => {
+    expect(fragmentShader).toContain('uCurrentDirection');
+    expect(fragmentShader).toContain('uCurrentStrength');
+    expect(fragmentShader).toContain('flowRibbon');
+    expect(runtimeSource).not.toContain('ArrowHelper');
+  });
+
+  it('records region-aware ocean QA metrics for the new visual baseline', () => {
+    expect(qaSource).toContain('regionMetrics');
+    expect(qaSource).toContain('waterCoverage');
+    expect(qaSource).toContain('skyLuma');
+    expect(qaSource).toContain('voxelLocalContrast');
   });
 });

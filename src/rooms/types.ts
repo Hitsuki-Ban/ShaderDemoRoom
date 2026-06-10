@@ -15,6 +15,11 @@ export interface VoxelWaterSettings {
   foam: number;
   clarity: number;
   surfaceDetail: number;
+  currentDirection: number;
+  currentStrength: number;
+  skyTime: number;
+  colorTemperature: number;
+  voxelColorVariance: number;
 }
 
 export interface GlassOpticsSettings {

@@ -9,6 +9,11 @@ describe('voxel water art-directable settings', () => {
       foam: expect.any(Number),
       clarity: expect.any(Number),
       surfaceDetail: expect.any(Number),
+      currentDirection: expect.any(Number),
+      currentStrength: expect.any(Number),
+      skyTime: expect.any(Number),
+      colorTemperature: expect.any(Number),
+      voxelColorVariance: expect.any(Number),
     });
   });
 
@@ -24,5 +29,7 @@ describe('voxel water art-directable settings', () => {
     expect(voxelWaterDefaults.chop).toBeLessThanOrEqual(0.36);
     expect(voxelWaterDefaults.foam).toBeLessThanOrEqual(0.4);
     expect(voxelWaterDefaults.surfaceDetail).toBeLessThanOrEqual(0.45);
+    expect(voxelWaterDefaults.currentStrength).toBeLessThanOrEqual(0.55);
+    expect(voxelWaterDefaults.voxelColorVariance).toBeLessThanOrEqual(0.5);
   });
 });

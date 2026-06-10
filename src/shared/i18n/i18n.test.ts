@@ -8,6 +8,8 @@ describe('i18n translator seam', () => {
     expect(t('app.title')).toBe('Shader Demo Room');
     expect(t('rooms.voxelWater.title')).toBe('Voxel Water');
     expect(t('rooms.voxelWater.controls.surfaceDetail')).toBe('Surface Detail');
+    expect(t('rooms.voxelWater.controls.currentDirection')).toBe('Current Direction');
+    expect(t('rooms.voxelWater.controls.skyTime')).toBe('Sky Time');
     expect(t('rooms.glassOptics.controls.lightPath')).toBe('Light Path');
   });
 

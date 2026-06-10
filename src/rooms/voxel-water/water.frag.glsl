@@ -6,6 +6,11 @@ uniform float uToonSteps;
 uniform float uFoam;
 uniform float uClarity;
 uniform float uSurfaceDetail;
+uniform float uCurrentDirection;
+uniform float uCurrentStrength;
+uniform float uSkyTime;
+uniform float uColorTemperature;
+uniform float uVoxelColorVariance;
 
 varying vec2 vUv;
 varying float vWave;
@@ -69,6 +74,14 @@ void main() {
   color = mix(color, shallow, smoothstep(0.48, 0.92, bands) * uClarity * 0.36);
   color = mix(color, stormTint, uStorm * 0.34 + uCloudCover * 0.17);
 
+  vec2 stableCell = floor(vWorldPosition.xz / 0.3);
+  float cellTint = hash(stableCell) - 0.5;
+  float warmMix = smoothstep(0.0, 1.0, uColorTemperature);
+  float coolMix = smoothstep(0.0, 1.0, -uColorTemperature);
+  color += cellTint * uVoxelColorVariance * vec3(0.035, 0.07, 0.055);
+  color = mix(color, color * vec3(0.8, 0.92, 1.12), coolMix * 0.24);
+  color = mix(color, color * vec3(1.12, 0.98, 0.82), warmMix * 0.2);
+
   float grid = gridLine(vUv);
   float gridDistanceFade = 1.0 - smoothstep(8.0, 15.0, length(cameraPosition - vWorldPosition));
   grid *= gridDistanceFade;
@@ -84,6 +97,16 @@ void main() {
   float ripple = smoothstep(0.46, 0.5, abs(fract(length(vUv * 24.0 + rainCell) - uTime * 1.8) - 0.5));
   color += rainSpark * vec3(0.28, 0.54, 0.78);
   color += ripple * uRain * 0.026 * vec3(0.46, 0.78, 0.92);
+
+  float currentAngle = radians(uCurrentDirection);
+  vec2 currentDirection = normalize(vec2(cos(currentAngle), sin(currentAngle)));
+  vec2 currentRight = vec2(-currentDirection.y, currentDirection.x);
+  vec2 flowSpace = vec2(dot(vWorldPosition.xz, currentRight), dot(vWorldPosition.xz, currentDirection));
+  float flowNoise = fbm(flowSpace * vec2(0.28, 1.25) + vec2(0.0, -uTime * (0.1 + uCurrentStrength * 0.42)));
+  float flowRibbon = smoothstep(0.7, 0.88, flowNoise + vRawWave * 0.12) * uCurrentStrength;
+  flowRibbon *= (0.28 + uFoam * 0.46) * (1.0 - smoothstep(9.0, 18.0, length(cameraPosition - vWorldPosition)));
+  color = mix(color, foamColor, flowRibbon * 0.18);
+  color += flowRibbon * vec3(0.06, 0.18, 0.2);
 
   vec3 viewDir = normalize(cameraPosition - vWorldPosition);
   float normalDetailFade = (1.0 - smoothstep(6.5, 14.0, length(cameraPosition - vWorldPosition))) * uSurfaceDetail;
@@ -109,13 +132,14 @@ void main() {
   color = mix(color, foamColor, clamp(crestFoam, 0.0, 0.48));
 
   float depthFade = smoothstep(10.0, -5.0, vWorldPosition.z);
-  color *= 0.68 + depthFade * 0.22 + opticalDepth * 0.18;
+  float skyFill = smoothstep(0.05, 0.82, sin(uSkyTime * 3.14159265));
+  color *= 0.66 + depthFade * 0.22 + opticalDepth * 0.18 + skyFill * 0.05;
   color *= 1.0 - uCloudCover * 0.08 - uStorm * 0.1;
 
   float edgeDistance = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
-  float edgeFade = smoothstep(0.015, 0.12, edgeDistance);
-  color = mix(vec3(0.006, 0.028, 0.045), color, edgeFade);
+  float edgeFade = smoothstep(0.004, 0.045, edgeDistance);
+  color = mix(color * vec3(0.72, 0.86, 0.92), color, edgeFade);
 
-  float surfaceAlpha = (mix(0.9, 0.97, uClarity) - uStorm * 0.03) * mix(0.72, 1.0, edgeFade);
+  float surfaceAlpha = (mix(0.9, 0.97, uClarity) - uStorm * 0.03) * mix(0.9, 1.0, edgeFade);
   gl_FragColor = vec4(color, surfaceAlpha);
 }

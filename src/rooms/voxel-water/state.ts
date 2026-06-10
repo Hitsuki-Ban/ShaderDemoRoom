@@ -12,6 +12,11 @@ export const voxelWaterDefaults: VoxelWaterSettings = {
   foam: 0.36,
   clarity: 0.74,
   surfaceDetail: 0.42,
+  currentDirection: 34,
+  currentStrength: 0.42,
+  skyTime: 0.42,
+  colorTemperature: -0.08,
+  voxelColorVariance: 0.34,
 };
 
 export const voxelWaterStormPreset: VoxelWaterSettings = {
@@ -26,18 +31,28 @@ export const voxelWaterStormPreset: VoxelWaterSettings = {
   foam: 0.84,
   clarity: 0.34,
   surfaceDetail: 0.86,
+  currentDirection: 58,
+  currentStrength: 0.78,
+  skyTime: 0.18,
+  colorTemperature: -0.36,
+  voxelColorVariance: 0.46,
 };
 
 export const voxelWaterCalmPreset: VoxelWaterSettings = {
   ...voxelWaterDefaults,
   weather: 'clear',
-  wind: 0.62,
+  wind: 0.46,
   rain: 0.05,
-  waveHeight: 0.42,
+  waveHeight: 0.24,
   cloudCover: 0.16,
-  swell: 0.36,
-  chop: 0.18,
-  foam: 0.22,
-  clarity: 0.86,
-  surfaceDetail: 0.35,
+  swell: 0.2,
+  chop: 0.12,
+  foam: 0.16,
+  clarity: 0.84,
+  surfaceDetail: 0.28,
+  currentDirection: 18,
+  currentStrength: 0.18,
+  skyTime: 0.58,
+  colorTemperature: 0.08,
+  voxelColorVariance: 0.18,
 };

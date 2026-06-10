@@ -23,7 +23,7 @@ page.on('pageerror', (error) => consoleErrors.push(error.message));
 
 for (const room of rooms) {
   await page.goto(`${baseUrl}/#/room/${room}`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1600);
   await page.screenshot({
     path: `${outputDir}/${room}-desktop.png`,
     fullPage: false,
@@ -32,7 +32,7 @@ for (const room of rooms) {
 
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'networkidle' });
-await page.waitForTimeout(800);
+await page.waitForTimeout(1400);
 await page.screenshot({
   path: `${outputDir}/voxel-water-mobile.png`,
   fullPage: true,

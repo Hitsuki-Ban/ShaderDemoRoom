@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Clock, SRGBColorSpace, WebGLRenderer } from 'three';
+import { SRGBColorSpace, Timer, WebGLRenderer } from 'three';
 import type {
   AnyRoomSettings,
   RoomDefinition,
@@ -66,13 +66,15 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas.parentElement ?? canvas);
 
-    const clock = new Clock();
+    const timer = new Timer();
+    timer.connect(document);
     let frames = 0;
     let fpsElapsed = 0;
 
-    const tick = () => {
-      const delta = Math.min(clock.getDelta(), 0.05);
-      const elapsed = clock.elapsedTime;
+    const tick = (timestamp?: number) => {
+      timer.update(timestamp);
+      const delta = Math.min(timer.getDelta(), 0.05);
+      const elapsed = timer.getElapsed();
       runtimeRef.current?.render({ elapsed, delta });
 
       frames += 1;
@@ -99,6 +101,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
       observer.disconnect();
       runtimeRef.current?.dispose();
       runtimeRef.current = null;
+      timer.dispose();
       renderer.dispose();
       rendererRef.current = null;
     };
