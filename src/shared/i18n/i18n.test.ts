@@ -1,0 +1,19 @@
+import { describe, expect, it } from 'vitest';
+import { createTranslator, messages } from './index';
+
+describe('i18n translator seam', () => {
+  it('translates global and room-scoped copy in English by default', () => {
+    const t = createTranslator(messages, 'en');
+
+    expect(t('app.title')).toBe('Shader Demo Room');
+    expect(t('rooms.voxelWater.title')).toBe('Voxel Water');
+    expect(t('rooms.glassOptics.controls.lightPath')).toBe('Light Path');
+  });
+
+  it('falls back to English and then the key for missing copy', () => {
+    const t = createTranslator(messages, 'ja');
+
+    expect(t('app.rooms')).toBe('Rooms');
+    expect(t('rooms.unknown.title')).toBe('rooms.unknown.title');
+  });
+});
