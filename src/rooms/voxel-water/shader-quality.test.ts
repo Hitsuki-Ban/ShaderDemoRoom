@@ -77,7 +77,7 @@ describe('voxel water shader stability', () => {
   });
 
   it('uses a tight camera clip range for better depth precision', () => {
-    expect(runtimeSource).toContain('new PerspectiveCamera(45, 1, 0.3, 48)');
+    expect(runtimeSource).toContain('new PerspectiveCamera(45, 1, 0.3, 72)');
   });
 
   it('keeps rain particles sparse enough for a refined default view', () => {
@@ -86,9 +86,9 @@ describe('voxel water shader stability', () => {
   });
 
   it('uses less emissive voxel column material for a refined water read', () => {
-    expect(runtimeSource).toContain('0x23b8ce');
+    expect(runtimeSource).toContain('0x32cddd');
     expect(runtimeSource).toContain('stormColumnColor');
-    expect(runtimeSource).toContain('0.34 + settings.clarity * 0.16 + settings.foam * 0.05');
+    expect(runtimeSource).toContain('0.42 + settings.clarity * 0.2 + settings.foam * 0.04');
   });
 
   it('reserves spray particles for high-foam or storm conditions', () => {
@@ -104,8 +104,8 @@ describe('voxel water shader stability', () => {
   });
 
   it('defines a fine viewport-scale voxel ocean budget instead of a small center island', () => {
-    expect(runtimeSource).toContain('VOXEL_GRID_SIDE = 72');
-    expect(runtimeSource).toContain('WATER_PLANE_SIZE = 68');
+    expect(runtimeSource).toContain('VOXEL_GRID_SIDE = 96');
+    expect(runtimeSource).toContain('WATER_PLANE_SIZE = 104');
     expect(runtimeSource).toContain('VOXEL_SPACING = 0.26');
   });
 
@@ -134,5 +134,25 @@ describe('voxel water shader stability', () => {
     expect(qaSource).toContain('waterCoverage');
     expect(qaSource).toContain('skyLuma');
     expect(qaSource).toContain('voxelLocalContrast');
+  });
+
+  it('uses a brighter translucent toon seawater palette instead of a storm-muted default', () => {
+    expect(fragmentShader).toContain('toonRamp');
+    expect(fragmentShader).toContain('toonEdgeAccent');
+    expect(fragmentShader).toContain('translucentGlow');
+    expect(fragmentShader).toContain('vec3(0.34, 0.92, 0.96)');
+    expect(fragmentShader).not.toContain('uStorm * 0.34 + uCloudCover * 0.17');
+  });
+
+  it('documents an infinite-ocean-ready hybrid strategy without adding heavy FFT runtime', () => {
+    expect(runtimeSource).toContain('INFINITE_OCEAN_STRATEGY');
+    expect(runtimeSource).toContain('cameraRelativeOceanOffset');
+    expect(runtimeSource).not.toContain('FFT');
+  });
+
+  it('tracks brightness and toon band metrics during water QA', () => {
+    expect(qaSource).toContain('toonBandSeparation');
+    expect(qaSource).toContain('waterLuma');
+    expect(qaSource).toContain('waterSaturationRange');
   });
 });

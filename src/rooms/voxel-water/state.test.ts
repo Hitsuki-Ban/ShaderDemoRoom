@@ -25,9 +25,11 @@ describe('voxel water art-directable settings', () => {
   });
 
   it('keeps the default room stable enough for first-view visual QA', () => {
-    expect(voxelWaterDefaults.rain).toBeLessThanOrEqual(0.36);
-    expect(voxelWaterDefaults.chop).toBeLessThanOrEqual(0.36);
-    expect(voxelWaterDefaults.foam).toBeLessThanOrEqual(0.4);
+    expect(voxelWaterDefaults.rain).toBeLessThanOrEqual(0.24);
+    expect(voxelWaterDefaults.cloudCover).toBeLessThanOrEqual(0.28);
+    expect(voxelWaterDefaults.clarity).toBeGreaterThanOrEqual(0.82);
+    expect(voxelWaterDefaults.chop).toBeLessThanOrEqual(0.32);
+    expect(voxelWaterDefaults.foam).toBeLessThanOrEqual(0.34);
     expect(voxelWaterDefaults.surfaceDetail).toBeLessThanOrEqual(0.45);
     expect(voxelWaterDefaults.currentStrength).toBeLessThanOrEqual(0.55);
     expect(voxelWaterDefaults.voxelColorVariance).toBeLessThanOrEqual(0.5);

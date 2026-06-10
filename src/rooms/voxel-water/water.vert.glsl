@@ -6,6 +6,7 @@ uniform float uSwell;
 uniform float uChop;
 uniform float uFoam;
 uniform float uSurfaceDetail;
+uniform vec2 uOceanOriginXZ;
 
 varying vec2 vUv;
 varying float vWave;
@@ -31,12 +32,12 @@ WaveSample waveLayer(vec2 p, vec2 direction, float frequency, float amplitude, f
 WaveSample waveField(vec2 p) {
   float timeScale = 0.44 + uWind * 0.15;
   float chopShape = mix(1.2, 3.8, uChop);
-  WaveSample a = waveLayer(p, vec2(0.92, 0.34), 1.35, 0.42 + uSwell * 0.2, uTime * timeScale * 1.05, chopShape);
-  WaveSample b = waveLayer(p, vec2(-0.38, 0.93), 2.15, 0.24 + uChop * 0.12, -uTime * timeScale * 1.42, 1.6 + uChop * 2.1);
-  WaveSample c = waveLayer(p, vec2(0.55, -0.83), 3.7, 0.12 + uSurfaceDetail * 0.1, uTime * timeScale * 2.15, 1.2 + uSurfaceDetail * 2.0);
-  WaveSample d = waveLayer(p, vec2(-0.98, -0.18), 0.72, 0.3 * uSwell, -uTime * timeScale * 0.68, 1.4);
+  WaveSample a = waveLayer(p, vec2(0.78, 0.62), 1.12, 0.32 + uSwell * 0.15, uTime * timeScale * 0.92, chopShape);
+  WaveSample b = waveLayer(p, vec2(-0.64, 0.77), 2.45, 0.28 + uChop * 0.12, -uTime * timeScale * 1.36, 1.6 + uChop * 2.1);
+  WaveSample c = waveLayer(p, vec2(0.18, -0.98), 4.2, 0.16 + uSurfaceDetail * 0.08, uTime * timeScale * 1.9, 1.2 + uSurfaceDetail * 2.0);
+  WaveSample d = waveLayer(p, vec2(-0.95, 0.31), 0.86, 0.18 * uSwell, -uTime * timeScale * 0.72, 1.4);
   WaveSample result;
-  result.height = (a.height + b.height + c.height + d.height) / max(1.0, 1.08 + uSwell * 0.62);
+  result.height = (a.height + b.height + c.height + d.height) / max(1.0, 1.02 + uSwell * 0.54);
   result.gradient = a.gradient + b.gradient + c.gradient + d.gradient;
   return result;
 }
@@ -44,12 +45,12 @@ WaveSample waveField(vec2 p) {
 void main() {
   vUv = uv;
   vec3 displaced = position;
-  WaveSample wave = waveField(position.xz);
+  vec2 oceanWorldXZ = position.xz + uOceanOriginXZ;
+  WaveSample wave = waveField(oceanWorldXZ);
   float normalizedWave = clamp(wave.height, 0.0, 1.0);
-  float stepped = floor(normalizedWave * uToonSteps) / max(uToonSteps, 1.0);
-  float signedStep = stepped * 2.0 - 1.0;
-  displaced.y += signedStep * uWaveHeight * (0.72 + uSwell * 0.34);
-  vWave = stepped;
+  float signedWave = normalizedWave * 2.0 - 1.0;
+  displaced.y += signedWave * uWaveHeight * (0.72 + uSwell * 0.34);
+  vWave = normalizedWave;
   vRawWave = normalizedWave;
   vSlope = clamp(length(wave.gradient), 0.0, 1.0);
   vFoam = smoothstep(0.78 - uFoam * 0.12, 0.98, normalizedWave + vSlope * 0.18);

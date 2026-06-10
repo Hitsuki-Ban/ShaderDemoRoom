@@ -156,9 +156,13 @@ function measureRegion(frame, region) {
   let lumaTotal = 0;
   let saturationMin = 1;
   let saturationMax = 0;
+  let lumaMin = 255;
+  let lumaMax = 0;
   let waterLike = 0;
   let localContrastTotal = 0;
   let localContrastCount = 0;
+  const lumaSamples = [];
+  const lumaBands = new Array(12).fill(0);
   let count = 0;
 
   for (let y = y0; y < y1; y += sampleScale) {
@@ -171,6 +175,10 @@ function measureRegion(frame, region) {
       const pixelSaturation = saturation(r, g, b);
 
       lumaTotal += pixelLuma;
+      lumaMin = Math.min(lumaMin, pixelLuma);
+      lumaMax = Math.max(lumaMax, pixelLuma);
+      lumaSamples.push(pixelLuma);
+      lumaBands[Math.min(lumaBands.length - 1, Math.floor(pixelLuma / 22))] += 1;
       saturationMin = Math.min(saturationMin, pixelSaturation);
       saturationMax = Math.max(saturationMax, pixelSaturation);
       if (g > r * 1.05 && b > r * 1.08 && g + b > 92) {
@@ -190,10 +198,18 @@ function measureRegion(frame, region) {
     }
   }
 
+  lumaSamples.sort((a, b) => a - b);
+  const p10 = lumaSamples[Math.floor(lumaSamples.length * 0.1)] ?? lumaMin;
+  const p90 = lumaSamples[Math.floor(lumaSamples.length * 0.9)] ?? lumaMax;
+  const activeLumaBands = lumaBands.filter((bandCount) => bandCount / count > 0.018).length;
+
   return {
     lumaMean: lumaTotal / count,
+    waterLuma: lumaTotal / count,
     waterCoverage: waterLike / count,
     saturationRange: saturationMax - saturationMin,
+    waterSaturationRange: saturationMax - saturationMin,
+    toonBandSeparation: (p90 - p10) / Math.max(1, activeLumaBands - 1),
     voxelLocalContrast: localContrastTotal / localContrastCount,
   };
 }
@@ -216,8 +232,11 @@ function regionMetrics(frame) {
     },
     water: {
       lumaMean: Number(water.lumaMean.toFixed(2)),
+      waterLuma: Number(water.waterLuma.toFixed(2)),
       waterCoverage: Number(water.waterCoverage.toFixed(5)),
       saturationRange: Number(water.saturationRange.toFixed(4)),
+      waterSaturationRange: Number(water.waterSaturationRange.toFixed(4)),
+      toonBandSeparation: Number(water.toonBandSeparation.toFixed(3)),
       voxelLocalContrast: Number(water.voxelLocalContrast.toFixed(3)),
     },
   };
@@ -245,11 +264,10 @@ if (preset === 'storm') {
   await page.getByRole('button', { name: 'Storm preset' }).click();
 } else if (preset === 'calm') {
   await page.getByRole('button', { name: 'Calm preset' }).click();
+} else if (preset === 'rain') {
+  await page.getByRole('button', { name: 'Rain' }).click();
 }
 await page.waitForTimeout(1200);
-
-const fullPagePath = `${outputDir}/${label}-page.png`;
-await page.screenshot({ path: fullPagePath, fullPage: false });
 
 const canvasShell = page.locator('.canvas-shell');
 const frames = [];
@@ -261,6 +279,9 @@ for (let i = 0; i < frameCount; i += 1) {
   }
   frames.push(parsePng(screenshot));
 }
+
+const fullPagePath = `${outputDir}/${label}-page.png`;
+await page.screenshot({ path: fullPagePath, fullPage: false });
 
 await browser.close();
 
@@ -295,6 +316,9 @@ const result = {
   maxDelta: Number(summarize(diffs, 'maxDelta').toFixed(1)),
   regionMetrics: regions,
   waterCoverage: regions.water.waterCoverage,
+  waterLuma: regions.water.waterLuma,
+  waterSaturationRange: regions.water.waterSaturationRange,
+  toonBandSeparation: regions.water.toonBandSeparation,
   skyLuma: regions.sky.skyLuma,
   voxelLocalContrast: regions.water.voxelLocalContrast,
   diffs: diffs.map((diff) => ({

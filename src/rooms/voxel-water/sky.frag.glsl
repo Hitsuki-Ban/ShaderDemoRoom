@@ -40,15 +40,15 @@ void main() {
   float coolMix = smoothstep(0.0, 1.0, -uColorTemperature);
   float warmMix = smoothstep(0.0, 1.0, uColorTemperature);
 
-  vec3 nightZenith = vec3(0.014, 0.028, 0.055);
-  vec3 dayZenith = mix(vec3(0.045, 0.19, 0.34), vec3(0.08, 0.3, 0.5), 1.0 - coolMix);
-  vec3 stormZenith = vec3(0.045, 0.06, 0.082);
+  vec3 nightZenith = vec3(0.018, 0.04, 0.075);
+  vec3 dayZenith = mix(vec3(0.09, 0.3, 0.52), vec3(0.16, 0.44, 0.68), 1.0 - coolMix);
+  vec3 stormZenith = vec3(0.09, 0.12, 0.15);
   vec3 zenith = mix(nightZenith, dayZenith, dayStrength);
-  zenith = mix(zenith, stormZenith, uStorm * 0.74 + uCloudCover * 0.18);
+  zenith = mix(zenith, stormZenith, uStorm * 0.62 + uCloudCover * 0.12);
 
-  vec3 horizon = mix(vec3(0.025, 0.09, 0.13), vec3(0.33, 0.64, 0.68), dayStrength);
-  horizon = mix(horizon, vec3(0.72, 0.43, 0.25), warmEdge * (0.22 + warmMix * 0.32));
-  horizon = mix(horizon, vec3(0.055, 0.07, 0.09), uStorm * 0.58);
+  vec3 horizon = mix(vec3(0.04, 0.14, 0.18), vec3(0.48, 0.82, 0.86), dayStrength);
+  horizon = mix(horizon, vec3(0.82, 0.56, 0.34), warmEdge * (0.18 + warmMix * 0.28));
+  horizon = mix(horizon, vec3(0.14, 0.18, 0.2), uStorm * 0.48);
 
   vec3 color = mix(horizon, zenith, smoothstep(0.28, 0.96, vertical));
 
@@ -56,12 +56,15 @@ void main() {
   float cloudNoise = fbm(cloudUv * 2.4 + vec2(uTime * 0.012, -uTime * 0.006));
   float cloudMask = smoothstep(0.47, 0.74, cloudNoise + uCloudCover * 0.42 + uStorm * 0.16);
   float cloudBand = smoothstep(0.18, 0.44, vertical) * (1.0 - smoothstep(0.86, 1.0, vertical));
-  vec3 cloudColor = mix(vec3(0.22, 0.34, 0.4), vec3(0.66, 0.82, 0.82), dayStrength);
-  cloudColor = mix(cloudColor, vec3(0.16, 0.18, 0.21), uStorm * 0.65);
+  vec3 cloudColor = mix(vec3(0.28, 0.42, 0.48), vec3(0.78, 0.92, 0.9), dayStrength);
+  cloudColor = mix(cloudColor, vec3(0.22, 0.26, 0.3), uStorm * 0.58);
   color = mix(color, cloudColor, cloudMask * cloudBand * (0.12 + uCloudCover * 0.36 + uStorm * 0.12));
 
   vec2 sunDir = normalize(vec2(cos(uSkyTime * 6.2831853), sin(uSkyTime * 6.2831853)));
-  float sunDisc = smoothstep(0.998, 1.0, dot(normalize(direction.xz), sunDir)) * smoothstep(0.32, 0.8, vertical);
+  float sunAlignment = dot(normalize(direction.xz), sunDir);
+  float sunGlow = smoothstep(0.78, 1.0, sunAlignment) * smoothstep(0.18, 0.7, vertical);
+  float sunDisc = smoothstep(0.998, 1.0, sunAlignment) * smoothstep(0.32, 0.8, vertical);
+  color += sunGlow * (1.0 - uStorm) * vec3(0.16, 0.18, 0.14) * (0.12 + warmMix * 0.12);
   color += sunDisc * (1.0 - uStorm) * vec3(0.56, 0.42, 0.26) * (0.18 + warmMix * 0.16);
 
   gl_FragColor = vec4(color, 1.0);
