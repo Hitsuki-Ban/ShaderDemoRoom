@@ -1,4 +1,4 @@
-import { FlaskConical, Waves } from 'lucide-react';
+import { Archive, Droplets, FlaskConical, Waves } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { RoomDefinition, RoomId } from '../rooms/types';
@@ -12,6 +12,8 @@ interface RoomRailProps {
 const roomIcons = {
   'voxel-water': Waves,
   'glass-optics': FlaskConical,
+  'anime-liquid-orb': Droplets,
+  'ninth-tide-archive': Archive,
 } satisfies Record<RoomId, typeof Waves>;
 
 export function RoomRail({ activeRoomId, rooms, t }: RoomRailProps) {

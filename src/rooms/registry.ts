@@ -1,6 +1,8 @@
 import { lazy } from 'react';
 import type { ComponentType } from 'react';
+import { animeLiquidOrbDefaults } from './anime-liquid-orb/state';
 import { glassOpticsDefaults } from './glass-optics/state';
+import { ninthTideArchiveDefaults } from './ninth-tide-archive/state';
 import type {
   AnyRoomSettings,
   RoomControlsProps,
@@ -22,10 +24,15 @@ const loadGlassOpticsScene = () =>
   import('./glass-optics/runtime').then((module) => module as unknown as RoomRuntimeModule);
 const loadGlassOpticsControls = () =>
   import('./glass-optics/Controls').then((module) => module as unknown as AnyControlsModule);
+const loadAnimeLiquidOrbControls = () =>
+  import('./anime-liquid-orb/Controls').then((module) => module as unknown as AnyControlsModule);
+const loadNinthTideArchiveControls = () =>
+  import('./ninth-tide-archive/Controls').then((module) => module as unknown as AnyControlsModule);
 
 export const roomRegistry = [
   {
     id: 'voxel-water',
+    kind: 'shader',
     titleKey: 'rooms.voxelWater.title',
     kickerKey: 'rooms.voxelWater.kicker',
     descriptionKey: 'rooms.voxelWater.description',
@@ -40,6 +47,7 @@ export const roomRegistry = [
   },
   {
     id: 'glass-optics',
+    kind: 'shader',
     titleKey: 'rooms.glassOptics.title',
     kickerKey: 'rooms.glassOptics.kicker',
     descriptionKey: 'rooms.glassOptics.description',
@@ -51,6 +59,36 @@ export const roomRegistry = [
     loadScene: loadGlassOpticsScene,
     loadControls: loadGlassOpticsControls,
     ControlsComponent: lazy(loadGlassOpticsControls),
+  },
+  {
+    id: 'anime-liquid-orb',
+    kind: 'embedded',
+    titleKey: 'rooms.animeLiquidOrb.title',
+    kickerKey: 'rooms.animeLiquidOrb.kicker',
+    descriptionKey: 'rooms.animeLiquidOrb.description',
+    shortDescriptionKey: 'rooms.animeLiquidOrb.shortDescription',
+    i18nNamespace: 'rooms.animeLiquidOrb',
+    accent: '#ff56d8',
+    techTags: ['NPR Fluid', 'Post FX', 'Interactive Phase'],
+    defaultPreset: animeLiquidOrbDefaults,
+    embedPath: 'exhibits/anime-liquid-orb/index.html',
+    loadControls: loadAnimeLiquidOrbControls,
+    ControlsComponent: lazy(loadAnimeLiquidOrbControls),
+  },
+  {
+    id: 'ninth-tide-archive',
+    kind: 'embedded',
+    titleKey: 'rooms.ninthTideArchive.title',
+    kickerKey: 'rooms.ninthTideArchive.kicker',
+    descriptionKey: 'rooms.ninthTideArchive.description',
+    shortDescriptionKey: 'rooms.ninthTideArchive.shortDescription',
+    i18nNamespace: 'rooms.ninthTideArchive',
+    accent: '#79ead9',
+    techTags: ['Audio Reactive', 'Archive Core', 'Post FX'],
+    defaultPreset: ninthTideArchiveDefaults,
+    embedPath: 'exhibits/ninth-tide-archive/index.html',
+    loadControls: loadNinthTideArchiveControls,
+    ControlsComponent: lazy(loadNinthTideArchiveControls),
   },
 ] satisfies readonly RoomDefinition[];
 

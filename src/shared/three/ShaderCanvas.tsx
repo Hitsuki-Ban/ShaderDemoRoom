@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { SRGBColorSpace, Timer, WebGLRenderer } from 'three';
 import type {
   AnyRoomSettings,
-  RoomDefinition,
   RoomRuntime,
   RoomStats,
+  ShaderRoomDefinition,
 } from '../../rooms/types';
 
 interface ShaderCanvasProps {
-  room: RoomDefinition<AnyRoomSettings>;
+  room: ShaderRoomDefinition<AnyRoomSettings>;
   settings: AnyRoomSettings;
   onStats: (stats: RoomStats) => void;
 }

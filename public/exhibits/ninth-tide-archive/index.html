@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#010609" />
+  <meta name="description" content="《第九潮汐档案馆：无岸层》——由音乐与声呐驱动的深海 Three.js 装置。" />
+  <title>第九潮汐档案馆 · 无岸层</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --cyan: #83eadb;
+      --pale: #def9f1;
+      --ink: #010609;
+      --line: rgba(145, 234, 219, .20);
+      --progress: 0%;
+      --blackout: 1;
+      --ritual-caption: 0;
+      --phase-turn: 0;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--ink); }
+    body {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Noto Sans Mono CJK SC", monospace;
+      color: var(--pale);
+      user-select: none;
+      cursor: none;
+    }
+    #scene, canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    #scene { z-index: 0; }
+
+    /* A very light scrim keeps the image photographic rather than HUD-heavy. */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      pointer-events: none;
+      opacity: .14;
+      mix-blend-mode: soft-light;
+      background:
+        radial-gradient(ellipse at 50% 48%, transparent 0 44%, rgba(0,0,0,.38) 82%, rgba(0,0,0,.74) 100%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0, rgba(255,255,255,.012) 1px, transparent 1px, transparent 4px);
+    }
+    #blackout {
+      position: fixed;
+      inset: 0;
+      z-index: 14;
+      pointer-events: none;
+      background: #000;
+      opacity: var(--blackout);
+      transition: opacity .08s linear;
+    }
+
+    .hud {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.8s cubic-bezier(.2,.75,.2,1);
+    }
+    body.calibrated .hud { opacity: .68; }
+    body.ending .hud { opacity: 0; transition-duration: 2.4s; }
+
+    .topbar {
+      position: absolute;
+      top: max(22px, env(safe-area-inset-top));
+      left: max(24px, env(safe-area-inset-left));
+      right: max(24px, env(safe-area-inset-right));
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    .brand { max-width: min(580px, 68vw); }
+    .kicker {
+      color: rgba(177, 241, 229, .45);
+      font-size: 9px;
+      letter-spacing: .31em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .titleline { display: flex; align-items: baseline; gap: 12px; letter-spacing: .13em; }
+    .titleline strong { font-weight: 500; font-size: clamp(13px, 1.18vw, 17px); }
+    .titleline span { color: rgba(209, 249, 240, .38); font-size: 8px; }
+
+    .telemetry {
+      min-width: 238px;
+      padding: 11px 13px 10px;
+      border-top: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(4,20,25,.24), transparent 76%);
+      text-align: right;
+      font-size: 8px;
+      line-height: 1.75;
+      letter-spacing: .16em;
+      color: rgba(184, 240, 230, .44);
+    }
+    .telemetry b { color: var(--cyan); font-weight: 500; }
+
+    .phase {
+      position: absolute;
+      top: 50%;
+      left: max(24px, env(safe-area-inset-left));
+      transform: translateY(-50%);
+      display: grid;
+      grid-template-columns: 1px auto;
+      gap: 15px;
+      align-items: center;
+    }
+    .phase::before {
+      content: "";
+      height: 98px;
+      background: linear-gradient(transparent, var(--cyan), transparent);
+      opacity: .34;
+    }
+    .phase > div {
+      opacity: calc(1 - min(1, var(--phase-turn)) * .72);
+      transform: translateY(calc(var(--phase-turn) * -11px)) scale(calc(1 - var(--phase-turn) * .025));
+      filter: blur(calc(var(--phase-turn) * 6px));
+      transition: opacity .08s linear, transform .08s linear, filter .08s linear;
+      transform-origin: left center;
+    }
+    .phase-number {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(28px, 4.4vw, 62px);
+      font-weight: 400;
+      line-height: .88;
+      letter-spacing: -.04em;
+      text-shadow: 0 0 30px rgba(99, 233, 211, .22);
+    }
+    .phase-name { margin-top: 9px; font-size: 9px; letter-spacing: .24em; color: rgba(189, 242, 231, .54); }
+    .phase-sub { margin-top: 5px; font-size: 7px; letter-spacing: .17em; color: rgba(189, 242, 231, .30); }
+
+    .side-index {
+      position: absolute;
+      right: max(18px, env(safe-area-inset-right));
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      gap: 8px;
+      width: 34px;
+    }
+    .side-index i {
+      display: block;
+      height: 1px;
+      width: 9px;
+      margin-left: auto;
+      background: rgba(142, 235, 218, .15);
+      transition: width .5s ease, background-color .5s ease, box-shadow .5s ease;
+    }
+    .side-index i.active { width: 33px; background: rgba(142, 235, 218, .84); box-shadow: 0 0 12px rgba(104, 234, 212, .72); }
+
+    .bottom {
+      position: absolute;
+      left: max(24px, env(safe-area-inset-left));
+      right: max(24px, env(safe-area-inset-right));
+      bottom: max(22px, env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: minmax(130px, 230px) 1fr minmax(160px, 270px);
+      align-items: end;
+      gap: 25px;
+    }
+    .status { font-size: 7px; line-height: 1.85; letter-spacing: .17em; color: rgba(182, 235, 225, .36); }
+    .status b { color: rgba(157, 240, 222, .86); font-weight: 500; }
+    .transport { min-width: 0; }
+    .time-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; font-size: 8px; letter-spacing: .12em; color: rgba(195, 241, 231, .50); }
+    .progress { position: relative; height: 1px; background: rgba(142, 235, 218, .13); }
+    .progress::before { content: ""; position: absolute; inset: -1px auto -1px 0; width: var(--progress); background: var(--cyan); box-shadow: 0 0 10px rgba(121, 234, 217, .72); }
+    .progress::after { content: ""; position: absolute; left: var(--progress); top: -3px; width: 1px; height: 7px; background: white; box-shadow: 0 0 8px rgba(121,234,217,.8); }
+    .bands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .band { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 7px; font-size: 7px; color: rgba(182,235,225,.32); }
+    .band span { height: 1px; background: rgba(142,235,218,.12); }
+    .band span::after { content: ""; display: block; width: calc(var(--v, 0) * 100%); height: 1px; background: rgba(121,234,217,.76); box-shadow: 0 0 7px rgba(121,234,217,.55); transition: width .07s linear; }
+    .instructions { position: absolute; right: max(24px, env(safe-area-inset-right)); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 67px); font-size: 7px; line-height: 1.9; letter-spacing: .16em; color: rgba(182,235,225,.23); text-align: right; }
+
+    #gate {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 47%, rgba(4,34,42,.22) 0, rgba(1,8,12,.95) 46%, #000 100%);
+      transition: opacity 1.45s cubic-bezier(.2,.75,.2,1), visibility 1.45s;
+    }
+    #gate::before, #gate::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      width: min(70vw, 820px);
+      aspect-ratio: 1;
+      border: 1px solid rgba(117,232,214,.08);
+      box-shadow: inset 0 0 70px rgba(77,205,190,.025);
+      animation: orbit 22s linear infinite;
+    }
+    #gate::after { width: min(46vw, 540px); border-style: dashed; animation-duration: 15s; animation-direction: reverse; }
+    @keyframes orbit { to { transform: rotate(360deg); } }
+    body.entered #gate { opacity: 0; visibility: hidden; pointer-events: none; }
+    .gate-card {
+      position: relative;
+      z-index: 2;
+      width: min(660px, calc(100vw - 46px));
+      padding: 38px clamp(24px,5vw,60px) 36px;
+      text-align: center;
+      border-top: 1px solid rgba(141,234,217,.20);
+      border-bottom: 1px solid rgba(141,234,217,.11);
+      background: linear-gradient(90deg, transparent, rgba(7,29,36,.38), transparent);
+      backdrop-filter: blur(9px);
+    }
+    .sigil { width: 82px; height: 82px; margin: 0 auto 25px; position: relative; border: 1px solid rgba(121,234,217,.38); border-radius: 50%; box-shadow: inset 0 0 36px rgba(72,213,194,.07), 0 0 48px rgba(72,213,194,.06); }
+    .sigil::before { content:""; position:absolute; inset:13px; border:1px solid rgba(121,234,217,.18); transform:rotate(45deg); }
+    .sigil::after { content:""; position:absolute; inset:30px; border-radius:50%; background:rgba(171,247,232,.75); box-shadow:0 0 20px rgba(121,234,217,.9); animation: breathe 3.8s ease-in-out infinite; }
+    @keyframes breathe { 50% { opacity:.35; transform:scale(.78); } }
+    .gate-kicker { font-size: 8px; letter-spacing: .37em; color: rgba(168,239,225,.42); text-transform: uppercase; }
+    h1 { margin: 15px 0 7px; font-family: Georgia, "Noto Serif CJK SC", "Songti SC", serif; font-size: clamp(28px,5vw,58px); font-weight:400; letter-spacing:.10em; line-height:1.1; }
+    .en-title { margin:0 0 26px; color:rgba(200,245,235,.38); font-size:9px; letter-spacing:.25em; text-transform:uppercase; }
+    .prologue { max-width:500px; margin:0 auto 27px; font-family:Georgia,"Noto Serif CJK SC",serif; font-size:13px; line-height:1.9; color:rgba(216,248,238,.54); }
+    .gate-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
+    button, .file-label { appearance:none; border:1px solid rgba(121,234,217,.32); background:rgba(6,31,38,.38); color:rgba(223,252,245,.85); min-width:174px; padding:13px 19px; font:inherit; font-size:8px; letter-spacing:.22em; text-transform:uppercase; transition:background .25s,border-color .25s,box-shadow .25s,color .25s; cursor:none; }
+    button:hover, .file-label:hover { background:rgba(22,79,80,.38); border-color:rgba(121,234,217,.72); box-shadow:0 0 25px rgba(70,207,190,.10); color:white; }
+    button:disabled { opacity:.45; }
+    .secondary { min-width:auto; border-color:rgba(121,234,217,.12); color:rgba(223,252,245,.42); background:transparent; }
+    #fileInput { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+    #gateHint { min-height:18px; margin-top:15px; font-size:7px; letter-spacing:.13em; color:rgba(178,233,222,.32); }
+
+    #ritualCaption {
+      position: fixed;
+      z-index: 23;
+      left: 50%;
+      top: 50%;
+      width: min(660px, calc(100vw - 48px));
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      opacity: var(--ritual-caption);
+      transition: opacity .5s ease;
+    }
+    #ritualCaption .ritual-index { font-size: 8px; letter-spacing: .42em; color: rgba(150,234,218,.38); margin-bottom: 14px; }
+    #ritualCaption .ritual-main { font-family: Georgia,"Noto Serif CJK SC",serif; font-size: clamp(17px,2.4vw,30px); font-weight:400; letter-spacing:.12em; text-shadow:0 0 28px rgba(111,231,211,.2); }
+    #ritualCaption .ritual-sub { margin-top:10px; font-size:7px; letter-spacing:.26em; color:rgba(190,243,232,.38); }
+
+    #epilogue {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      background:#000;
+      transition: opacity 2.2s ease, visibility 2.2s;
+    }
+    body.ended #epilogue { opacity: 1; visibility: visible; pointer-events: auto; }
+    .epilogue-card { width:min(620px,calc(100vw - 48px)); text-align:center; padding:38px; }
+    .epilogue-card .roman { font-family:Georgia,serif; font-size:clamp(44px,8vw,100px); line-height:.9; color:rgba(220,250,242,.86); text-shadow:0 0 38px rgba(111,231,211,.16); }
+    .epilogue-card h2 { margin:22px 0 10px; font-family:Georgia,"Noto Serif CJK SC",serif; font-weight:400; letter-spacing:.14em; font-size:clamp(20px,3vw,36px); }
+    .epilogue-card p { margin:0 auto 28px; max-width:480px; font-family:Georgia,"Noto Serif CJK SC",serif; line-height:2; color:rgba(218,249,241,.44); font-size:12px; }
+
+    #cursor { position:fixed; z-index:80; width:24px; height:24px; margin:-12px 0 0 -12px; border:1px solid rgba(143,238,220,.50); border-radius:50%; pointer-events:none; mix-blend-mode:screen; transition:width .18s,height .18s,margin .18s,border-color .18s; }
+    #cursor::before,#cursor::after { content:""; position:absolute; background:rgba(171,246,231,.68); }
+    #cursor::before { width:4px; height:1px; top:11px; left:9px; }
+    #cursor::after { width:1px; height:4px; top:9px; left:11px; }
+    #cursor.active { width:42px; height:42px; margin:-21px 0 0 -21px; border-color:rgba(143,238,220,.88); }
+    #message { position:fixed; z-index:60; left:50%; top:17%; transform:translate(-50%,8px); opacity:0; padding:8px 12px; font-size:7px; letter-spacing:.21em; color:rgba(209,249,240,.72); border-top:1px solid rgba(121,234,217,.20); background:rgba(4,17,22,.24); pointer-events:none; transition:opacity .35s,transform .35s; }
+    #message.show { opacity:1; transform:translate(-50%,0); }
+    #phaseVeil { position:fixed; inset:0; z-index:13; pointer-events:none; opacity:var(--phase-veil,0); mix-blend-mode:screen; background:radial-gradient(circle at 50% 48%, rgba(179,255,239,.10), rgba(38,111,124,.025) 33%, transparent 62%); filter:blur(calc(var(--phase-veil,0) * 9px)); }
+    #unsupported { display:none; position:fixed; z-index:100; inset:0; place-items:center; padding:30px; background:#02080d; color:#d8f8ee; text-align:center; line-height:1.8; }
+
+    @media (max-width: 760px) {
+      .telemetry { display:none; }
+      .phase { top:42%; }
+      .bottom { grid-template-columns:1fr; gap:13px; }
+      .status,.bands,.instructions { display:none; }
+      .side-index { right:11px; }
+      .brand { max-width:86vw; }
+      .gate-card { padding-top:29px; }
+      .prologue { font-size:12px; }
+    }
+    @media (pointer: coarse) {
+      body,button,.file-label { cursor:auto; }
+      #cursor { display:none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #gate::before,#gate::after,.sigil::after { animation:none; }
+      * { scroll-behavior:auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main id="scene" aria-label="第九潮汐档案馆三维交互光场"></main>
+  <div id="blackout" aria-hidden="true"></div>
+  <div id="phaseVeil" aria-hidden="true"></div>
+
+  <section id="gate" aria-label="启动体验">
+    <div class="gate-card">
+      <div class="sigil" aria-hidden="true"></div>
+      <div class="gate-kicker">hadal record / node ix</div>
+      <h1>第九潮汐档案馆</h1>
+      <p class="en-title">Archive of the Ninth Tide · The Shoreless Layer</p>
+      <p class="prologue">海床以下，仍有一座天空。<br>它只在声呐里出现。</p>
+      <div class="gate-actions">
+        <button id="enterBtn" type="button">下潜</button>
+        <button id="silentBtn" class="secondary" type="button">静默下潜</button>
+        <label id="fileLabel" class="file-label secondary" for="fileInput" hidden>载入音频</label>
+        <input id="fileInput" type="file" accept="audio/*" />
+      </div>
+      <div id="gateHint">耳机建议 · 拖动环视 · 点击发出声呐</div>
+    </div>
+  </section>
+
+  <div id="ritualCaption" aria-hidden="true">
+    <div class="ritual-index" id="ritualIndex">I</div>
+    <div class="ritual-main" id="ritualMain">听。</div>
+    <div class="ritual-sub" id="ritualSub">LISTEN.</div>
+  </div>
+
+  <div class="hud" aria-hidden="true">
+    <header class="topbar">
+      <div class="brand">
+        <div class="kicker">hadal record / node ix</div>
+        <div class="titleline"><strong>第九潮汐档案馆</strong><span>ARCHIVE OF THE NINTH TIDE</span></div>
+      </div>
+      <div class="telemetry">
+        <div>CORE <b id="coreState">DORMANT</b></div>
+        <div>FIELD <b id="fieldState">UNLIT</b></div>
+        <div>DEPTH <b id="depthValue">−003,860 M</b></div>
+        <div>COORD <b id="coordValue">00.000 / 00.000</b></div>
+        <div>INDEX <b id="indexValue">09–0000</b></div>
+      </div>
+    </header>
+
+    <aside class="phase"><div><div class="phase-number" id="phaseNumber">I</div><div class="phase-name" id="phaseName">无月测深</div><div class="phase-sub" id="phaseSub">MOONLESS SOUNDING</div></div></aside>
+    <div class="side-index" id="sideIndex"><i class="active"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="instructions">拖动：环视　滚轮：潜航<br>点击核心：开合　点击空间：发出声呐<br>SPACE：播放 / 暂停　M：静音　F：全屏</div>
+
+    <footer class="bottom">
+      <div class="status">SIGNAL <b id="signalState">SYNTHETIC</b><br>MODE <b id="modeState">OBSERVATION</b><br>AUDIO <b id="audioState">STANDBY</b></div>
+      <div class="transport"><div class="time-row"><span id="timeNow">00:00</span><span>ARCHIVE OF THE NINTH TIDE</span><span id="timeTotal">05:54</span></div><div class="progress" id="progress"></div></div>
+      <div class="bands"><div class="band">LOW<span id="bandLow"></span></div><div class="band">MID<span id="bandMid"></span></div><div class="band">HIGH<span id="bandHigh"></span></div></div>
+    </footer>
+  </div>
+
+  <section id="epilogue" aria-label="体验结束">
+    <div class="epilogue-card">
+      <div class="roman">IX</div>
+      <h2>归档。</h2>
+      <p>灯灭以后，海仍在读。</p>
+      <button id="replayBtn" type="button">再次下潜</button>
+    </div>
+  </section>
+
+  <div id="message"></div>
+  <div id="cursor" aria-hidden="true"></div>
+  <div id="unsupported">当前浏览器无法建立 WebGL 场景。请使用最新版 Chrome、Edge、Firefox 或 Safari。</div>
+  <audio id="audio" src="./archive.mp3" preload="auto" playsinline></audio>
+  <script defer src="./app.js"></script>
+</body>
+</html>

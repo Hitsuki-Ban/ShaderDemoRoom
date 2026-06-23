@@ -18,6 +18,8 @@ export const messages: MessageCatalog = {
       status: 'Deployment status',
       staticReady: 'GitHub Pages ready',
       sceneStats: 'Scene statistics',
+      embeddedRuntime: 'Embedded runtime',
+      standaloneExhibit: 'Standalone exhibit',
       language: 'Language',
       source: 'Source',
       loadingControls: 'Loading controls...',
@@ -82,6 +84,34 @@ export const messages: MessageCatalog = {
           showCaustics: 'Show Caustics',
         },
       },
+      animeLiquidOrb: {
+        title: 'Anime Liquid Orb',
+        kicker: 'NPR fluid specimen',
+        shortDescription: 'Interactive toon liquid character',
+        description:
+          'MIZU//KOKORO is an embedded anime-style liquid specimen with phase switching, sculptable ripples, bloom, chroma, and sound-reactive controls inside the exhibit.',
+        controls: {
+          runtime: 'Embedded Exhibit',
+          runtimeNote:
+            'This room preserves the original full-screen exhibit runtime inside the shared showroom shell.',
+          reload: 'Reload exhibit',
+          openStandalone: 'Open standalone',
+        },
+      },
+      ninthTideArchive: {
+        title: 'Ninth Tide Archive',
+        kicker: 'Audio archive room',
+        shortDescription: 'Audio-reactive shoreless archive',
+        description:
+          'Archive of the Ninth Tide: The Shoreless Layer is a submerged Three.js installation driven by synthetic or user-started audio, with sonar pulses, depth telemetry, and post-processing.',
+        controls: {
+          runtime: 'Embedded Exhibit',
+          runtimeNote:
+            'Use the dive gate inside the frame to start audio or enter silently. The showroom controls reload or open the standalone version.',
+          reload: 'Reload exhibit',
+          openStandalone: 'Open standalone',
+        },
+      },
     },
   },
   'zh-CN': {
@@ -94,6 +124,8 @@ export const messages: MessageCatalog = {
       status: '部署状态',
       staticReady: 'GitHub Pages 就绪',
       sceneStats: '场景统计',
+      embeddedRuntime: '嵌入式运行时',
+      standaloneExhibit: '独立展品',
       language: '语言',
       source: '源码',
       loadingControls: '正在加载控制器...',
@@ -156,6 +188,34 @@ export const messages: MessageCatalog = {
           thickness: '厚度',
           autoRotate: '自动旋转',
           showCaustics: '显示焦散',
+        },
+      },
+      animeLiquidOrb: {
+        title: '动漫液体球',
+        kicker: 'NPR 流体标本',
+        shortDescription: '可交互的 Toon 液态角色',
+        description:
+          'MIZU//KOKORO 以嵌入式展品形式保留原始动漫风格液体球体验，支持相位切换、拖拽塑形、涟漪、辉光、色差和声场交互。',
+        controls: {
+          runtime: '嵌入式展品',
+          runtimeNote:
+            '该展厅在共享展厅外壳中保留原始全屏展品运行时。',
+          reload: '重载展品',
+          openStandalone: '独立打开',
+        },
+      },
+      ninthTideArchive: {
+        title: '第九潮汐档案馆',
+        kicker: '声音档案展厅',
+        shortDescription: '音频驱动的无岸层档案馆',
+        description:
+          '《第九潮汐档案馆：无岸层》是由合成或用户启动音频驱动的 Three.js 水下装置，包含声呐脉冲、深度遥测和后期处理。',
+        controls: {
+          runtime: '嵌入式展品',
+          runtimeNote:
+            '可在画面内的下潜入口启动音频或静默进入；展厅控制器负责重载或独立打开。',
+          reload: '重载展品',
+          openStandalone: '独立打开',
         },
       },
     },

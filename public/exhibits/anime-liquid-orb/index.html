@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#03060d" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><circle cx=%2232%22 cy=%2232%22 r=%2225%22 fill=%22%2350e8ff%22/><circle cx=%2224%22 cy=%2222%22 r=%227%22 fill=%22white%22/></svg>" />
+    <meta name="description" content="MIZU//KOKORO：可交互动漫风格化液体球 Three.js 渲染技术展示。" />
+    <title>MIZU//KOKORO — Interactive Anime Liquid Orb</title>
+    <script type="module" crossorigin src="./assets/index-CR_YyWXx.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DXkfpgO2.css">
+  </head>
+  <body>
+    <main id="app" aria-label="MIZU KOKORO 交互式液体球展品">
+      <canvas id="scene" aria-label="可交互三维液体球画布"></canvas>
+
+      <div class="frame frame--top" aria-hidden="true"></div>
+      <div class="frame frame--bottom" aria-hidden="true"></div>
+      <div class="frame frame--left" aria-hidden="true"></div>
+      <div class="frame frame--right" aria-hidden="true"></div>
+      <div class="reticle" aria-hidden="true"><span></span><span></span></div>
+
+      <header class="hero-ui glass">
+        <div class="eyebrow"><span class="live-dot"></span> REAL-TIME NPR FLUID SPECIMEN</div>
+        <h1>MIZU<span>//</span>KOKORO</h1>
+        <p class="subtitle">液态情绪标本 <b>LQ-09</b> · THREE.JS / GLSL</p>
+      </header>
+
+      <aside class="telemetry glass" aria-label="渲染状态">
+        <div><span>PIPELINE</span><strong id="pipeline">WEBGL</strong></div>
+        <div><span>FRAME</span><strong id="fps">-- FPS</strong></div>
+        <div><span>STATE</span><strong id="state-name">静水 CALM</strong></div>
+      </aside>
+
+      <section class="mode-rail glass" aria-label="液体状态">
+        <p>PHASE / 相位</p>
+        <div class="mode-buttons" role="group" aria-label="选择液体状态">
+          <button class="mode-btn is-active" data-mode="0" aria-pressed="true"><i>01</i><span>静水</span><small>CALM</small><em>AQUEOUS</em></button>
+          <button class="mode-btn" data-mode="1" aria-pressed="false"><i>02</i><span>涨潮</span><small>SURGE</small><em>OCEANIC</em></button>
+          <button class="mode-btn" data-mode="2" aria-pressed="false"><i>03</i><span>绽生</span><small>BLOOM</small><em>VISCOUS</em></button>
+          <button class="mode-btn" data-mode="3" aria-pressed="false"><i>04</i><span>零界</span><small>VOID</small><em>METALLIC</em></button>
+        </div>
+        <div class="material-profile" aria-live="polite">
+          <div><span>RHEOLOGY</span><strong id="material-type">AQUEOUS / WATER</strong></div>
+          <b id="matter-state">LIQUID</b>
+          <output id="material-metrics">μ 0.16 · σ 0.92 · FLOW 0.35</output>
+          <p id="material-note">高表面张力、清澈折射与短促毛细波。</p>
+        </div>
+      </section>
+
+      <section class="interaction-hint glass" aria-label="交互说明">
+        <span><kbd>拖拽球体</kbd>塑形</span>
+        <span><kbd>点击</kbd>激发涟漪</span>
+        <span><kbd>双击</kbd>冻结 / 熔解</span>
+        <span><kbd>空格</kbd>脉冲</span>
+      </section>
+
+      <nav class="tool-dock glass" aria-label="展品工具">
+        <button id="audio-toggle" aria-pressed="false" title="开启程序化声场">声场 OFF</button>
+        <button id="mic-toggle" aria-pressed="false" title="使用麦克风驱动液体">MIC OFF</button>
+        <button id="panel-toggle" aria-expanded="false" aria-controls="lab-panel">实验参数</button>
+        <button id="capture" title="保存当前画面">CAPTURE</button>
+        <button id="fullscreen" title="全屏">FULL</button>
+      </nav>
+
+      <section id="lab-panel" class="lab-panel glass" aria-label="实验参数" hidden>
+        <div class="panel-head">
+          <div><span>LIVE MATERIAL LAB</span><strong>液体参数</strong></div>
+          <button id="panel-close" aria-label="关闭参数面板">×</button>
+        </div>
+        <label>流动幅度 <output id="deform-out">1.00</output><input id="deform" type="range" min="0.35" max="1.8" value="1" step="0.01" /></label>
+        <label>时间速度 <output id="speed-out">1.00</output><input id="speed" type="range" min="0.15" max="2.2" value="1" step="0.01" /></label>
+        <label>墨线厚度 <output id="outline-out">1.00</output><input id="outline" type="range" min="0" max="2" value="1" step="0.01" /></label>
+        <label>辉光强度 <output id="bloom-out">1.00</output><input id="bloom" type="range" min="0" max="2" value="1" step="0.01" /></label>
+        <label>色差扰动 <output id="chroma-out">0.45</output><input id="chroma" type="range" min="0" max="1.5" value="0.45" step="0.01" /></label>
+        <label>表面流线 <output id="flow-out">1.00</output><input id="flow" type="range" min="0" max="2" value="1" step="0.01" /></label>
+        <label>回弹活性 <output id="liveliness-out">1.00</output><input id="liveliness" type="range" min="0.15" max="1.8" value="1" step="0.01" /></label>
+        <div class="quality-row"><span>QUALITY</span><button class="quality is-active" data-quality="high">HIGH</button><button class="quality" data-quality="medium">MID</button><button class="quality" data-quality="low">LOW</button></div>
+        <button id="reset-params" class="reset-btn">RESET MATERIAL</button>
+      </section>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div id="loading" class="loading" role="status">
+        <div class="loading-mark"><span></span><span></span><span></span></div>
+        <p>CALIBRATING LIQUID MEMORY</p>
+      </div>
+
+      <div class="vertical-label" aria-hidden="true">感応型流体演算標本 / REACTIVE LIQUID STUDY</div>
+      <div class="credit" aria-hidden="true">ART × CODE × PRESENCE</div>
+    </main>
+  </body>
+</html>

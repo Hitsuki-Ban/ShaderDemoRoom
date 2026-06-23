@@ -1,7 +1,11 @@
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import type { WebGLRenderer } from 'three';
 
-export type RoomId = 'voxel-water' | 'glass-optics';
+export type RoomId =
+  | 'voxel-water'
+  | 'glass-optics'
+  | 'anime-liquid-orb'
+  | 'ninth-tide-archive';
 
 export interface VoxelWaterSettings {
   weather: 'clear' | 'rain' | 'storm';
@@ -34,7 +38,14 @@ export interface GlassOpticsSettings {
   showCaustics: boolean;
 }
 
-export type AnyRoomSettings = VoxelWaterSettings | GlassOpticsSettings;
+export interface EmbeddedExhibitSettings {
+  reloadToken: number;
+}
+
+export type AnyRoomSettings =
+  | VoxelWaterSettings
+  | GlassOpticsSettings
+  | EmbeddedExhibitSettings;
 
 export interface RoomStats {
   fps: number;
@@ -80,8 +91,9 @@ export interface RoomControlsProps<TSettings extends AnyRoomSettings = AnyRoomSe
   t: (key: string) => string;
 }
 
-export interface RoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> {
+interface BaseRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> {
   id: RoomId;
+  kind: 'shader' | 'embedded';
   titleKey: string;
   kickerKey: string;
   descriptionKey: string;
@@ -90,10 +102,24 @@ export interface RoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSetti
   accent: string;
   techTags: string[];
   defaultPreset: TSettings;
-  loadScene: () => Promise<RoomRuntimeModule<TSettings>>;
-  loadControls: () => Promise<{ default: ComponentType<RoomControlsProps<TSettings>> }>;
+  loadControls: () => Promise<{ default: ComponentType<RoomControlsProps<AnyRoomSettings>> }>;
   ControlsComponent: LazyExoticComponent<ComponentType<RoomControlsProps<AnyRoomSettings>>>;
 }
+
+export interface ShaderRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings>
+  extends BaseRoomDefinition<TSettings> {
+  kind: 'shader';
+  loadScene: () => Promise<RoomRuntimeModule<TSettings>>;
+}
+
+export interface EmbeddedRoomDefinition extends BaseRoomDefinition<EmbeddedExhibitSettings> {
+  kind: 'embedded';
+  embedPath: string;
+}
+
+export type RoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> =
+  | ShaderRoomDefinition<TSettings>
+  | EmbeddedRoomDefinition;
 
 export interface ActionButton {
   label: string;

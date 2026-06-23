@@ -2,7 +2,12 @@ import { Suspense, lazy, useState } from 'react';
 import { Code, Languages, RadioTower } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { getRoomById, roomRegistry } from '../rooms/registry';
-import type { AnyRoomSettings, RoomId } from '../rooms/types';
+import type {
+  AnyRoomSettings,
+  EmbeddedExhibitSettings,
+  RoomId,
+} from '../rooms/types';
+import { EmbeddedExhibitFrame } from '../shared/embedded/EmbeddedExhibitFrame';
 import { useI18n } from '../shared/i18n/useI18n';
 import { Button } from '../shared/ui/Button';
 import { RoomRail } from './RoomRail';
@@ -109,15 +114,26 @@ export function ShowroomPage() {
 
         <section className="stage-column" aria-label={t('app.viewport')}>
           <Suspense fallback={<div className="canvas-shell"><div className="canvas-loader">Loading renderer</div></div>}>
-            <ShaderCanvas
-              room={activeRoom}
-              settings={settings}
-              onStats={setStats}
-            />
+            {activeRoom.kind === 'embedded' ? (
+              <EmbeddedExhibitFrame
+                room={activeRoom}
+                settings={settings as EmbeddedExhibitSettings}
+              />
+            ) : (
+              <ShaderCanvas
+                room={activeRoom}
+                settings={settings}
+                onStats={setStats}
+              />
+            )}
           </Suspense>
           <div className="scene-hud" aria-label={t('app.sceneStats')}>
-            <span>{Math.round(stats.fps)} FPS</span>
-            <span>{stats.drawCalls} calls</span>
+            <span>
+              {activeRoom.kind === 'embedded' ? t('app.embeddedRuntime') : `${Math.round(stats.fps)} FPS`}
+            </span>
+            <span>
+              {activeRoom.kind === 'embedded' ? t('app.standaloneExhibit') : `${stats.drawCalls} calls`}
+            </span>
             <span>{activeRoom.techTags.join(' / ')}</span>
           </div>
         </section>
