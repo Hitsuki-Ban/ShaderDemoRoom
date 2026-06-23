@@ -39,11 +39,31 @@ async function prepareRoom(room) {
 
 const screenshots = [];
 let hasHorizontalOverflow = false;
+let hasStageHudOverlap = false;
+
+async function updateStageHudOverlap() {
+  const overlapsViewport = await page.evaluate(() => {
+    const viewport = document.querySelector('.stage-viewport');
+    const hud = document.querySelector('.scene-hud');
+
+    if (!viewport || !hud) {
+      return true;
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const hudRect = hud.getBoundingClientRect();
+
+    return hudRect.top < viewportRect.bottom && hudRect.bottom > viewportRect.top;
+  });
+
+  hasStageHudOverlap = hasStageHudOverlap || overlapsViewport;
+}
 
 for (const room of desktopRooms) {
   await page.goto(`${baseUrl}/#/room/${room}`, { waitUntil: 'domcontentloaded' });
   await prepareRoom(room);
   await page.waitForTimeout(1600);
+  await updateStageHudOverlap();
   const screenshotPath = `${outputDir}/${room}-desktop.png`;
   await page.screenshot({
     path: screenshotPath,
@@ -57,6 +77,7 @@ for (const room of mobileRooms) {
   await page.goto(`${baseUrl}/#/room/${room}`, { waitUntil: 'domcontentloaded' });
   await prepareRoom(room);
   await page.waitForTimeout(1400);
+  await updateStageHudOverlap();
   const screenshotPath = `${outputDir}/${room}-mobile.png`;
   await page.screenshot({
     path: screenshotPath,
@@ -79,6 +100,10 @@ if (hasHorizontalOverflow) {
   throw new Error('Mobile viewport has horizontal overflow.');
 }
 
+if (hasStageHudOverlap) {
+  throw new Error('Scene HUD overlaps the rendered exhibit viewport.');
+}
+
 console.log(
   JSON.stringify(
     {
@@ -86,6 +111,7 @@ console.log(
       screenshots,
       consoleErrors: 0,
       mobileHorizontalOverflow: false,
+      sceneHudViewportOverlap: false,
     },
     null,
     2,

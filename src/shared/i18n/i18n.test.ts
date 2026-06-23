@@ -11,7 +11,7 @@ describe('i18n translator seam', () => {
     expect(t('rooms.voxelWater.controls.currentDirection')).toBe('Current Direction');
     expect(t('rooms.voxelWater.controls.skyTime')).toBe('Sky Time');
     expect(t('rooms.glassOptics.controls.lightPath')).toBe('Light Path');
-    expect(t('rooms.animeLiquidOrb.title')).toBe('Anime Liquid Orb');
+    expect(t('rooms.animeLiquidOrb.title')).toBe('MIZU//KOKORO');
     expect(t('rooms.ninthTideArchive.controls.reload')).toBe('Reload exhibit');
   });
 

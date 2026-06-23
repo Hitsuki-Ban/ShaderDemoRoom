@@ -113,20 +113,22 @@ export function ShowroomPage() {
         <RoomRail activeRoomId={activeRoom.id} rooms={roomRegistry} t={t} />
 
         <section className="stage-column" aria-label={t('app.viewport')}>
-          <Suspense fallback={<div className="canvas-shell"><div className="canvas-loader">Loading renderer</div></div>}>
-            {activeRoom.kind === 'embedded' ? (
-              <EmbeddedExhibitFrame
-                room={activeRoom}
-                settings={settings as EmbeddedExhibitSettings}
-              />
-            ) : (
-              <ShaderCanvas
-                room={activeRoom}
-                settings={settings}
-                onStats={setStats}
-              />
-            )}
-          </Suspense>
+          <div className="stage-viewport">
+            <Suspense fallback={<div className="canvas-shell"><div className="canvas-loader">Loading renderer</div></div>}>
+              {activeRoom.kind === 'embedded' ? (
+                <EmbeddedExhibitFrame
+                  room={activeRoom}
+                  settings={settings as EmbeddedExhibitSettings}
+                />
+              ) : (
+                <ShaderCanvas
+                  room={activeRoom}
+                  settings={settings}
+                  onStats={setStats}
+                />
+              )}
+            </Suspense>
+          </div>
           <div className="scene-hud" aria-label={t('app.sceneStats')}>
             <span>
               {activeRoom.kind === 'embedded' ? t('app.embeddedRuntime') : `${Math.round(stats.fps)} FPS`}
