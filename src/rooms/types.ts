@@ -42,6 +42,8 @@ export interface EmbeddedExhibitSettings {
   reloadToken: number;
 }
 
+export type EmbeddedPermission = 'autoplay' | 'microphone';
+
 export type AnyRoomSettings =
   | VoxelWaterSettings
   | GlassOpticsSettings
@@ -115,6 +117,7 @@ export interface ShaderRoomDefinition<TSettings extends AnyRoomSettings = AnyRoo
 export interface EmbeddedRoomDefinition extends BaseRoomDefinition<EmbeddedExhibitSettings> {
   kind: 'embedded';
   embedPath: string;
+  permissions: readonly EmbeddedPermission[];
 }
 
 export type RoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> =

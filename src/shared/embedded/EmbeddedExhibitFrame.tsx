@@ -23,7 +23,7 @@ export function EmbeddedExhibitFrame({ room, settings }: EmbeddedExhibitFramePro
         className="embedded-exhibit-frame"
         src={src}
         title={room.id}
-        allow="autoplay; microphone; clipboard-write"
+        allow={room.permissions.join('; ')}
         allowFullScreen
       />
     </div>

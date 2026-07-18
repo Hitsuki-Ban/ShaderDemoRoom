@@ -4,6 +4,7 @@
 - 優先度: P2(小粒)
 - 評価軸: コントラクト遵守(TA軸)— 最小権限原則への違反。埋め込みコンテンツへ実使用のない権限サーフェスを一律付与している
 - 依存: なし(T-EMB-01/02 と独立に実施可能。ただし T-EMB-02 と同一ファイルを編集するため着手順の調整のみ必要 — 本チケット先行を推奨)
+- 状態: **完了 (2026-07-18)**
 
 ## 現状(証拠)
 
@@ -48,3 +49,26 @@ research-webgl-platform.md §2.8 の提案どおり、宣言をレジストリ�
 - **T-EMB-02 との編集競合**: `EmbeddedExhibitFrame.tsx` と `types.ts` / `registry.ts` を共有する。本チケットは小粒のため**先行実施を推奨**し、T-EMB-02 側がリベースする(依存関係ではなく順序調整)。
 - **将来の権限追加はレジストリ経由のみ**: ブリッジ(T-EMB-02)や新規埋め込み展示が権限を要する場合も `permissions` 宣言に足すこと。EmbeddedExhibitFrame への直書き復活はレビューで却下する運用を明記。
 - **autoplay の意味論**: 両展示ともユーザー操作(ボタン/クリック)起点で音声を開始するため、autoplay 削除でも動く可能性はあるが、ブラウザ実装差(iframe 内ジェスチャの委譲仕様)による無音リグレッションのリスクに対して得るものがない。v1 では autoplay は両展示に残す判断とし、その理由を registry コメントに残す。
+
+## 完了レポート (2026-07-18)
+
+### 実装
+
+- `EmbeddedPermission = 'autoplay' | 'microphone'` を閉じた union として追加し、全 `EmbeddedRoomDefinition` に `permissions` 宣言を必須化した。
+- registry の宣言を実 API 使用へ縮小した。
+  - `anime-liquid-orb`: `autoplay`(WebAudio) + `microphone`(`getUserMedia` の MIC mode)
+  - `ninth-tide-archive`: `autoplay`(archive audio)
+- `EmbeddedExhibitFrame` の共通ハードコードを削除し、`room.permissions.join('; ')` のみを `allow` に反映する。`allowFullScreen` は既存機能経路として維持した。
+- registry test は token の範囲・重複と現在の最小権限 matrix を検証する。`permissions: []` は将来の zero-permission 展示として合法であり、不要な権限を強制しない。
+- DOM test で実 iframe の `allow` が orb=`autoplay; microphone`、tide=`autoplay` となること、および `allowfullscreen` 維持を検証する。`clipboard-write` は `src/` から消えた。
+
+### 検証
+
+- `pnpm test`: 9 files / 29 tests pass
+- `pnpm lint` / `pnpm typecheck` / `pnpm build`: pass
+- `pnpm qa:visual`: desktop/mobile 合計7 capture、console error 0、横 overflow 0、scene/HUD overlap 0。desktop/mobile の orb/tide capture を目視し、iframe clipping・shell overlap・表示回帰なし
+- localhost の実ブラウザー iframe で以下を確認した。
+  - orb: `allow="autoplay; microphone"`、MIC button が `MIC LIVE` / `aria-pressed=true`、SoundField ON、CAPTURE が PNG download、FULL が fullscreen へ遷移
+  - tide: `allow="autoplay"`、下潜クリック後に `<audio>` が `paused=false` かつ `currentTime>0`、F key で fullscreen へ遷移
+  - 両展示の Open standalone が正しい URL/title でロード
+- 独立 reviewer の指摘を受け、全 embedded room に非空 permissions を強制していた初案を修正。最終復審は P0–P3 findings なし、merge 可。
