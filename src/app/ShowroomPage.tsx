@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { Code, Languages, RadioTower } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { getRoomById, roomRegistry } from '../rooms/registry';
@@ -9,16 +9,11 @@ import type {
 } from '../rooms/types';
 import { EmbeddedExhibitFrame } from '../shared/embedded/EmbeddedExhibitFrame';
 import { useI18n } from '../shared/i18n/useI18n';
+import { ShaderCanvas } from '../shared/three/ShaderCanvas';
 import { Button } from '../shared/ui/Button';
 import { RoomRail } from './RoomRail';
 
 type SettingsByRoom = Record<RoomId, AnyRoomSettings>;
-
-const ShaderCanvas = lazy(() =>
-  import('../shared/three/ShaderCanvas').then((module) => ({
-    default: module.ShaderCanvas,
-  })),
-);
 
 function createInitialSettings(): SettingsByRoom {
   return roomRegistry.reduce((settings, room) => {
@@ -41,6 +36,7 @@ export function ShowroomPage() {
 
   const settings = settingsByRoom[activeRoom.id];
   const Controls = activeRoom.ControlsComponent;
+  const shaderRoom = activeRoom.kind === 'shader' ? activeRoom : null;
 
   const updateSettings = (nextSettings: AnyRoomSettings) => {
     setSettingsByRoom((current) => ({
@@ -114,20 +110,17 @@ export function ShowroomPage() {
 
         <section className="stage-column" aria-label={t('app.viewport')}>
           <div className="stage-viewport">
-            <Suspense fallback={<div className="canvas-shell"><div className="canvas-loader">Loading renderer</div></div>}>
-              {activeRoom.kind === 'embedded' ? (
-                <EmbeddedExhibitFrame
-                  room={activeRoom}
-                  settings={settings as EmbeddedExhibitSettings}
-                />
-              ) : (
-                <ShaderCanvas
-                  room={activeRoom}
-                  settings={settings}
-                  onStats={setStats}
-                />
-              )}
-            </Suspense>
+            <ShaderCanvas
+              room={shaderRoom}
+              settings={shaderRoom ? settings : null}
+              onStats={setStats}
+            />
+            {activeRoom.kind === 'embedded' ? (
+              <EmbeddedExhibitFrame
+                room={activeRoom}
+                settings={settings as EmbeddedExhibitSettings}
+              />
+            ) : null}
           </div>
           <div className="scene-hud" aria-label={t('app.sceneStats')}>
             <span>

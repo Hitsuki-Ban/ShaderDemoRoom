@@ -243,6 +243,16 @@
     var(--bg);
 }
 
+.canvas-shell-inactive {
+  display: none;
+}
+
+.shader-canvas-host {
+  position: absolute;
+  inset: 0;
+}
+
+.shader-canvas-host,
 .shader-canvas {
   display: block;
   width: 100%;

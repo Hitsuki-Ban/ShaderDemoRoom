@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "qa:visual": "node scripts/visual-smoke.mjs",
     "qa:water": "node scripts/water-qa.mjs",
+    "qa:renderer": "node scripts/renderer-lifecycle.mjs",
     "lint": "eslint . && pnpm lint:tokens",
     "lint:tokens": "node scripts/token-lint.mjs",
     "typecheck": "tsc -b"
