@@ -44,7 +44,7 @@ Room code must not receive or recover the raw `WebGLRenderer`. In particular:
 - Request PMREM through `context.createPmremGenerator()` and dispose the returned generator and environment texture.
 - Do not depend on renderer state left by another room. Per-room tone mapping and exposure belong to the stage-profile mechanism tracked by T-SH-04.
 
-The shell keeps `renderer.info.autoReset = false`. For each logical frame it renders all passes, samples total calls and triangles, resets info, then reports the current telemetry window. A room must not report or reset telemetry itself.
+The shell keeps `renderer.info.autoReset = false`. For each logical frame it renders all passes, samples total calls and triangles, resets info, then reports the current telemetry window. A room must not report or reset telemetry itself. Window lengths, p95 warm-up, renderer classification, and QA records are defined only in [Shell telemetry protocol](./telemetry-protocol.md).
 
 ## 4. Apply motionScale only to motion
 

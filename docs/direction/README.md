@@ -30,7 +30,8 @@
 - **健全性**: `pnpm build` ✅ / `pnpm test` 51件全パス ✅ / `pnpm lint` ✅ / `pnpm typecheck` ✅ / `pnpm qa:visual` ✅(コンソールエラー0)
 - **最新スクリーンショット**: `output/playwright/`(qa:visual で再取得済み。gitignore対象なのでローカルのみ)
 - **Ninth Tide 本編キャプチャ(初)**: `captures/ninth-tide-opening.png`, `ninth-tide-ch1..9.png`, `ninth-tide-ending.png` — `?preview=main&section=0..8` 機構で全9章+開幕+終幕を取得。これまでタイトルゲートしか証拠がなかったギャップ(NT-1)を解消。再取得手順: `pnpm build && vite preview` 起動後 `node docs/direction/captures/capture.mjs`
-- **FPS チップ実測**: `captures/fps-samples-2026-07-18.json` + `captures/voxel-water-hud-evidence.png` / `glass-optics-hud-evidence.png` — **glass-optics はソフトウェアGL環境で 17→2-4 FPS に崩落**(「1 FPS」チップの正体)。voxel-water は同環境で 16-17 FPS 安定。実GPU計測は未実施(SH-1 の統一プロトコル定義が先)
+- **旧 FPS チップ実測**: `captures/fps-samples-2026-07-18.json` + `captures/voxel-water-hud-evidence.png` / `glass-optics-hud-evidence.png` — 丸め済み HUD 文字列を読む旧手順の履歴証拠。新しい性能基準には使用しない。
+- **Telemetry protocol v1 参照記録**: `captures/telemetry-reference-2026-07-18.json` — Voxel Water / 1440×900 / 5秒 warm-up + 15秒 measurement。SwiftShader は median 14.52 FPS / 68.88 ms、system Chrome D3D11 (RTX 4070 Ti) は median 200 FPS / 5.00 ms。両方 19 logical-frame calls、renderer raw string と software/hardware 三態を記録。
 
 ## 統合優先度ビュー(カルテP1 × リサーチP0 の整合)
 
@@ -51,9 +52,9 @@
 ## 要確認事項(チケットの検証ステップへ転記する用)
 
 - Orb SURGE の色相齟齬: コードは `#ec3b9b`(マゼンタ)、リファレンス批評は「muted lavender-gray」— トーンマッピングの結果か要実機確認
-- Glass FPS: ソフトウェアGLで2-4 FPSは確定。実GPUでの値と、Tube再生成/transmissionの寄与切り分けが未了
+- Glass FPS: ソフトウェアGLで2-4 FPSは確定。T-SH-03 で Voxel の実GPU参照は取得済みだが、Glass の実GPU値と Tube再生成/transmission の寄与切り分けは未了
 - Tide `preview=main` の既定 section 4(第V章・唯一の暖色)vs 原典ヒーロー preview.png(第VIII章)の不一致 — QA既定章の変更判断
-- Voxel Water の FPS 数値は資料間で 15-28 の幅(計測環境差)。統一プロトコル確立まで断定引用しない
+- Voxel Water の FPS は環境を必ず併記する。protocol v1 参照値は SwiftShader 14.52 FPS、RTX 4070 Ti / D3D11 200 FPS で、環境を跨いだ比較や hard gate は行わない
 
 ## 修正履歴(監査反映)
 
