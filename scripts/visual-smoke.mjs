@@ -1,8 +1,10 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { luma, parsePng } from './water-qa-metrics.mjs';
 
 const baseUrl = process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
 const outputDir = 'output/playwright';
+const stageProfileMetricsPath = `${outputDir}/ninth-tide-stage-profile-luma.json`;
 const settleScaleSource = process.env.QA_SETTLE_SCALE ?? '1';
 if (!/^(?:[1-9]\d*(?:\.\d+)?|0\.\d*[1-9]\d*)$/.test(settleScaleSource)) {
   throw new Error(
@@ -82,7 +84,108 @@ async function assertTelemetry(room, mobile) {
   }
 }
 
+async function assertStageProfile(room) {
+  const expected = room === 'ninth-tide-archive' ? 'dim' : 'default';
+  const actual = await page.locator('.showroom-shell').getAttribute('data-shell-chrome');
+  if (actual !== expected) {
+    throw new Error(
+      `${room} exposes shell chrome profile "${actual}"; expected "${expected}".`,
+    );
+  }
+}
+
+function meanLuma(buffer) {
+  const image = parsePng(buffer);
+  let total = 0;
+  const pixelCount = image.width * image.height;
+  for (let index = 0; index < image.pixels.length; index += image.bytesPerPixel) {
+    total += luma(
+      image.pixels[index],
+      image.pixels[index + 1],
+      image.pixels[index + 2],
+    );
+  }
+  return total / pixelCount;
+}
+
+async function setShellChrome(profile) {
+  await page.locator('.showroom-shell').evaluate(
+    (element, shellChrome) => {
+      element.dataset.shellChrome = shellChrome;
+      return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    },
+    profile,
+  );
+}
+
+async function captureNinthTideStageProfile() {
+  const regions = [
+    { name: 'topbar', selector: '.topbar' },
+    { name: 'room-rail', selector: '.room-rail' },
+    { name: 'inspector', selector: '.inspector' },
+  ];
+  const captures = new Map();
+
+  try {
+    for (const profile of ['default', 'dim']) {
+      await setShellChrome(profile);
+      for (const region of regions) {
+        const path = `${outputDir}/ninth-tide-${region.name}-${profile}.png`;
+        const buffer = await page.locator(region.selector).screenshot({
+          animations: 'disabled',
+          path,
+        });
+        screenshots.push(path);
+        captures.set(`${region.name}:${profile}`, {
+          path,
+          meanLuma: meanLuma(buffer),
+        });
+      }
+    }
+  } finally {
+    await setShellChrome('dim');
+  }
+
+  const metrics = regions.map(({ name }) => {
+    const defaultCapture = captures.get(`${name}:default`);
+    const dimCapture = captures.get(`${name}:dim`);
+    if (!defaultCapture || !dimCapture) {
+      throw new Error(`Missing paired stage profile captures for ${name}.`);
+    }
+    const ratio = dimCapture.meanLuma / defaultCapture.meanLuma;
+    return {
+      region: name,
+      default: {
+        path: defaultCapture.path,
+        meanLuma: defaultCapture.meanLuma,
+      },
+      dim: {
+        path: dimCapture.path,
+        meanLuma: dimCapture.meanLuma,
+      },
+      ratio,
+      maximumRatio: 0.7,
+    };
+  });
+  await writeFile(
+    stageProfileMetricsPath,
+    `${JSON.stringify(metrics, null, 2)}\n`,
+  );
+  console.log(
+    JSON.stringify({ stageProfileMetricsPath, stageProfileMetrics: metrics }, null, 2),
+  );
+
+  const failedRegion = metrics.find(({ ratio, maximumRatio }) => ratio > maximumRatio);
+  if (failedRegion) {
+    throw new Error(
+      `${failedRegion.region} dim/default mean luma ratio ${failedRegion.ratio.toFixed(3)} exceeds 0.700.`,
+    );
+  }
+  return metrics;
+}
+
 const screenshots = [];
+let stageProfileMetrics = [];
 let hasHorizontalOverflow = false;
 let hasStageHudOverlap = false;
 
@@ -108,6 +211,7 @@ for (const room of desktopRooms) {
   await page.goto(`${baseUrl}/#/room/${room}`, { waitUntil: 'domcontentloaded' });
   await prepareRoom(room);
   await page.waitForTimeout(Math.round(1600 * settleScale));
+  await assertStageProfile(room);
   await assertTelemetry(room, false);
   await updateStageHudOverlap();
   const screenshotPath = `${outputDir}/${room}-desktop.png`;
@@ -116,6 +220,9 @@ for (const room of desktopRooms) {
     fullPage: false,
   });
   screenshots.push(screenshotPath);
+  if (room === 'ninth-tide-archive') {
+    stageProfileMetrics = await captureNinthTideStageProfile();
+  }
 }
 
 await page.setViewportSize({ width: 390, height: 844 });
@@ -157,6 +264,8 @@ console.log(
       baseUrl,
       settleScale,
       screenshots,
+      stageProfileMetricsPath,
+      stageProfileMetrics,
       consoleErrors: 0,
       mobileHorizontalOverflow: false,
       sceneHudViewportOverlap: false,

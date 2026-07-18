@@ -69,7 +69,10 @@ export function ShowroomPage() {
   };
 
   return (
-    <main className="showroom-shell">
+    <main
+      className="showroom-shell"
+      data-shell-chrome={activeRoom.stageProfile.shellChrome}
+    >
       <header className="topbar">
         <Link className="brand-lockup" to="/room/voxel-water" aria-label={t('app.title')}>
           <span className="brand-mark">S</span>
