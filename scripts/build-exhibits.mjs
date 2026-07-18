@@ -4,14 +4,13 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
+import { resolvePnpmInvocation } from './pnpm-invocation.mjs';
+
 const run = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const publicRoot = join(root, 'public', 'exhibits');
 const pnpmCli = process.env.npm_execpath;
-
-if (!pnpmCli || !isAbsolute(pnpmCli)) {
-  throw new Error('Run this build through `pnpm exhibits:build`.');
-}
+const pnpmInvocation = await resolvePnpmInvocation(pnpmCli);
 
 const exhibits = [
   {
@@ -37,8 +36,8 @@ const exhibits = [
 
 for (const exhibit of exhibits) {
   const { stderr, stdout } = await run(
-    process.execPath,
-    [pnpmCli, '--filter', exhibit.packageName, 'run', 'build'],
+    pnpmInvocation.command,
+    [...pnpmInvocation.prefixArgs, '--filter', exhibit.packageName, 'run', 'build'],
     { cwd: root },
   );
   process.stdout.write(stdout);
