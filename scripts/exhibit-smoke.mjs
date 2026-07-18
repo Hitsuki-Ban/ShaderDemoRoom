@@ -3,7 +3,8 @@ import { chromium } from 'playwright';
 const baseUrl =
   process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+const page = await context.newPage();
 const consoleErrors = [];
 
 page.on('console', (message) => {
@@ -13,6 +14,358 @@ page.on('pageerror', (error) => consoleErrors.push(error.message));
 
 const tideSections = [];
 const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+
+async function openEmbeddedRoom(roomId, expectedCapabilities) {
+  await page.goto(`${baseUrl}/#/room/${roomId}`, { waitUntil: 'domcontentloaded' });
+  const iframe = page.locator('iframe.embedded-exhibit-frame');
+  await iframe.waitFor({ state: 'attached' });
+  await page.waitForFunction(
+    ({ capabilities }) => {
+      const element = document.querySelector('iframe.embedded-exhibit-frame');
+      return element?.dataset.bridgeState === 'ready'
+        && element.dataset.bridgeCapabilities === capabilities
+        && typeof element.dataset.bridgeInstanceId === 'string';
+    },
+    { capabilities: expectedCapabilities.join(' ') },
+  );
+  await page.waitForFunction(() => {
+    const element = document.querySelector('[data-telemetry-source="embedded"]');
+    if (!element?.getAttribute('data-telemetry-json')) return false;
+    return element.querySelector('[data-telemetry-state="live"]') !== null;
+  });
+  return iframe;
+}
+
+async function postEmbeddedCommand(iframe, type, payload) {
+  const instanceId = await iframe.getAttribute('data-bridge-instance-id');
+  if (!instanceId) throw new Error(`Embedded ${type} command has no instance id.`);
+  await iframe.evaluate((element, command) => {
+    element.contentWindow.postMessage({
+      context: 'shader-demo-room',
+      v: 1,
+      instanceId: command.instanceId,
+      type: command.type,
+      payload: command.payload,
+    }, location.origin);
+  }, { instanceId, type, payload });
+}
+
+async function readEmbeddedStats() {
+  const rawStats = await page
+    .locator('[data-telemetry-source="embedded"]')
+    .getAttribute('data-telemetry-json');
+  if (!rawStats) throw new Error('Embedded telemetry has no stats payload.');
+  return JSON.parse(rawStats);
+}
+
+async function waitForEmbeddedStats({ paused, minimumFrameCount = 0 }) {
+  await page.waitForFunction(
+    ({ expectedPaused, minimum }) => {
+      const rawStats = document
+        .querySelector('[data-telemetry-source="embedded"]')
+        ?.getAttribute('data-telemetry-json');
+      if (!rawStats) return false;
+      const stats = JSON.parse(rawStats);
+      return stats.paused === expectedPaused && stats.frameCount >= minimum;
+    },
+    { expectedPaused: paused, minimum: minimumFrameCount },
+  );
+  return readEmbeddedStats();
+}
+
+async function assertPauseLifecycle(iframe, label) {
+  const running = await waitForEmbeddedStats({ paused: false, minimumFrameCount: 1 });
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
+  const paused = await waitForEmbeddedStats({
+    paused: true,
+    minimumFrameCount: running.frameCount,
+  });
+  await page.waitForTimeout(750);
+  const stillPaused = await readEmbeddedStats();
+  if (stillPaused.frameCount !== paused.frameCount) {
+    throw new Error(`${label} rendered while paused: ${paused.frameCount} -> ${stillPaused.frameCount}.`);
+  }
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
+  const resumed = await waitForEmbeddedStats({
+    paused: false,
+    minimumFrameCount: paused.frameCount + 1,
+  });
+  return {
+    beforePause: running.frameCount,
+    pausedAt: paused.frameCount,
+    resumedAt: resumed.frameCount,
+  };
+}
+
+async function assertPauseRace(iframe, label) {
+  const running = await waitForEmbeddedStats({ paused: false, minimumFrameCount: 1 });
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
+  const paused = await waitForEmbeddedStats({
+    paused: true,
+    minimumFrameCount: running.frameCount,
+  });
+  await page.waitForTimeout(750);
+  const stillPaused = await readEmbeddedStats();
+  if (stillPaused.frameCount !== paused.frameCount) {
+    throw new Error(
+      `${label} pause race resumed rendering: ${paused.frameCount} -> ${stillPaused.frameCount}.`,
+    );
+  }
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
+  const resumed = await waitForEmbeddedStats({
+    paused: false,
+    minimumFrameCount: paused.frameCount + 1,
+  });
+  return {
+    beforeRace: running.frameCount,
+    pausedAt: paused.frameCount,
+    resumedAt: resumed.frameCount,
+  };
+}
+
+async function assertWallClockTelemetry(iframe, label) {
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
+  await waitForEmbeddedStats({ paused: true });
+  await iframe.evaluate((element) => {
+    const child = element.contentWindow;
+    child.__shaderDemoRoomQaAnimationFrame = {
+      request: child.requestAnimationFrame,
+      cancel: child.cancelAnimationFrame,
+    };
+    child.requestAnimationFrame = (callback) => child.setTimeout(
+      () => callback(child.performance.now()),
+      80,
+    );
+    child.cancelAnimationFrame = (handle) => child.clearTimeout(handle);
+  });
+
+  let throttled;
+  try {
+    await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const stats = await readEmbeddedStats();
+      if (
+        !stats.paused
+        && stats.fps > 0
+        && stats.fps < 18
+        && stats.frameTimeMs > 55
+      ) {
+        throttled = stats;
+        break;
+      }
+      await page.waitForTimeout(100);
+    }
+    if (!throttled) {
+      throw new Error(`${label} telemetry did not reflect throttled wall-clock cadence.`);
+    }
+  } finally {
+    await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
+    await waitForEmbeddedStats({ paused: true });
+    await iframe.evaluate((element) => {
+      const child = element.contentWindow;
+      const original = child.__shaderDemoRoomQaAnimationFrame;
+      child.requestAnimationFrame = original.request;
+      child.cancelAnimationFrame = original.cancel;
+      delete child.__shaderDemoRoomQaAnimationFrame;
+    });
+    await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
+    await waitForEmbeddedStats({
+      paused: false,
+      minimumFrameCount: throttled?.frameCount ?? 1,
+    });
+  }
+  return { fps: throttled.fps, frameTimeMs: throttled.frameTimeMs };
+}
+
+async function assertTideMediaStartedWhilePaused(iframe) {
+  const embedded = iframe.contentFrame();
+  const audio = embedded.locator('audio');
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
+  await waitForEmbeddedStats({ paused: true });
+  await page.waitForTimeout(500);
+  await embedded.locator('#enterBtn').click({ force: true });
+  await embedded.locator('#enterBtn:not([disabled])').waitFor({ state: 'attached' });
+  if (!(await audio.evaluate((element) => element.paused))) {
+    throw new Error('Ninth Tide media played while the runtime was paused.');
+  }
+
+  await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
+  await waitForEmbeddedStats({ paused: false });
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    if (!(await audio.evaluate((element) => element.paused))) {
+      return { resumed: true };
+    }
+    await page.waitForTimeout(100);
+  }
+  const diagnostic = await audio.evaluate((element) => ({
+    currentSrc: element.currentSrc,
+    currentTime: element.currentTime,
+    duration: element.duration,
+    errorCode: element.error?.code ?? null,
+    networkState: element.networkState,
+    paused: element.paused,
+    readyState: element.readyState,
+  }));
+  const stats = await readEmbeddedStats();
+  throw new Error(
+    `Ninth Tide did not resume media started during lifecycle pause: ${JSON.stringify({ diagnostic, stats, consoleErrors })}`,
+  );
+}
+
+async function pollEmbeddedStats({ paused, minimumFrameCount }, label) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const stats = await readEmbeddedStats();
+    if (stats.paused === paused && stats.frameCount >= minimumFrameCount) return stats;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`${label} did not publish paused=${paused} telemetry in time.`);
+}
+
+async function pollFrameVisibility(iframe, expected, label) {
+  const root = iframe.contentFrame().locator('html');
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const visibility = await root.evaluate(
+      (element) => element.ownerDocument.visibilityState,
+    );
+    if (visibility === expected) return;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`${label} iframe did not become ${expected}.`);
+}
+
+async function setVisibilityOverride(iframe, hidden) {
+  await iframe.evaluate((element, nextHidden) => {
+    for (const targetDocument of [document, element.contentDocument]) {
+      Object.defineProperties(targetDocument, {
+        hidden: { configurable: true, value: nextHidden },
+        visibilityState: {
+          configurable: true,
+          value: nextHidden ? 'hidden' : 'visible',
+        },
+      });
+      targetDocument.dispatchEvent(new Event('visibilitychange'));
+    }
+  }, hidden);
+}
+
+async function clearVisibilityOverride(iframe) {
+  await iframe.evaluate((element) => {
+    for (const targetDocument of [document, element.contentDocument]) {
+      delete targetDocument.hidden;
+      delete targetDocument.visibilityState;
+      targetDocument.dispatchEvent(new Event('visibilitychange'));
+    }
+  });
+}
+
+async function assertPageVisibilityLifecycle(iframe, label) {
+  const running = await waitForEmbeddedStats({ paused: false, minimumFrameCount: 1 });
+  let hidden;
+  let resumed;
+  try {
+    await setVisibilityOverride(iframe, true);
+    await pollFrameVisibility(iframe, 'hidden', label);
+    hidden = await pollEmbeddedStats({
+      paused: true,
+      minimumFrameCount: running.frameCount,
+    }, `${label} hidden tab`);
+    await page.waitForTimeout(750);
+    const stillHidden = await readEmbeddedStats();
+    if (stillHidden.frameCount !== hidden.frameCount) {
+      throw new Error(
+        `${label} rendered in a hidden tab: ${hidden.frameCount} -> ${stillHidden.frameCount}.`,
+      );
+    }
+
+    await setVisibilityOverride(iframe, false);
+    await pollFrameVisibility(iframe, 'visible', label);
+    resumed = await pollEmbeddedStats({
+      paused: false,
+      minimumFrameCount: hidden.frameCount + 1,
+    }, `${label} visible tab`);
+  } finally {
+    await clearVisibilityOverride(iframe);
+  }
+  return {
+    beforeHidden: running.frameCount,
+    hiddenAt: hidden.frameCount,
+    resumedAt: resumed.frameCount,
+  };
+}
+
+const embeddedOrbFrame = await openEmbeddedRoom(
+  'anime-liquid-orb',
+  ['pause', 'stats', 'set-mode', 'set-quality'],
+);
+const embeddedOrb = embeddedOrbFrame.contentFrame();
+await embeddedOrb.locator('#loading.is-hidden').waitFor({ state: 'attached' });
+await embeddedOrbFrame.evaluate((element) => {
+  element.contentWindow.document.documentElement.dataset.bridgeQa = 'orb-preserved';
+});
+for (let mode = 0; mode < 4; mode += 1) {
+  await postEmbeddedCommand(embeddedOrbFrame, 'set-orb-mode', { mode });
+  await embeddedOrb.locator(`.mode-btn[data-mode="${mode}"].is-active`).waitFor();
+}
+for (const quality of ['high', 'medium', 'low']) {
+  await postEmbeddedCommand(embeddedOrbFrame, 'set-orb-quality', { quality });
+  await embeddedOrb
+    .locator(`.quality[data-quality="${quality}"].is-active`)
+    .waitFor({ state: 'attached' });
+}
+const orbWallClockTelemetry = await assertWallClockTelemetry(embeddedOrbFrame, 'Orb');
+await embeddedOrb.locator('#audio-toggle').click({ force: true });
+await embeddedOrb.locator('#audio-toggle[aria-pressed="true"]').waitFor();
+const orbPauseLifecycle = await assertPauseLifecycle(embeddedOrbFrame, 'Orb');
+const orbPauseRace = await assertPauseRace(embeddedOrbFrame, 'Orb');
+const orbVisibilityLifecycle = await assertPageVisibilityLifecycle(embeddedOrbFrame, 'Orb');
+const orbFramePreserved = await embeddedOrb.locator('html').getAttribute('data-bridge-qa');
+if (orbFramePreserved !== 'orb-preserved') {
+  throw new Error('Orb bridge commands unexpectedly reloaded the iframe.');
+}
+const orbAudioActive = await embeddedOrb
+  .locator('#audio-toggle')
+  .getAttribute('aria-pressed');
+if (orbAudioActive !== 'true') throw new Error('Orb lost its active audio intent.');
+
+const embeddedTideFrame = await openEmbeddedRoom(
+  'ninth-tide-archive',
+  ['pause', 'stats', 'set-preview'],
+);
+const embeddedTide = embeddedTideFrame.contentFrame();
+await embeddedTideFrame.evaluate((element) => {
+  element.contentWindow.document.documentElement.dataset.bridgeQa = 'tide-preserved';
+});
+const tideMediaStartedWhilePaused = await assertTideMediaStartedWhilePaused(
+  embeddedTideFrame,
+);
+const embeddedTideSections = [];
+for (let section = 0; section < roman.length; section += 1) {
+  await postEmbeddedCommand(embeddedTideFrame, 'set-tide-preview', {
+    mode: 'main',
+    section,
+  });
+  await embeddedTide
+    .locator('#phaseNumber')
+    .filter({ hasText: new RegExp(`^${roman[section]}$`) })
+    .waitFor();
+  embeddedTideSections.push(await embeddedTide.locator('#phaseNumber').textContent());
+}
+const tidePauseLifecycle = await assertPauseLifecycle(embeddedTideFrame, 'Ninth Tide');
+const tidePauseRace = await assertPauseRace(embeddedTideFrame, 'Ninth Tide');
+const tideVisibilityLifecycle = await assertPageVisibilityLifecycle(
+  embeddedTideFrame,
+  'Ninth Tide',
+);
+const tideFramePreserved = await embeddedTide.locator('html').getAttribute('data-bridge-qa');
+if (tideFramePreserved !== 'tide-preserved') {
+  throw new Error('Ninth Tide bridge commands unexpectedly reloaded the iframe.');
+}
 
 for (let section = 0; section < roman.length; section += 1) {
   const url = `${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main&section=${section}`;
@@ -81,7 +434,17 @@ console.log(
     {
       baseUrl,
       tideSections,
+      embeddedTideSections,
       orbModes,
+      orbWallClockTelemetry,
+      orbAudioActive,
+      tideMediaStartedWhilePaused,
+      orbPauseLifecycle,
+      tidePauseLifecycle,
+      orbPauseRace,
+      tidePauseRace,
+      orbVisibilityLifecycle,
+      tideVisibilityLifecycle,
       orbFreezeCycle: ['LIQUID', 'CRYSTAL', 'LIQUID'],
       consoleErrors: consoleErrors.length,
     },

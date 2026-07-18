@@ -42,12 +42,15 @@ page.on('console', (message) => {
 page.on('pageerror', (error) => consoleErrors.push(error.message));
 
 async function prepareRoom(room) {
-  if (room === 'anime-liquid-orb') {
-    await page.waitForSelector('iframe.embedded-exhibit-frame', { timeout: 10000 });
-  }
-
-  if (room === 'ninth-tide-archive') {
-    await page.waitForSelector('iframe.embedded-exhibit-frame', { timeout: 10000 });
+  if (room === 'anime-liquid-orb' || room === 'ninth-tide-archive') {
+    await page.waitForSelector(
+      'iframe.embedded-exhibit-frame[data-bridge-state="ready"]',
+      { timeout: 15000 },
+    );
+    await page.waitForSelector(
+      '[data-telemetry-source="embedded"] [data-telemetry-state="live"]',
+      { timeout: 15000 },
+    );
   }
 }
 
@@ -59,11 +62,12 @@ async function assertTelemetry(room, mobile) {
       (metric) => getComputedStyle(metric).display !== 'none',
     );
     return {
-      external: rail?.querySelector('[data-telemetry-state="external"]') !== null,
+      source: rail?.getAttribute('data-telemetry-source') ?? 'shader',
+      state: rail?.querySelector('[data-telemetry-state]')?.getAttribute('data-telemetry-state'),
       hasDash: rail?.textContent?.includes('—') ?? false,
       metricCount: metrics.length,
       visibleMetricCount: visibleMetrics.length,
-      expectedVisible: embeddedRoom ? 0 : mobileViewport ? 2 : 5,
+      expectedVisible: embeddedRoom || mobileViewport ? 2 : 5,
     };
   }, {
     embeddedRoom: room === 'anime-liquid-orb' || room === 'ninth-tide-archive',
@@ -74,8 +78,11 @@ async function assertTelemetry(room, mobile) {
     throw new Error(`${room} telemetry contains a broken-state dash.`);
   }
   const embedded = room === 'anime-liquid-orb' || room === 'ninth-tide-archive';
-  if (embedded !== result.external) {
-    throw new Error(`${room} external telemetry state is incorrect.`);
+  if ((embedded ? 'embedded' : 'shader') !== result.source) {
+    throw new Error(`${room} telemetry source is "${result.source}".`);
+  }
+  if (embedded && result.state !== 'live') {
+    throw new Error(`${room} embedded telemetry state is "${result.state}".`);
   }
   if (result.visibleMetricCount !== result.expectedVisible) {
     throw new Error(

@@ -30,6 +30,83 @@ const clamp01 = (value) => THREE.MathUtils.clamp(value, 0, 1);
 const damp = (current, target, lambda, delta) => THREE.MathUtils.damp(current, target, lambda, delta);
 const hexColor = (value) => new THREE.Color(value);
 
+const bridgeContext = 'shader-demo-room';
+const bridgeVersion = 1;
+const bridgeCapabilities = Object.freeze(['pause', 'stats', 'set-mode', 'set-quality']);
+const embeddedBridge = window.parent === window
+  ? null
+  : Object.freeze({ instanceId: crypto.randomUUID(), targetOrigin: location.origin });
+
+function isPlainRecord(value) {
+  return value !== null
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && Object.getPrototypeOf(value) === Object.prototype;
+}
+
+function hasExactKeys(value, expectedKeys) {
+  if (!isPlainRecord(value)) return false;
+  const actualKeys = Object.keys(value).sort();
+  const sortedExpectedKeys = [...expectedKeys].sort();
+  return actualKeys.length === sortedExpectedKeys.length
+    && actualKeys.every((key, index) => key === sortedExpectedKeys[index]);
+}
+
+function postBridgeMessage(type, payload) {
+  if (!embeddedBridge) return;
+  window.parent.postMessage({
+    context: bridgeContext,
+    v: bridgeVersion,
+    instanceId: embeddedBridge.instanceId,
+    type,
+    payload
+  }, embeddedBridge.targetOrigin);
+}
+
+function assertCommandPayload(type, payload) {
+  if (type === 'set-paused') {
+    if (!hasExactKeys(payload, ['paused']) || typeof payload.paused !== 'boolean') {
+      throw new Error('Invalid set-paused payload');
+    }
+    return;
+  }
+  if (type === 'set-orb-mode') {
+    if (!hasExactKeys(payload, ['mode']) || !Number.isInteger(payload.mode) || payload.mode < 0 || payload.mode > 3) {
+      throw new Error('Invalid set-orb-mode payload');
+    }
+    return;
+  }
+  if (type === 'set-orb-quality') {
+    if (!hasExactKeys(payload, ['quality']) || !['high', 'medium', 'low'].includes(payload.quality)) {
+      throw new Error('Invalid set-orb-quality payload');
+    }
+    return;
+  }
+  throw new Error(`Unknown embedded command: ${String(type)}`);
+}
+
+function handleBridgeMessage(event) {
+  if (!embeddedBridge || event.origin !== location.origin || event.source !== window.parent) return;
+  const message = event.data;
+  if (!hasExactKeys(message, ['context', 'v', 'instanceId', 'type', 'payload'])) {
+    throw new Error('Invalid embedded command envelope');
+  }
+  if (message.context !== bridgeContext || message.v !== bridgeVersion) {
+    throw new Error('Embedded command envelope does not match this runtime');
+  }
+  if (message.instanceId !== embeddedBridge.instanceId) return;
+  if (typeof message.type !== 'string') throw new Error('Embedded command type must be a string');
+  assertCommandPayload(message.type, message.payload);
+
+  if (message.type === 'set-paused') {
+    setHostPaused(message.payload.paused);
+  } else if (message.type === 'set-orb-mode') {
+    setMode(message.payload.mode);
+  } else if (message.type === 'set-orb-quality') {
+    applyQuality(message.payload.quality);
+  }
+}
+
 const modes = [
   {
     zh: '静水', en: 'CALM', material: 'AQUEOUS / WATER',
@@ -1691,6 +1768,7 @@ class SoundField {
     this.master.gain.cancelScheduledValues(now);
     this.master.gain.setValueAtTime(this.master.gain.value, now);
     this.master.gain.linearRampToValueAtTime(0.075, now + 0.5);
+    if (runtimePaused) queueRuntimeAudioReconciliation();
   }
 
   stop() {
@@ -1812,6 +1890,7 @@ async function enableMic() {
   mic.context = context;
   mic.analyser = analyser;
   mic.data = new Uint8Array(analyser.frequencyBinCount);
+  if (runtimePaused) queueRuntimeAudioReconciliation();
 }
 
 async function disableMic() {
@@ -2244,10 +2323,111 @@ function resize() {
 window.addEventListener('resize', resize, { passive: true });
 
 let previousFrameTime = performance.now();
-let fpsAccum = 0;
-let fpsFrames = 0;
-let fpsLastUpdate = 0;
+let statsSampleStartedAt = performance.now();
+let statsSampleFrames = 0;
 let hasRendered = false;
+let frameCount = 0;
+let lastRuntimeFps = 0;
+let lastRuntimeFrameTimeMs = 0;
+let animationFrameId = null;
+let documentHidden = document.hidden;
+let hostPaused = false;
+let runtimePaused = null;
+const lifecycleAudioContexts = new Set();
+const lifecycleMicrophoneTracks = new Set();
+let audioTransition = Promise.resolve();
+
+function publishRuntimeStats(paused) {
+  postBridgeMessage('stats', {
+    fps: lastRuntimeFps,
+    frameTimeMs: lastRuntimeFrameTimeMs,
+    frameCount,
+    paused
+  });
+}
+
+async function reconcileRuntimeAudio() {
+  while (true) {
+    const desiredPaused = runtimePaused;
+    if (desiredPaused) {
+      for (const context of [soundField.context, mic.context]) {
+        if (context?.state === 'running') lifecycleAudioContexts.add(context);
+      }
+      for (const track of mic.stream?.getAudioTracks() ?? []) {
+        if (track.enabled && track.readyState === 'live') {
+          lifecycleMicrophoneTracks.add(track);
+          track.enabled = false;
+        }
+      }
+      await Promise.all([...lifecycleAudioContexts].map((context) =>
+        context.state === 'running' ? context.suspend() : undefined
+      ));
+    } else {
+      await Promise.all([...lifecycleAudioContexts].map((context) =>
+        context.state === 'suspended' ? context.resume() : undefined
+      ));
+      for (const track of lifecycleMicrophoneTracks) {
+        if (track.readyState === 'live') track.enabled = true;
+      }
+    }
+
+    if (runtimePaused !== desiredPaused) continue;
+    if (!desiredPaused) {
+      lifecycleAudioContexts.clear();
+      lifecycleMicrophoneTracks.clear();
+    }
+    return;
+  }
+}
+
+function queueRuntimeAudioReconciliation() {
+  audioTransition = audioTransition
+    .then(reconcileRuntimeAudio)
+    .catch((error) => {
+      console.error('Orb runtime audio transition failed.', error);
+    });
+}
+
+function scheduleAnimation() {
+  if (runtimePaused || animationFrameId !== null) return;
+  animationFrameId = requestAnimationFrame(animate);
+}
+
+function synchronizePauseState() {
+  const nextPaused = documentHidden || hostPaused;
+  if (runtimePaused === nextPaused) return;
+  runtimePaused = nextPaused;
+
+  if (runtimePaused) {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    queueRuntimeAudioReconciliation();
+    publishRuntimeStats(true);
+    return;
+  }
+
+  const now = performance.now();
+  previousFrameTime = now;
+  lastInteraction = now;
+  lastAutoModeChange = now;
+  statsSampleStartedAt = now;
+  statsSampleFrames = 0;
+  queueRuntimeAudioReconciliation();
+  publishRuntimeStats(false);
+  scheduleAnimation();
+}
+
+function setHostPaused(paused) {
+  hostPaused = paused;
+  synchronizePauseState();
+}
+
+function handleVisibilityChange() {
+  documentHidden = document.hidden;
+  synchronizePauseState();
+}
 
 function updateColors(delta) {
   const mode = modes[targetMode];
@@ -2436,7 +2616,8 @@ function autoExhibitionMode() {
 }
 
 function animate(timestamp = performance.now()) {
-  requestAnimationFrame(animate);
+  animationFrameId = null;
+  if (runtimePaused) return;
   const delta = Math.min(Math.max((timestamp - previousFrameTime) / 1000, 0), 0.05);
   previousFrameTime = timestamp;
   const mode = modes[activeMode];
@@ -2501,23 +2682,33 @@ function animate(timestamp = performance.now()) {
   renderRefractionBuffer();
   composer.render(delta);
 
-  fpsAccum += delta;
-  fpsFrames += 1;
-  if (fpsAccum >= 0.5) {
-    const fps = Math.round(fpsFrames / fpsAccum);
+  frameCount += 1;
+  statsSampleFrames += 1;
+  const statsSampleDurationMs = timestamp - statsSampleStartedAt;
+  if (statsSampleDurationMs >= 500) {
+    lastRuntimeFps = statsSampleFrames * 1000 / statsSampleDurationMs;
+    lastRuntimeFrameTimeMs = statsSampleDurationMs / statsSampleFrames;
+    const fps = Math.round(lastRuntimeFps);
     fpsEl.textContent = `${fps} FPS`;
-    fpsAccum = 0;
-    fpsFrames = 0;
-    fpsLastUpdate = performance.now();
+    publishRuntimeStats(false);
+    statsSampleStartedAt = timestamp;
+    statsSampleFrames = 0;
   }
 
   if (!hasRendered) {
     hasRendered = true;
     setTimeout(() => loading.classList.add('is-hidden'), 280);
   }
+
+  scheduleAnimation();
 }
 
 applyQuality(settings.quality);
 setMode(0, false);
 resize();
-animate();
+document.addEventListener('visibilitychange', handleVisibilityChange);
+if (embeddedBridge) {
+  window.addEventListener('message', handleBridgeMessage);
+  postBridgeMessage('ready', { capabilities: [...bridgeCapabilities] });
+}
+synchronizePauseState();

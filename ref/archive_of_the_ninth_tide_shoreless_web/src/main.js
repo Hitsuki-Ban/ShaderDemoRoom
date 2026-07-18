@@ -1722,8 +1722,233 @@ let frequencyData = null;
 let timeData = null;
 let objectUrl = null;
 
+const bridgeContext = 'shader-demo-room';
+const bridgeVersion = 1;
+const bridgeCapabilities = Object.freeze(['pause', 'stats', 'set-preview']);
+const isEmbedded = window.parent !== window;
+let bridgeInstanceId = null;
+let animationFrameId = null;
+let runtimePaused = document.hidden;
+const pauseReasons = {
+  documentHidden: document.hidden,
+  hostPaused: false
+};
+const lifecycleAudioElements = new Set();
+const lifecycleAudioContexts = new Set();
+let lifecycleAudioStartPending = false;
+let mediaTransition = Promise.resolve();
+const frameStats = {
+  frameCount: 0,
+  sampleStartedAt: performance.now(),
+  sampleFrames: 0,
+  fps: 0,
+  frameTimeMs: 0
+};
+
+function isPlainRecord(value) {
+  return value !== null
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && Object.getPrototypeOf(value) === Object.prototype;
+}
+
+function hasExactKeys(value, keys) {
+  if (!isPlainRecord(value)) return false;
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function postBridgeMessage(type, payload) {
+  if (!isEmbedded) return;
+  window.parent.postMessage({
+    context: bridgeContext,
+    v: bridgeVersion,
+    instanceId: bridgeInstanceId,
+    type,
+    payload
+  }, location.origin);
+}
+
+function emitStats(paused) {
+  postBridgeMessage('stats', {
+    fps: frameStats.fps,
+    frameTimeMs: frameStats.frameTimeMs,
+    frameCount: frameStats.frameCount,
+    paused
+  });
+}
+
+function resetStatsSample(now = performance.now()) {
+  frameStats.sampleStartedAt = now;
+  frameStats.sampleFrames = 0;
+}
+
+function recordRenderedFrame(now) {
+  frameStats.frameCount++;
+  frameStats.sampleFrames++;
+  const sampleDurationMs = now - frameStats.sampleStartedAt;
+  if (sampleDurationMs < 500) return;
+  frameStats.fps = frameStats.sampleFrames * 1000 / sampleDurationMs;
+  frameStats.frameTimeMs = sampleDurationMs / frameStats.sampleFrames;
+  emitStats(false);
+  resetStatsSample(now);
+}
+
+async function reconcileRuntimeMedia() {
+  while (true) {
+    const desiredPaused = runtimePaused;
+    if (desiredPaused) {
+      for (const element of document.querySelectorAll('audio')) {
+        if (!element.paused && !element.ended) lifecycleAudioElements.add(element);
+      }
+      for (const element of lifecycleAudioElements) {
+        if (!element.paused && !element.ended) element.pause();
+      }
+      if (audioContext?.state === 'running') lifecycleAudioContexts.add(audioContext);
+      await Promise.all([...lifecycleAudioContexts].map((context) =>
+        context.state === 'running' ? context.suspend() : undefined
+      ));
+    } else {
+      await Promise.all([...lifecycleAudioContexts].map((context) =>
+        context.state === 'suspended' ? context.resume() : undefined
+      ));
+      const elementsToResume = new Set(lifecycleAudioElements);
+      if (lifecycleAudioStartPending) elementsToResume.add(ui.audio);
+      for (const element of elementsToResume) {
+        if (element.isConnected && element.paused && !element.ended) await element.play();
+      }
+    }
+
+    if (runtimePaused !== desiredPaused) continue;
+    if (!desiredPaused) {
+      lifecycleAudioElements.clear();
+      lifecycleAudioContexts.clear();
+      lifecycleAudioStartPending = false;
+    }
+    return;
+  }
+}
+
+function queueRuntimeMediaReconciliation() {
+  mediaTransition = mediaTransition
+    .then(reconcileRuntimeMedia)
+    .catch((error) => {
+      console.error('Ninth Tide media pause transition failed.', error);
+    });
+}
+
+async function rollbackLifecycleMediaIntent({
+  elementWasOwned,
+  contextWasOwned,
+  startWasPending,
+}) {
+  const context = audioContext;
+  mediaTransition = mediaTransition
+    .then(async () => {
+      if (!elementWasOwned) lifecycleAudioElements.delete(ui.audio);
+      if (!contextWasOwned && context) lifecycleAudioContexts.delete(context);
+      if (!startWasPending) lifecycleAudioStartPending = false;
+      if (runtimePaused && context?.state === 'running') await context.suspend();
+    })
+    .catch((error) => {
+      console.error('Ninth Tide media intent rollback failed.', error);
+    });
+  await mediaTransition;
+}
+
+function requestNextFrame() {
+  if (!runtimePaused && animationFrameId === null) {
+    animationFrameId = requestAnimationFrame(animate);
+  }
+}
+
+function reconcileRuntimePause() {
+  const nextPaused = pauseReasons.documentHidden || pauseReasons.hostPaused;
+  if (nextPaused === runtimePaused) return;
+  runtimePaused = nextPaused;
+
+  if (runtimePaused) {
+    if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+    queueRuntimeMediaReconciliation();
+    emitStats(true);
+    return;
+  }
+
+  timer.reset();
+  resetStatsSample();
+  queueRuntimeMediaReconciliation();
+  emitStats(false);
+  requestNextFrame();
+}
+
+function handleVisibilityChange() {
+  pauseReasons.documentHidden = document.hidden;
+  reconcileRuntimePause();
+}
+
+function isValidBridgeEnvelope(value) {
+  return hasExactKeys(value, ['context', 'v', 'instanceId', 'type', 'payload'])
+    && value.context === bridgeContext
+    && value.v === bridgeVersion;
+}
+
+function handleBridgeMessage(event) {
+  if (!isEmbedded || event.origin !== location.origin || event.source !== window.parent) return;
+  const message = event.data;
+  if (!isValidBridgeEnvelope(message)) throw new Error('Invalid Ninth Tide bridge command envelope.');
+  if (message.instanceId !== bridgeInstanceId) return;
+  if (typeof message.type !== 'string') throw new Error('Invalid Ninth Tide bridge command type.');
+
+  if (message.type === 'set-paused') {
+    if (!hasExactKeys(message.payload, ['paused']) || typeof message.payload.paused !== 'boolean') {
+      throw new Error('Invalid Ninth Tide set-paused payload.');
+    }
+    pauseReasons.hostPaused = message.payload.paused;
+    reconcileRuntimePause();
+    return;
+  }
+
+  if (message.type === 'set-tide-preview') {
+    if (!hasExactKeys(message.payload, ['mode', 'section'])) {
+      throw new Error('Invalid Ninth Tide set-tide-preview payload.');
+    }
+    const { mode, section } = message.payload;
+    if (!['opening', 'main', 'ending'].includes(mode)
+      || !Number.isInteger(section)
+      || section < 0
+      || section > 8) {
+      throw new Error('Invalid Ninth Tide set-tide-preview payload.');
+    }
+    applyPreview(mode, section);
+    return;
+  }
+
+  throw new Error(`Unsupported Ninth Tide bridge command: ${message.type}.`);
+}
+
+function initializeRuntimeControl() {
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  if (!isEmbedded) return;
+  if (typeof crypto.randomUUID !== 'function') {
+    throw new Error('Embedded Ninth Tide requires crypto.randomUUID().');
+  }
+  bridgeInstanceId = crypto.randomUUID();
+  window.addEventListener('message', handleBridgeMessage);
+  postBridgeMessage('ready', { capabilities: [...bridgeCapabilities] });
+  if (runtimePaused) emitStats(true);
+}
+
 ui.audio.addEventListener('loadedmetadata', () => { ui.timeTotal.textContent = formatTime(ui.audio.duration); });
 ui.audio.addEventListener('play', () => {
+  if (runtimePaused) {
+    lifecycleAudioElements.add(ui.audio);
+    lifecycleAudioStartPending = true;
+    ui.audio.pause();
+    queueRuntimeMediaReconciliation();
+    return;
+  }
   state.playing = true;
   ui.audioState.textContent = 'PLAYING';
   ui.signal.textContent = 'LIVE FFT';
@@ -1759,7 +1984,12 @@ async function prepareAudio() {
     frequencyData = new Uint8Array(analyser.frequencyBinCount);
     timeData = new Uint8Array(analyser.fftSize);
   }
-  if (audioContext.state !== 'running') await audioContext.resume();
+  if (runtimePaused) {
+    lifecycleAudioContexts.add(audioContext);
+    queueRuntimeMediaReconciliation();
+  } else if (audioContext.state !== 'running') {
+    await audioContext.resume();
+  }
   state.audioReady = true;
 }
 
@@ -1818,12 +2048,34 @@ async function enterExperience(withAudio, restarting = false) {
     ui.audioState.textContent = 'SILENT';
     return;
   }
+  const contextWasOwned = audioContext !== null
+    && lifecycleAudioContexts.has(audioContext);
   try {
     ui.enter.disabled = true;
     ui.enter.textContent = '正在校准…';
     await prepareAudio();
     if (restarting || state.ended || ui.audio.currentTime > 0.2) ui.audio.currentTime = 0;
-    await ui.audio.play();
+    if (runtimePaused) {
+      const elementWasOwned = lifecycleAudioElements.has(ui.audio);
+      const startWasPending = lifecycleAudioStartPending;
+      lifecycleAudioElements.add(ui.audio);
+      lifecycleAudioStartPending = true;
+      queueRuntimeMediaReconciliation();
+      try {
+        await ui.audio.play();
+      } catch (error) {
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+          await rollbackLifecycleMediaIntent({
+            elementWasOwned,
+            contextWasOwned,
+            startWasPending,
+          });
+          throw error;
+        }
+      }
+    } else {
+      await ui.audio.play();
+    }
     ui.enter.textContent = '启动共鸣仪式';
     ui.enter.disabled = false;
   } catch (error) {
@@ -2671,6 +2923,8 @@ function updateTransport() {
 }
 
 function animate(timestamp) {
+  animationFrameId = null;
+  if (runtimePaused) return;
   timer.update(timestamp);
   const dt = clamp(timer.getDelta(), 0, 0.05);
   const elapsed = timer.getElapsed();
@@ -2698,9 +2952,9 @@ function animate(timestamp) {
   updateTransport();
 
   composer.render(dt);
-  requestAnimationFrame(animate);
+  recordRenderedFrame(timestamp);
+  requestNextFrame();
 }
-requestAnimationFrame(animate);
 
 function resize() {
   const width = innerWidth;
@@ -2716,17 +2970,34 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 
-// Preview modes are used only for still capture/testing.
-const params = new URLSearchParams(location.search);
-const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
-if (params.has('preview') || forcedPreview) {
-  const mode = forcedPreview || params.get('preview') || 'main';
-  const requestedSection = Number(window.__NINTH_TIDE_PREVIEW_SECTION__ ?? params.get('section'));
-  state.previewSection = Number.isFinite(requestedSection) ? clamp(Math.round(requestedSection), 0, 8) : (mode === 'ending' ? 8 : mode === 'opening' ? 0 : 4);
-  state.tideIndex = state.previewSection;
-  state.transitionFrom = state.previewSection;
-  globals.section.value = state.previewSection;
+function applyPreview(mode, section) {
+  if (!['opening', 'main', 'ending'].includes(mode)) {
+    throw new TypeError(`Unknown Ninth Tide preview mode: ${String(mode)}`);
+  }
+  if (!Number.isInteger(section) || section < 0 || section > 8) {
+    throw new RangeError(`Ninth Tide preview section must be an integer from 0 through 8; received ${String(section)}.`);
+  }
+
   state.previewMode = mode;
+  state.previewSection = section;
+  state.tideIndex = section;
+  state.transitionFrom = section;
+  state.pendingTide = -1;
+  state.phaseLocal = 0;
+  state.phaseTransition = 0;
+  state.transitionClock = 99;
+  state.transitionSwitched = false;
+  state.shutdown = 0;
+  state.ending = false;
+  state.ended = false;
+  state.endingCue = 0;
+  state.ceremonyCue = 0;
+  state.archiveOpen = 0;
+  globals.section.value = section;
+  globals.sectionLocal.value = 0;
+  globals.phaseTransition.value = 0;
+  globals.shutdown.value = 0;
+  lastTide = -1;
   state.entered = true;
   state.calibrated = mode !== 'opening';
   state.ceremonyTime = mode === 'opening' ? 5.75 : 99;
@@ -2738,15 +3009,53 @@ if (params.has('preview') || forcedPreview) {
   globals.ritual.value = state.ritual;
   globals.ignite.value = state.ignite;
   document.body.classList.add('entered');
-  if (state.calibrated) document.body.classList.add('calibrated');
-  if (mode === 'ending') document.body.classList.add('ending');
+  document.body.classList.toggle('calibrated', state.calibrated);
+  document.body.classList.toggle('ending', mode === 'ending');
+  document.body.classList.remove('ended');
   document.documentElement.style.setProperty('--blackout', mode === 'opening' ? '0.28' : '0');
   triggerPulse(new THREE.Vector2(0, 0), mode === 'ending' ? 0.45 : 1.15, 0.34, false);
-  // Deterministic still-capture hook; inert in the public experience.
-  window.__NINTH_TIDE_STEP__ = animate;
 }
 
+function stepPreview(timestamp = performance.now()) {
+  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+  animationFrameId = null;
+  animate(timestamp);
+}
+
+// Preview modes are used only for still capture/testing.
+const params = new URLSearchParams(location.search);
+const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
+if (params.has('preview') || forcedPreview !== undefined) {
+  const mode = forcedPreview ?? params.get('preview');
+  let section;
+  const forcedSection = window.__NINTH_TIDE_PREVIEW_SECTION__;
+  if (forcedSection !== undefined) {
+    if (!Number.isInteger(forcedSection) || forcedSection < 0 || forcedSection > 8) {
+      throw new RangeError(`Invalid explicit Ninth Tide preview section: ${String(forcedSection)}.`);
+    }
+    section = forcedSection;
+  } else if (params.has('section')) {
+    const rawSection = params.get('section');
+    if (!/^[0-8]$/.test(rawSection)) {
+      throw new RangeError(`Invalid explicit Ninth Tide preview section: ${String(rawSection)}.`);
+    }
+    section = Number(rawSection);
+  } else {
+    section = mode === 'ending' ? 8 : mode === 'opening' ? 0 : 4;
+  }
+  applyPreview(mode, section);
+  // Deterministic still-capture hook; inert in the public experience.
+  window.__NINTH_TIDE_STEP__ = stepPreview;
+}
+
+initializeRuntimeControl();
+resetStatsSample();
+requestNextFrame();
+
 window.addEventListener('beforeunload', () => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  window.removeEventListener('message', handleBridgeMessage);
+  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   timer.dispose();
   renderer.dispose();
