@@ -15,6 +15,7 @@
     "qa:water": "node scripts/water-qa.mjs",
     "qa:motion": "node scripts/motion-qa.mjs",
     "qa:renderer": "node scripts/renderer-lifecycle.mjs",
+    "qa:telemetry-reference": "node scripts/telemetry-reference.mjs",
     "exhibits:build": "node scripts/build-exhibits.mjs",
     "exhibits:check": "pnpm run exhibits:build && node scripts/check-exhibit-sync.mjs",
     "lint": "eslint . && pnpm lint:tokens",

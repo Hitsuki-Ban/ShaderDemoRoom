@@ -1,6 +1,6 @@
 import { Suspense, useState } from 'react';
 import { Code, Languages, RadioTower } from 'lucide-react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { getRoomById, roomRegistry } from '../rooms/registry';
 import {
   cloneRoomSettings,
@@ -9,24 +9,26 @@ import {
 import type {
   AnyRoomSettings,
   EmbeddedExhibitSettings,
+  RoomId,
+  RoomStats,
 } from '../rooms/types';
 import { EmbeddedExhibitFrame } from '../shared/embedded/EmbeddedExhibitFrame';
 import { useI18n } from '../shared/i18n/useI18n';
+import { TelemetryPanel } from '../shared/telemetry/TelemetryPanel';
 import { ShaderCanvas } from '../shared/three/ShaderCanvas';
 import { Button } from '../shared/ui/Button';
 import { RoomRail } from './RoomRail';
 
 export function ShowroomPage() {
   const { roomId } = useParams();
+  const location = useLocation();
   const { locale, setLocale, t } = useI18n();
   const [settingsByRoom, setSettingsByRoom] = useState(createInitialSettings);
-  const [stats, setStats] = useState({
-    fps: 0,
-    frameTimeMs: 0,
-    drawCalls: 0,
-    drawCallsMax: 0,
-    trianglesAvg: 0,
-  });
+  const [telemetry, setTelemetry] = useState<{
+    locationKey: string;
+    roomId: RoomId;
+    stats: RoomStats;
+  } | null>(null);
 
   const activeRoom = getRoomById(roomId);
 
@@ -37,6 +39,10 @@ export function ShowroomPage() {
   const settings = settingsByRoom[activeRoom.id];
   const Controls = activeRoom.ControlsComponent;
   const shaderRoom = activeRoom.kind === 'shader' ? activeRoom : null;
+  const activeStats =
+    telemetry?.roomId === activeRoom.id && telemetry.locationKey === location.key
+      ? telemetry.stats
+      : null;
 
   const updateSettings = (nextSettings: AnyRoomSettings) => {
     setSettingsByRoom((current) => ({
@@ -113,7 +119,9 @@ export function ShowroomPage() {
             <ShaderCanvas
               room={shaderRoom}
               settings={shaderRoom ? settings : null}
-              onStats={setStats}
+              onStats={(stats) =>
+                setTelemetry({ locationKey: location.key, roomId: activeRoom.id, stats })
+              }
             />
             {activeRoom.kind === 'embedded' ? (
               <EmbeddedExhibitFrame
@@ -122,15 +130,11 @@ export function ShowroomPage() {
               />
             ) : null}
           </div>
-          <div className="scene-hud" aria-label={t('app.sceneStats')}>
-            <span>
-              {activeRoom.kind === 'embedded' ? t('app.embeddedRuntime') : `${Math.round(stats.fps)} FPS`}
-            </span>
-            <span>
-              {activeRoom.kind === 'embedded' ? t('app.standaloneExhibit') : `${stats.drawCalls} calls`}
-            </span>
-            <span>{activeRoom.techTags.join(' / ')}</span>
-          </div>
+          <TelemetryPanel
+            embedded={activeRoom.kind === 'embedded'}
+            stats={activeStats}
+            t={t}
+          />
         </section>
 
         <aside className="inspector" aria-label={t('app.inspector')}>

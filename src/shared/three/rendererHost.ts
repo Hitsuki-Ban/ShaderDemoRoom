@@ -4,10 +4,15 @@ import {
   readRequiredRootColorToken,
 } from '../../styles/designTokens';
 import { getRendererAntialias } from './renderPolicy';
+import {
+  getRendererEnvironment,
+  type RendererEnvironment,
+} from './rendererEnvironment';
 
 export interface PersistentRendererHost {
   canvas: HTMLCanvasElement;
   renderer: WebGLRenderer;
+  environment: RendererEnvironment;
 }
 
 export function createPersistentRendererHost(): PersistentRendererHost {
@@ -28,6 +33,7 @@ export function createPersistentRendererHost(): PersistentRendererHost {
     readRequiredRootColorToken(colorTokenNames.shellBackground),
     1,
   );
+  const environment = getRendererEnvironment(renderer);
 
-  return { canvas, renderer };
+  return { canvas, renderer, environment };
 }

@@ -1,5 +1,6 @@
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import type { Camera, Object3D, PMREMGenerator } from 'three';
+import type { RendererEnvironment } from '../shared/three/rendererEnvironment';
 import type { RoomAccentToken } from '../styles/designTokens';
 
 export type RoomId =
@@ -57,9 +58,16 @@ export type DeepReadonly<T> = T extends object
 export interface RoomStats {
   fps: number;
   frameTimeMs: number;
+  frameTimeP95Ms: number | null;
+  sampleState: 'warming' | 'live';
+  frameTimeHistoryMs: readonly (number | null)[];
   drawCalls: number;
   drawCallsMax: number;
   trianglesAvg: number;
+  textures: number;
+  geometries: number;
+  programs: number | null;
+  environment: RendererEnvironment;
 }
 
 export interface RoomFrame {

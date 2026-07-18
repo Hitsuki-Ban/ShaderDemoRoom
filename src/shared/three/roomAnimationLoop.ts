@@ -2,6 +2,10 @@ import type { WebGLRenderer } from 'three';
 import type { RoomRuntime, RoomStats } from '../../rooms/types';
 import { getFrameTiming } from './renderPolicy';
 import { FrameStatsWindow, type RendererFrameMetrics } from './frameStats';
+import {
+  getRendererEnvironment,
+  type RendererEnvironment,
+} from './rendererEnvironment';
 
 export type RuntimePauseReason = 'hidden' | 'inactive';
 
@@ -38,10 +42,13 @@ export class RoomAnimationLoop {
   private readonly pausedReasons = new Set<RuntimePauseReason>(['inactive']);
   private readonly clock = new ActiveFrameClock();
   private readonly stats = new FrameStatsWindow();
+  private readonly environment: RendererEnvironment;
   private runtimePrepared = false;
   private runtimePaused = false;
 
-  constructor(private readonly options: RoomAnimationLoopOptions) {}
+  constructor(private readonly options: RoomAnimationLoopOptions) {
+    this.environment = getRendererEnvironment(options.renderer);
+  }
 
   activate(): void {
     this.setPaused('inactive', false);
@@ -89,6 +96,10 @@ export class RoomAnimationLoop {
       metrics = {
         calls: this.options.renderer.info.render.calls,
         triangles: this.options.renderer.info.render.triangles,
+        textures: this.options.renderer.info.memory.textures,
+        geometries: this.options.renderer.info.memory.geometries,
+        programs: this.options.renderer.info.programs?.length ?? null,
+        environment: this.environment,
       };
     } finally {
       this.options.renderer.info.reset();

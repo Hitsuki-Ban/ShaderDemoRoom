@@ -1,0 +1,604 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-18T12:26:24.064Z",
+  "buildId": "index-D1gxyNwV.js+index-MutqDs0q.css",
+  "sourceRevision": "0c1b17c6e8cac8138297da65b13350e698f74fd9",
+  "room": {
+    "id": "voxel-water",
+    "preset": "default"
+  },
+  "references": [
+    {
+      "label": "bundled-chromium-swiftshader",
+      "browserVersion": "148.0.7778.96",
+      "platform": "Win32",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1
+      },
+      "environment": {
+        "maskedVendor": "WebKit",
+        "maskedRenderer": "WebKit WebGL",
+        "unmaskedVendor": "Google Inc. (Google)",
+        "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "classification": "software",
+        "classificationReason": "software renderer marker matched: swiftshader"
+      },
+      "method": {
+        "warmupSeconds": 5,
+        "measurementSeconds": 15,
+        "sampleIntervalSeconds": 1
+      },
+      "aggregates": {
+        "fpsMedian": 15.372409005256369,
+        "frameTimeMsMedian": 65.05161290322582,
+        "frameTimeP95MsMedian": 66.80000000000109,
+        "drawCallsAverageMedian": 19,
+        "drawCallsMaximum": 19,
+        "trianglesAverageMedian": 60912
+      },
+      "samples": [
+        {
+          "second": 1,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 14.755065905961049,
+          "frameTimeMs": 67.77333333333333,
+          "frameTimeP95Ms": 83.30000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 2,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.000483886576983,
+          "frameTimeMs": 66.66451612903226,
+          "frameTimeP95Ms": 83.30000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 3,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.122688911654222,
+          "frameTimeMs": 66.12580645161292,
+          "frameTimeP95Ms": 83.30000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 4,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.372409005256369,
+          "frameTimeMs": 65.05161290322582,
+          "frameTimeP95Ms": 83.30000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 5,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.12268891165423,
+          "frameTimeMs": 66.12580645161289,
+          "frameTimeP95Ms": 83.30000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 6,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 14.755065905961041,
+          "frameTimeMs": 67.77333333333335,
+          "frameTimeP95Ms": 83.30000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 7,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 14.754340235085825,
+          "frameTimeMs": 67.77666666666664,
+          "frameTimeP95Ms": 83.30000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 8,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.24615157625534,
+          "frameTimeMs": 65.59032258064519,
+          "frameTimeP95Ms": 66.80000000000109,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 9,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.611279149185291,
+          "frameTimeMs": 64.05624999999998,
+          "frameTimeP95Ms": 66.80000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 10,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.610517586223722,
+          "frameTimeMs": 64.05937499999999,
+          "frameTimeP95Ms": 66.80000000000018,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 11,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.96902976046454,
+          "frameTimeMs": 62.621212121212174,
+          "frameTimeP95Ms": 66.79999999999927,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 12,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.968257040549693,
+          "frameTimeMs": 62.62424242424243,
+          "frameTimeP95Ms": 66.79999999999927,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 13,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.869080089263576,
+          "frameTimeMs": 63.015625,
+          "frameTimeP95Ms": 66.79999999999927,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 14,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 16.097560975609756,
+          "frameTimeMs": 62.121212121212125,
+          "frameTimeP95Ms": 66.79999999999927,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 15,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 15.610517586223734,
+          "frameTimeMs": 64.05937499999993,
+          "frameTimeP95Ms": 66.79999999999927,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        }
+      ]
+    },
+    {
+      "label": "system-chrome-d3d11",
+      "browserVersion": "150.0.7871.124",
+      "platform": "Win32",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1
+      },
+      "environment": {
+        "maskedVendor": "WebKit",
+        "maskedRenderer": "WebKit WebGL",
+        "unmaskedVendor": "Google Inc. (NVIDIA)",
+        "unmaskedRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "classification": "hardware",
+        "classificationReason": "hardware renderer marker matched: nvidia"
+      },
+      "method": {
+        "warmupSeconds": 5,
+        "measurementSeconds": 15,
+        "sampleIntervalSeconds": 1
+      },
+      "aggregates": {
+        "fpsMedian": 200,
+        "frameTimeMsMedian": 5,
+        "frameTimeP95MsMedian": 5.100000000000364,
+        "drawCallsAverageMedian": 19,
+        "drawCallsMaximum": 19,
+        "trianglesAverageMedian": 60912
+      },
+      "samples": [
+        {
+          "second": 1,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 2,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 199.99999999999991,
+          "frameTimeMs": 5.000000000000003,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 3,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 199.99999999999991,
+          "frameTimeMs": 5.000000000000003,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 4,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 5,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 6,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 7,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 199.99000049997514,
+          "frameTimeMs": 5.000249999999997,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 8,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 9,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 10,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200.0099755598785,
+          "frameTimeMs": 4.999750623441391,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 11,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 199.99000049997497,
+          "frameTimeMs": 5.000250000000001,
+          "frameTimeP95Ms": 5.100000000000364,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 12,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 200.0099755598785,
+          "frameTimeMs": 4.999750623441391,
+          "frameTimeP95Ms": 5.100000000002183,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 13,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 199.99000049997477,
+          "frameTimeMs": 5.000250000000006,
+          "frameTimeP95Ms": 5.100000000002183,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 14,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 198.5136415781338,
+          "frameTimeMs": 5.037437185929643,
+          "frameTimeP95Ms": 5.100000000002183,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        },
+        {
+          "second": 15,
+          "drawCalls": 19,
+          "drawCallsMax": 19,
+          "fps": 198.50374064837905,
+          "frameTimeMs": 5.0376884422110555,
+          "frameTimeP95Ms": 5.100000000002183,
+          "geometries": 19,
+          "programs": 6,
+          "sampleState": "live",
+          "textures": 1,
+          "trianglesAvg": 60912
+        }
+      ]
+    }
+  ],
+  "overhead": {
+    "comparison": "T-SH-02 baseline build vs T-SH-03 candidate build",
+    "baselineUrl": "https://hitsuki-ban.github.io/ShaderDemoRoom",
+    "candidateUrl": "http://127.0.0.1:4173/ShaderDemoRoom",
+    "method": {
+      "pairs": 5,
+      "order": "interleaved and alternating",
+      "warmupSeconds": 5,
+      "measurementSeconds": 15
+    },
+    "pairedMedianRegressionPercent": 1.4210854715202004e-14,
+    "pairs": [
+      {
+        "pair": 1,
+        "order": [
+          "baseline",
+          "candidate"
+        ],
+        "baseline": {
+          "label": "baseline",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15004.9,
+          "fps": 200.00133289792,
+          "frameTimeMs": 4.999966677774075,
+          "intervals": 3001
+        },
+        "candidate": {
+          "label": "candidate",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15004.999999999998,
+          "fps": 200.00000000000003,
+          "frameTimeMs": 4.999999999999999,
+          "intervals": 3001
+        },
+        "regressionPercent": 0.0006664445184773447
+      },
+      {
+        "pair": 2,
+        "order": [
+          "candidate",
+          "baseline"
+        ],
+        "baseline": {
+          "label": "baseline",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15000,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "intervals": 3000
+        },
+        "candidate": {
+          "label": "candidate",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15000.000000000002,
+          "fps": 199.99999999999997,
+          "frameTimeMs": 5.000000000000001,
+          "intervals": 3000
+        },
+        "regressionPercent": 1.4210854715202004e-14
+      },
+      {
+        "pair": 3,
+        "order": [
+          "baseline",
+          "candidate"
+        ],
+        "baseline": {
+          "label": "baseline",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15000,
+          "fps": 200,
+          "frameTimeMs": 5,
+          "intervals": 3000
+        },
+        "candidate": {
+          "label": "candidate",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15004.9,
+          "fps": 200.00133289792,
+          "frameTimeMs": 4.999966677774075,
+          "intervals": 3001
+        },
+        "regressionPercent": -0.0006664489600041179
+      },
+      {
+        "pair": 4,
+        "order": [
+          "candidate",
+          "baseline"
+        ],
+        "baseline": {
+          "label": "baseline",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15004.9,
+          "fps": 200.00133289792,
+          "frameTimeMs": 4.999966677774075,
+          "intervals": 3001
+        },
+        "candidate": {
+          "label": "candidate",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15000.000000000002,
+          "fps": 199.99999999999997,
+          "frameTimeMs": 5.000000000000001,
+          "intervals": 3000
+        },
+        "regressionPercent": 0.0006664445185057662
+      },
+      {
+        "pair": 5,
+        "order": [
+          "baseline",
+          "candidate"
+        ],
+        "baseline": {
+          "label": "baseline",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15004.900000000001,
+          "fps": 199.93468800191934,
+          "frameTimeMs": 5.001633333333333,
+          "intervals": 3000
+        },
+        "candidate": {
+          "label": "candidate",
+          "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "elapsedMs": 15004.900000000001,
+          "fps": 200.00133289791998,
+          "frameTimeMs": 4.999966677774076,
+          "intervals": 3001
+        },
+        "regressionPercent": -0.03333333333333302
+      }
+    ]
+  }
+}

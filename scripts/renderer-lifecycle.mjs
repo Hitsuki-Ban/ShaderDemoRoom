@@ -181,12 +181,25 @@ async function sampleTelemetry(page, room) {
   const samples = [];
   for (let index = 0; index < 8; index += 1) {
     await page.waitForTimeout(1000);
-    const chips = await page.locator('.scene-hud span').allTextContents();
-    const fps = Number.parseInt(chips[0] ?? '', 10);
-    const calls = Number.parseFloat(chips[1] ?? '');
-    assert(Number.isFinite(fps), `Could not read the ${room} FPS chip: ${chips[0]}.`);
-    assert(Number.isFinite(calls), `Could not read the ${room} calls chip: ${chips[1]}.`);
-    samples.push({ calls, fps });
+    const telemetry = await page.evaluate(() => {
+      const serialized = document.querySelector('[data-telemetry-json]')?.getAttribute('data-telemetry-json');
+      return serialized ? JSON.parse(serialized) : null;
+    });
+    assert(telemetry, `Could not read the ${room} telemetry record.`);
+    const fps = Number(telemetry.fps);
+    const calls = Number(telemetry.drawCalls);
+    assert(Number.isFinite(fps), `Could not read the ${room} FPS value: ${telemetry.fps}.`);
+    assert(Number.isFinite(calls), `Could not read the ${room} calls value: ${telemetry.drawCalls}.`);
+    assert(
+      ['software', 'hardware', 'unknown'].includes(telemetry.environment.classification),
+      `Invalid ${room} renderer classification: ${telemetry.environment.classification}.`,
+    );
+    samples.push({
+      calls,
+      environment: telemetry.environment.classification,
+      fps,
+      state: telemetry.sampleState,
+    });
   }
   return samples;
 }
