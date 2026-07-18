@@ -21,6 +21,7 @@ import {
   PlaneGeometry,
   Points,
   PointsMaterial,
+  Quaternion,
   Scene,
   ShaderMaterial,
   SphereGeometry,
@@ -157,7 +158,7 @@ const WATER_PLANE_SIZE = 156;
 const WATER_PLANE_SEGMENTS = 72;
 const VOXEL_GRID_SIDE = 64;
 const VOXEL_SPACING = 0.62;
-const VOXEL_SIZE = 0.6;
+const VOXEL_SIZE = VOXEL_SPACING;
 const VOXEL_FIELD_OFFSET_X = 8;
 const VOXEL_FIELD_OFFSET_Z = 0;
 const VOXEL_FIELD_YAW = -0.045;
@@ -206,6 +207,7 @@ export function createRoomRuntime(
   const root = new Group();
   const matrix = new Matrix4();
   const columnPosition = new Vector3();
+  const columnOrientation = new Quaternion();
   const columnScale = new Vector3();
   const columnColor = new Color();
   const lowColumnColor = new Color(0x8efff0);
@@ -535,7 +537,7 @@ export function createRoomRuntime(
 
         columnPosition.set(px, -0.24 + height * 0.5, pz);
         columnScale.set(1, height * (0.8 + edgeFade * 0.2), 1);
-        matrix.compose(columnPosition, columns.quaternion, columnScale);
+        matrix.compose(columnPosition, columnOrientation, columnScale);
         columns.setMatrixAt(index, matrix);
         if (updateColors) {
           columnColor.copy(lowColumnColor).lerp(highColumnColor, Math.min(1, columnColorBand * 1.18));

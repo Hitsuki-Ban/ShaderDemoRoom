@@ -46,3 +46,28 @@
 - 修正が water.frag.glsl / gridOverlay に及ぶ場合、`shader-quality.test.ts:87-103` の uniform 束縛テスト(宣言 uniform とランタイム uniform の集合一致)と 105-145 の renderOrder/transparent 契約に接触し得る。挙動を変えた場合はテストの意図ごと更新する。
 - T-VW-05 へ確定後の scene graph と残存する全 grid 表現を申し送り、その時点で存在する表現だけを単一尺度へ統合する。
 - 調査段階のトグルはコミットに残さない(キャプチャのみ成果物)。
+
+## 完了レポート (2026-07-19)
+
+### 根本原因と修正
+
+- 真因は4候補ではなく、2つのcolumn幾何契約違反だった。`VOXEL_SIZE = 0.60` が `VOXEL_SPACING = 0.62` より小さく全4096 column間へ **0.02 world-unit の隙間**を残していたうえ、各instance matrixへ親のyaw quaternionを入れ、さらに親objectでも同じyawを適用していた。配置格子は1回、box面は2回回転し、サイズを揃えるだけでも隙間が残る状態だった。底面のwater plane / 隙間エッジが透視で連続し、clear/rainでは青い斜縦線、stormでは暗い赤系の線として読まれていた。
+- water plane非表示では線が残り、columns非表示で消失した。UV `gridLine`、edge fade、`gridOverlay`、origin snapを個別に無効化しても同座標の線は消えず、候補(a)〜(d)を排除した。旧 `palette-camera-final-*` は `gridOverlay` 導入前の画像でも同じ線を持つため、overlayは歴史的にも真因になり得ない。
+- `VOXEL_SIZE = VOXEL_SPACING` へ単一ソース化し、instance orientationをidentityにして親objectで格子とboxを一度だけ一緒に回転するよう修正した。旧値と旧二重yawを一時復元した8-frame storm復発制御ではpersistent scoreが `0.536 → 1.436` へ戻ってhard gateを失敗し、修正の再適用で再び通過した。scene object数、draw topology、renderOrder、shader、uniformは変更していない。
+
+### 回帰ゲート
+
+- `water-qa-metrics.mjs` に画面高28%〜94%、横8%〜92%、既知の線方向である傾き -0.15〜0、左右5px比較の斜縦RGB outlier scanを追加した。経路全体が宣言scan内に留まる候補だけを全pixel走査し、8 frameのmedianを持続線score、maxを診断値として記録する。clear/rainは全水面 `score <= 1.5`、stormは旧線を含む前景(高72%〜94%、横75%〜95%) `score <= 1.0` をhard gateにしたため、短時間のlightningをシームと誤認しない。
+- 合成テストでuniform frame、垂直1px線、傾き -0.10 の1px線、storm低contrast線、単発線と持続線の判別を固定した。runtime contractは実instance matrixからX/Z格子軸とbox軸の一致、およびBoxGeometry width/depthがspacingを満たすことを検証するため、サイズ不足と二重yawのどちらも再導入できない。
+- 診断トグルは残していない。`gridOverlay` は原因でないためチケット契約どおりscene graphへ残し、そのscale/UV gridの整理はT-VW-05へ申し送る。
+
+### 三態検証
+
+| preset | persistent seam score (after) | gate | waterLuma before → after | toonBandSeparation before → after | hueMean before → after |
+|---|---:|---:|---:|---:|---:|
+| clear | 1.268 | <= 1.5 | 162.44 → 162.73 | 7.841 → 7.629 | 177.31 → 177.29 |
+| rain | 1.076 | <= 1.5 | 116.00 → 116.22 | 6.629 → 6.416 | 199.81 → 199.85 |
+| storm | 0.536 | <= 1.0 | 108.19 → 108.21 | 3.140 → 3.140 | 185.63 → 185.64 |
+
+- 初期A/Bではclear/rainの旧線がそれぞれ `2.197` / `1.657`、修正後は `1.343` / `1.121` だった。最終gateは8-frame medianへ強化し、3状態とも通過。stormの旧実装復発制御は `1.436 > 1.0` で失敗し、修正後は `0.536` で通過した。
+- 8 frameの正式キャプチャは `output/water-qa/vw03-final/` に保存。waterCoverageは3状態すべて1、console error 0。平均値/色相は同水準で、変化は隙間を閉じた前景local contrast低下だけに限定された。
