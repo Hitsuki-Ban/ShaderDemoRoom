@@ -21,9 +21,21 @@ export default function VoxelWaterControls({
           label={t('rooms.voxelWater.controls.weather')}
           value={settings.weather}
           options={[
-            { value: 'clear', label: t('rooms.voxelWater.controls.clear') },
-            { value: 'rain', label: t('rooms.voxelWater.controls.rainy') },
-            { value: 'storm', label: t('rooms.voxelWater.controls.storm') },
+            {
+              value: 'clear',
+              label: t('rooms.voxelWater.controls.clear'),
+              testId: 'voxel-water-weather-clear',
+            },
+            {
+              value: 'rain',
+              label: t('rooms.voxelWater.controls.rainy'),
+              testId: 'voxel-water-weather-rain',
+            },
+            {
+              value: 'storm',
+              label: t('rooms.voxelWater.controls.storm'),
+              testId: 'voxel-water-weather-storm',
+            },
           ]}
           onChange={(weather) => onPatch({ weather })}
         />
@@ -163,10 +175,18 @@ export default function VoxelWaterControls({
       </ControlGroup>
 
       <div className="control-actions">
-        <Button icon={<CloudRain size={16} />} onClick={() => onPatch(voxelWaterStormPreset)}>
+        <Button
+          data-testid="voxel-water-preset-storm"
+          icon={<CloudRain size={16} />}
+          onClick={() => onPatch(voxelWaterStormPreset)}
+        >
           Storm preset
         </Button>
-        <Button icon={<Waves size={16} />} onClick={() => onPatch(voxelWaterCalmPreset)}>
+        <Button
+          data-testid="voxel-water-preset-calm"
+          icon={<Waves size={16} />}
+          onClick={() => onPatch(voxelWaterCalmPreset)}
+        >
           Calm preset
         </Button>
         <Button

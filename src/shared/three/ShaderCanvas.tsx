@@ -6,18 +6,16 @@ import type {
   RoomStats,
   ShaderRoomDefinition,
 } from '../../rooms/types';
+import {
+  getFrameTiming,
+  getRendererAntialias,
+  getRenderPixelRatio,
+} from './renderPolicy';
 
 interface ShaderCanvasProps {
   room: ShaderRoomDefinition<AnyRoomSettings>;
   settings: AnyRoomSettings;
   onStats: (stats: RoomStats) => void;
-}
-
-function getRenderPixelRatio(roomId: string) {
-  const devicePixelRatio = window.devicePixelRatio || 1;
-  const maxPixelRatio = roomId === 'voxel-water' ? 0.6 : 2;
-
-  return Math.min(devicePixelRatio, maxPixelRatio);
 }
 
 export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
@@ -42,7 +40,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
 
     const renderer = new WebGLRenderer({
       canvas,
-      antialias: room.id !== 'voxel-water',
+      antialias: getRendererAntialias(room.id),
       alpha: false,
       powerPreference: 'high-performance',
     });
@@ -61,7 +59,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
       const rect = parent.getBoundingClientRect();
       const width = Math.max(1, Math.floor(rect.width));
       const height = Math.max(1, Math.floor(rect.height));
-      const pixelRatio = getRenderPixelRatio(room.id);
+      const pixelRatio = getRenderPixelRatio(room.id, window.devicePixelRatio);
 
       renderer.setPixelRatio(pixelRatio);
       renderer.setSize(width, height, false);
@@ -81,12 +79,12 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
     const tick = (timestamp?: number) => {
       timer.update(timestamp);
       const rawDelta = timer.getDelta();
-      const delta = Math.min(rawDelta, 0.05);
+      const { simulationDelta: delta, statsDelta } = getFrameTiming(rawDelta);
       const elapsed = timer.getElapsed();
       runtimeRef.current?.render({ elapsed, delta });
 
       frames += 1;
-      fpsElapsed += rawDelta;
+      fpsElapsed += statsDelta;
 
       if (fpsElapsed >= 0.5) {
         onStats({
@@ -144,7 +142,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
         runtime.resize({
           width: Math.max(1, Math.floor(rect.width)),
           height: Math.max(1, Math.floor(rect.height)),
-          pixelRatio: getRenderPixelRatio(room.id),
+          pixelRatio: getRenderPixelRatio(room.id, window.devicePixelRatio),
         });
       }
 

@@ -54,7 +54,7 @@ type BeamTube = {
   glow: Mesh<TubeGeometry, MeshBasicMaterial>;
 };
 
-function createTubeGeometry(points: Vector3[], radius: number) {
+export function createTubeGeometry(points: Vector3[], radius: number) {
   const curve = new CatmullRomCurve3(
     points.map((point) => point.clone()),
     false,
@@ -62,6 +62,59 @@ function createTubeGeometry(points: Vector3[], radius: number) {
     0.2,
   );
   return new TubeGeometry(curve, Math.max(16, points.length * 12), radius, 8, false);
+}
+
+export function createGlassMaterial(settings: GlassOpticsSettings) {
+  const material = new MeshPhysicalMaterial({
+    color: 0xe8fdff,
+    roughness: settings.roughness,
+    metalness: 0,
+    transmission: 1,
+    thickness: settings.thickness,
+    ior: settings.ior,
+    transparent: true,
+    opacity: 1,
+    reflectivity: 0.92,
+    envMapIntensity: 2.15,
+    clearcoat: 1,
+    clearcoatRoughness: 0.02,
+    attenuationColor: 0x9ff4ff,
+    attenuationDistance: 4.2,
+    specularIntensity: 1,
+    specularColor: 0xffffff,
+  });
+
+  material.ior = settings.ior;
+  return material;
+}
+
+export function calculateGlassLightPath(settings: GlassOpticsSettings) {
+  const lightPosition = new Vector3(settings.lightX, settings.lightY, settings.lightZ);
+  const incomingEnd = new Vector3(0, 1.18, 0);
+  const direction = incomingEnd.clone().sub(lightPosition).normalize();
+  const reflected = incomingEnd.clone().add(
+    new Vector3(-direction.x, Math.abs(direction.y), -direction.z).multiplyScalar(3.6),
+  );
+  const refractedA = incomingEnd.clone().add(direction.multiplyScalar(1.4 / settings.ior));
+  const refractedB = new Vector3(
+    refractedA.x + settings.beamSpread * 2.4,
+    0.04,
+    refractedA.z - settings.beamSpread * 3.2,
+  );
+
+  return {
+    lightPosition,
+    incomingEnd,
+    reflected,
+    refractedA,
+    refractedB,
+    causticsPosition: new Vector3(
+      (refractedA.x + refractedB.x) * 0.5,
+      0.022,
+      (refractedA.z + refractedB.z) * 0.5,
+    ),
+    causticsScale: 0.78 + settings.beamSpread * 0.58 + (settings.ior - 1) * 0.16,
+  };
 }
 
 function updateBeamGeometry(beam: BeamTube, points: Vector3[], coreRadius: number, glowRadius: number) {
@@ -80,7 +133,6 @@ export function createRoomRuntime(
   const camera = new PerspectiveCamera(42, 1, 0.1, 100);
   const root = new Group();
   const lightPosition = new Vector3();
-  const target = new Vector3(0, 1.18, 0);
   const refractedA = new Vector3();
   const refractedB = new Vector3();
   const reflected = new Vector3();
@@ -166,24 +218,7 @@ export function createRoomRuntime(
   glassGroup.position.y = 1.25;
   root.add(glassGroup);
 
-  const glassMaterial = new MeshPhysicalMaterial({
-    color: 0xe8fdff,
-    roughness: settings.roughness,
-    metalness: 0,
-    transmission: 1,
-    thickness: settings.thickness,
-    ior: settings.ior,
-    transparent: true,
-    opacity: 1,
-    reflectivity: 0.92,
-    envMapIntensity: 2.15,
-    clearcoat: 1,
-    clearcoatRoughness: 0.02,
-    attenuationColor: 0x9ff4ff,
-    attenuationDistance: 4.2,
-    specularIntensity: 1,
-    specularColor: 0xffffff,
-  });
+  const glassMaterial = createGlassMaterial(settings);
   const glass = new Mesh(new IcosahedronGeometry(1.35, 8), glassMaterial);
   glass.renderOrder = 3;
   glassGroup.add(glass);
@@ -301,33 +336,24 @@ export function createRoomRuntime(
   root.add(caustics);
 
   const updateLightPath = () => {
-    lightPosition.set(settings.lightX, settings.lightY, settings.lightZ);
+    const lightPath = calculateGlassLightPath(settings);
+    lightPosition.copy(lightPath.lightPosition);
     source.position.copy(lightPosition);
     sourceHalo.position.copy(lightPosition);
     pointLight.position.copy(lightPosition);
 
-    const incomingEnd = target.clone();
-    const direction = incomingEnd.clone().sub(lightPosition).normalize();
-    reflected.copy(incomingEnd).add(new Vector3(-direction.x, Math.abs(direction.y), -direction.z).multiplyScalar(3.6));
-    refractedA.copy(incomingEnd).add(direction.multiplyScalar(1.4 / settings.ior));
-    refractedB.set(
-      refractedA.x + settings.beamSpread * 2.4,
-      0.04,
-      refractedA.z - settings.beamSpread * 3.2,
-    );
+    reflected.copy(lightPath.reflected);
+    refractedA.copy(lightPath.refractedA);
+    refractedB.copy(lightPath.refractedB);
 
-    updateBeamGeometry(incoming, [lightPosition, incomingEnd], 0.017, 0.064);
-    updateBeamGeometry(reflection, [incomingEnd, reflected], 0.014, 0.052);
-    updateBeamGeometry(refraction, [incomingEnd, refractedA, refractedB], 0.018, 0.07);
-    targetMarker.position.copy(incomingEnd);
+    updateBeamGeometry(incoming, [lightPosition, lightPath.incomingEnd], 0.017, 0.064);
+    updateBeamGeometry(reflection, [lightPath.incomingEnd, reflected], 0.014, 0.052);
+    updateBeamGeometry(refraction, [lightPath.incomingEnd, refractedA, refractedB], 0.018, 0.07);
+    targetMarker.position.copy(lightPath.incomingEnd);
     reflectionMarker.position.copy(reflected);
     refractionMarker.position.copy(refractedB);
-    caustics.position.set(
-      (refractedA.x + refractedB.x) * 0.5,
-      0.022,
-      (refractedA.z + refractedB.z) * 0.5,
-    );
-    caustics.scale.setScalar(0.78 + settings.beamSpread * 0.58 + (settings.ior - 1) * 0.16);
+    caustics.position.copy(lightPath.causticsPosition);
+    caustics.scale.setScalar(lightPath.causticsScale);
   };
 
   const updateMaterial = () => {

@@ -1,5 +1,15 @@
 import type { GlassOpticsSettings } from '../types';
 
+export const glassOpticsDomains = {
+  lightX: { min: -6, max: 6 },
+  lightY: { min: 0.8, max: 6 },
+  lightZ: { min: -6, max: 6 },
+  beamSpread: { min: 0.05, max: 0.9 },
+  ior: { min: 1, max: 2.4 },
+  roughness: { min: 0, max: 0.55 },
+  thickness: { min: 0.2, max: 2.4 },
+} as const;
+
 export const glassOpticsDefaults: GlassOpticsSettings = {
   lightX: -0.05,
   lightY: 2.42,
@@ -11,3 +21,17 @@ export const glassOpticsDefaults: GlassOpticsSettings = {
   autoRotate: true,
   showCaustics: true,
 };
+
+export const glassOpticsFocusPreset = {
+  lightX: -0.28,
+  lightY: 2.85,
+  lightZ: 1.45,
+  beamSpread: 0.18,
+} satisfies Partial<GlassOpticsSettings>;
+
+export const glassOpticsCrystalPreset = {
+  ior: 1.72,
+  thickness: 1.8,
+  roughness: 0.01,
+  showCaustics: true,
+} satisfies Partial<GlassOpticsSettings>;

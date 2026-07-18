@@ -1,0 +1,10 @@
+{
+  "date": "2026-07-18",
+  "environment": "Playwright headless Chromium (software GL / SwiftShader 系) — 実GPU値ではない点に注意。QAパイプラインのスクリーンショットと同一環境",
+  "method": "各ルーム入場後2.5s待機、以後1s間隔で .scene-hud のテキストを8回サンプル",
+  "samples": {
+    "voxel-water": ["16 FPS / 19 calls", "16 FPS / 19 calls", "17 FPS / 19 calls", "16 FPS / 19 calls", "17 FPS / 19 calls", "17 FPS / 19 calls", "17 FPS / 19 calls", "17 FPS / 19 calls"],
+    "glass-optics": ["17 FPS / 19 calls", "2 FPS / 19 calls", "4 FPS / 19 calls", "4 FPS / 19 calls", "4 FPS / 19 calls", "4 FPS / 19 calls", "4 FPS / 19 calls", "4 FPS / 19 calls"]
+  },
+  "reading": "voxel-water はソフトウェアGLでも16-17 FPSで安定。glass-optics は入場直後17→2-4 FPSへ崩落し、既報の『1 FPS』チップはこの崩落の観測。transmission バッファ(フルシーン2回描画)がソフトウェアGLで特に高コストである可能性が高い。実GPUでの再計測(SH-1 の統一計測プロトコル)が必要だが、glass 固有の per-frame コスト問題の存在自体はこのデータで裏付けられた。draw calls は両ルームとも19で一定"
+}
