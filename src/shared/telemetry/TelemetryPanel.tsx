@@ -1,21 +1,31 @@
+import { useMemo } from 'react';
 import type { RoomStats } from '../../rooms/types';
+import type { Locale, Translator } from '../i18n';
 import { TelemetrySparkline } from './TelemetrySparkline';
 
 interface TelemetryPanelProps {
   embedded: boolean;
   stats: RoomStats | null;
-  t: (key: string) => string;
-}
-
-function formatCount(value: number): string {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+  locale: Locale;
+  t: Translator;
 }
 
 function environmentKey(stats: RoomStats): string {
   return `app.telemetry.environment.${stats.environment.classification}`;
 }
 
-export function TelemetryPanel({ embedded, stats, t }: TelemetryPanelProps) {
+export function TelemetryPanel({ embedded, stats, locale, t }: TelemetryPanelProps) {
+  const numberFormatters = useMemo(
+    () => ({
+      integer: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+      oneDecimal: new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }),
+    }),
+    [locale],
+  );
+
   if (embedded) {
     return (
       <div className="scene-hud telemetry-rail telemetry-rail-external" aria-label={t('app.sceneStats')}>
@@ -31,7 +41,7 @@ export function TelemetryPanel({ embedded, stats, t }: TelemetryPanelProps) {
   const statusKey = stats ? `app.telemetry.${stats.sampleState}` : 'app.telemetry.measuring';
   const contextLabel = stats ? t(environmentKey(stats)) : t('app.telemetry.environment.unknown');
   const environmentTitle = stats
-    ? `${stats.environment.unmaskedRenderer ?? stats.environment.maskedRenderer} · ${stats.environment.classificationReason}`
+    ? `${contextLabel} · ${stats.environment.unmaskedRenderer ?? stats.environment.maskedRenderer}`
     : contextLabel;
 
   return (
@@ -56,8 +66,8 @@ export function TelemetryPanel({ embedded, stats, t }: TelemetryPanelProps) {
         <section className="telemetry-cell telemetry-cell-graph" data-metric="fps">
           <span className="telemetry-label">{t('app.telemetry.cadence')}</span>
           <span className="telemetry-value">
-            <strong>{stats ? stats.fps.toFixed(1) : t('app.telemetry.measuring')}</strong>
-            {stats ? <small>FPS</small> : null}
+            <strong>{stats ? numberFormatters.oneDecimal.format(stats.fps) : t('app.telemetry.measuring')}</strong>
+            {stats ? <small>{t('app.telemetry.units.fps')}</small> : null}
           </span>
           {stats ? <TelemetrySparkline samples={stats.frameTimeHistoryMs} /> : null}
         </section>
@@ -65,28 +75,30 @@ export function TelemetryPanel({ embedded, stats, t }: TelemetryPanelProps) {
         <section className="telemetry-cell telemetry-cell-graph" data-metric="frame-time">
           <span className="telemetry-label">{t('app.telemetry.frameTime')}</span>
           <span className="telemetry-value">
-            <strong>{stats ? stats.frameTimeMs.toFixed(1) : t('app.telemetry.measuring')}</strong>
-            {stats ? <small>MS</small> : null}
+            <strong>{stats ? numberFormatters.oneDecimal.format(stats.frameTimeMs) : t('app.telemetry.measuring')}</strong>
+            {stats ? <small>{t('app.telemetry.units.milliseconds')}</small> : null}
           </span>
           {stats ? <TelemetrySparkline samples={stats.frameTimeHistoryMs} /> : null}
           <span className="telemetry-detail">
             {stats?.frameTimeP95Ms === null || !stats
               ? t('app.telemetry.p95Warming')
-              : `P95 ${stats.frameTimeP95Ms.toFixed(1)} MS`}
+              : `${t('app.telemetry.units.p95')} ${numberFormatters.oneDecimal.format(stats.frameTimeP95Ms)} ${t('app.telemetry.units.milliseconds')}`}
           </span>
         </section>
 
         <section className="telemetry-cell" data-metric="draw-calls">
           <span className="telemetry-label">{t('app.telemetry.drawCalls')}</span>
-          <strong>{stats ? stats.drawCalls.toFixed(1) : t('app.telemetry.measuring')}</strong>
+          <strong>{stats ? numberFormatters.oneDecimal.format(stats.drawCalls) : t('app.telemetry.measuring')}</strong>
           <span className="telemetry-detail">
-            {stats ? `${t('app.telemetry.maximum')} ${stats.drawCallsMax}` : t('app.telemetry.sameWindow')}
+            {stats
+              ? `${t('app.telemetry.maximum')} ${numberFormatters.integer.format(stats.drawCallsMax)}`
+              : t('app.telemetry.sameWindow')}
           </span>
         </section>
 
         <section className="telemetry-cell" data-metric="triangles">
           <span className="telemetry-label">{t('app.telemetry.triangles')}</span>
-          <strong>{stats ? formatCount(stats.trianglesAvg) : t('app.telemetry.measuring')}</strong>
+          <strong>{stats ? numberFormatters.integer.format(stats.trianglesAvg) : t('app.telemetry.measuring')}</strong>
           <span className="telemetry-detail">{t('app.telemetry.twoSecondAverage')}</span>
         </section>
 
@@ -94,12 +106,12 @@ export function TelemetryPanel({ embedded, stats, t }: TelemetryPanelProps) {
           <span className="telemetry-label">{t('app.telemetry.resources')}</span>
           <strong>
             {stats
-              ? `TX ${stats.textures} / GEO ${stats.geometries}`
+              ? `${t('app.telemetry.units.textures')} ${numberFormatters.integer.format(stats.textures)} / ${t('app.telemetry.units.geometries')} ${numberFormatters.integer.format(stats.geometries)}`
               : t('app.telemetry.measuring')}
           </strong>
           <span className="telemetry-detail">
             {stats
-              ? `${stats.programs === null ? t('app.telemetry.programsUnavailable') : `PGM ${stats.programs}`} · ${isLive ? contextLabel : t(statusKey)}`
+              ? `${stats.programs === null ? t('app.telemetry.programsUnavailable') : `${t('app.telemetry.units.programs')} ${numberFormatters.integer.format(stats.programs)}`} · ${isLive ? contextLabel : t(statusKey)}`
               : t(statusKey)}
           </span>
         </section>

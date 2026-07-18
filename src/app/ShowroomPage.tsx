@@ -13,6 +13,7 @@ import type {
   RoomStats,
 } from '../rooms/types';
 import { EmbeddedExhibitFrame } from '../shared/embedded/EmbeddedExhibitFrame';
+import { localeManifest, parseLocale } from '../shared/i18n';
 import { useI18n } from '../shared/i18n/useI18n';
 import { TelemetryPanel } from '../shared/telemetry/TelemetryPanel';
 import { ShaderCanvas } from '../shared/three/ShaderCanvas';
@@ -43,6 +44,7 @@ export function ShowroomPage() {
     telemetry?.roomId === activeRoom.id && telemetry.locationKey === location.key
       ? telemetry.stats
       : null;
+  const roomLabel = t(activeRoom.titleKey);
 
   const updateSettings = (nextSettings: AnyRoomSettings) => {
     setSettingsByRoom((current) => ({
@@ -95,11 +97,14 @@ export function ShowroomPage() {
             <span>{t('app.language')}</span>
             <select
               value={locale}
-              onChange={(event) => setLocale(event.target.value)}
+              onChange={(event) => setLocale(parseLocale(event.currentTarget.value))}
               aria-label={t('app.language')}
             >
-              <option value="en">English</option>
-              <option value="zh-CN">中文</option>
+              {localeManifest.map(({ code, labelKey }) => (
+                <option key={code} value={code}>
+                  {t(labelKey)}
+                </option>
+              ))}
             </select>
           </label>
           <Button
@@ -122,6 +127,8 @@ export function ShowroomPage() {
             <ShaderCanvas
               room={shaderRoom}
               settings={shaderRoom ? settings : null}
+              ariaLabel={roomLabel}
+              loadingLabel={t('app.loadingRoom', { room: roomLabel })}
               onStats={(stats) =>
                 setTelemetry({ locationKey: location.key, roomId: activeRoom.id, stats })
               }
@@ -130,12 +137,14 @@ export function ShowroomPage() {
               <EmbeddedExhibitFrame
                 room={activeRoom}
                 settings={settings as EmbeddedExhibitSettings}
+                title={roomLabel}
               />
             ) : null}
           </div>
           <TelemetryPanel
             embedded={activeRoom.kind === 'embedded'}
             stats={activeStats}
+            locale={locale}
             t={t}
           />
         </section>
@@ -153,6 +162,7 @@ export function ShowroomPage() {
               onChange={updateSettings}
               onPatch={patchSettings}
               onReset={resetSettings}
+              locale={locale}
               t={t}
             />
           </Suspense>

@@ -19,6 +19,8 @@ import { useRendererHost } from './useRendererHost';
 interface ShaderCanvasProps {
   room: ShaderRoomDefinition<AnyRoomSettings> | null;
   settings: AnyRoomSettings | null;
+  ariaLabel: string;
+  loadingLabel: string;
   onStats: (stats: RoomStats) => void;
 }
 
@@ -49,7 +51,13 @@ function resizeStage(
   runtime?.resize({ width, height, pixelRatio });
 }
 
-export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
+export function ShaderCanvas({
+  room,
+  settings,
+  ariaLabel,
+  loadingLabel,
+  onStats,
+}: ShaderCanvasProps) {
   const { canvas, renderer } = useRendererHost();
   const motionScale = useMotionScale();
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
@@ -87,13 +95,13 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
 
   useEffect(() => {
     if (room) {
-      canvas.setAttribute('aria-label', room.id);
+      canvas.setAttribute('aria-label', ariaLabel);
       canvas.removeAttribute('aria-hidden');
     } else {
       canvas.removeAttribute('aria-label');
       canvas.setAttribute('aria-hidden', 'true');
     }
-  }, [canvas, room]);
+  }, [ariaLabel, canvas, room]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -216,7 +224,7 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
       aria-hidden={room ? undefined : true}
     >
       <div ref={canvasHostRef} className="shader-canvas-host" />
-      {room && loading ? <div className="canvas-loader">Loading {room.id}</div> : null}
+      {room && loading ? <div className="canvas-loader">{loadingLabel}</div> : null}
     </div>
   );
 }

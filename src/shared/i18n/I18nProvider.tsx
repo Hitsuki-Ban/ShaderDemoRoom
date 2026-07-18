@@ -1,31 +1,36 @@
 import {
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react';
 import { I18nContext, type I18nContextValue } from './I18nContext';
-import { createTranslator, defaultLocale, messages, type Locale } from './index';
+import { createTranslator, defaultLocale, parseLocale, type Locale } from './index';
 
-const supportedLocales: Locale[] = ['en', 'zh-CN'];
+const localeStorageKey = 'sdr.locale';
 
-function normalizeLocale(locale: string): Locale {
-  return supportedLocales.includes(locale as Locale) ? (locale as Locale) : defaultLocale;
+function readInitialLocale(): Locale {
+  const storedLocale = window.localStorage.getItem(localeStorageKey);
+  return storedLocale === null ? defaultLocale : parseLocale(storedLocale);
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+  const [locale, setLocaleState] = useState<Locale>(readInitialLocale);
 
   const value = useMemo<I18nContextValue>(
     () => ({
       locale,
-      setLocale: (nextLocale) => setLocaleState(normalizeLocale(nextLocale)),
-      t: createTranslator(messages, locale),
+      setLocale: (nextLocale) => {
+        const parsedLocale = parseLocale(nextLocale);
+        window.localStorage.setItem(localeStorageKey, parsedLocale);
+        setLocaleState(parsedLocale);
+      },
+      t: createTranslator(locale),
     }),
     [locale],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 

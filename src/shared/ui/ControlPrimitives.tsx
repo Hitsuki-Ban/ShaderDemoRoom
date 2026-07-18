@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import type { Locale } from '../i18n';
 
 interface ControlGroupProps {
   title: string;
@@ -20,6 +21,7 @@ interface SliderControlProps {
   min: number;
   max: number;
   step: number;
+  locale: Locale;
   unit?: string;
   onChange: (value: number) => void;
 }
@@ -30,15 +32,24 @@ export function SliderControl({
   min,
   max,
   step,
+  locale,
   unit = '',
   onChange,
 }: SliderControlProps) {
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, {
+      minimumFractionDigits: Number.isInteger(step) ? 0 : 2,
+      maximumFractionDigits: Number.isInteger(step) ? 0 : 2,
+    }),
+    [locale, step],
+  );
+
   return (
     <label className="slider-control">
       <span className="control-label">
         <span>{label}</span>
         <output>
-          {Number.isInteger(step) ? value.toFixed(0) : value.toFixed(2)}
+          {numberFormatter.format(value)}
           {unit}
         </output>
       </span>

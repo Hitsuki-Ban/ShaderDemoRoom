@@ -1,6 +1,7 @@
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import type { Camera, Object3D, PMREMGenerator } from 'three';
 import type { RendererEnvironment } from '../shared/three/rendererEnvironment';
+import type { Locale, Translator } from '../shared/i18n';
 import type { RoomAccentToken } from '../styles/designTokens';
 
 export type RoomId =
@@ -112,7 +113,8 @@ export interface RoomControlsProps<TSettings extends AnyRoomSettings = AnyRoomSe
   onChange: (settings: TSettings) => void;
   onPatch: (patch: DeepReadonly<Partial<TSettings>>) => void;
   onReset: () => void;
-  t: (key: string) => string;
+  locale: Locale;
+  t: Translator;
 }
 
 export interface RoomStageProfile {

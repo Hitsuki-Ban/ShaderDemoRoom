@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { createTranslator, messages } from '../../shared/i18n';
+import { createTranslator } from '../../shared/i18n';
 import VoxelWaterControls from './Controls';
 import {
   voxelWaterCalmPreset,
@@ -11,7 +11,7 @@ import {
 describe('voxel water QA controls', () => {
   it('selects presets and weather through locale-independent test ids', () => {
     const onPatch = vi.fn();
-    const t = createTranslator(messages, 'zh-CN');
+    const t = createTranslator('zh-CN');
 
     render(
       <VoxelWaterControls
@@ -19,6 +19,7 @@ describe('voxel water QA controls', () => {
         onChange={vi.fn()}
         onPatch={onPatch}
         onReset={vi.fn()}
+        locale="zh-CN"
         t={t}
       />,
     );
@@ -31,5 +32,7 @@ describe('voxel water QA controls', () => {
     expect(onPatch).toHaveBeenNthCalledWith(2, voxelWaterCalmPreset);
     expect(onPatch).toHaveBeenNthCalledWith(3, { weather: 'rain' });
     expect(screen.getByTestId('voxel-water-weather-rain')).toHaveTextContent('降雨');
+    expect(screen.getByTestId('voxel-water-preset-storm')).toHaveTextContent('风暴预设');
+    expect(screen.getByTestId('voxel-water-preset-calm')).toHaveTextContent('平静预设');
   });
 });

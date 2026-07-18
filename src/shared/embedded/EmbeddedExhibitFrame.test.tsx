@@ -21,10 +21,11 @@ describe('EmbeddedExhibitFrame permissions', () => {
       <EmbeddedExhibitFrame
         room={getEmbeddedRoom(roomId)}
         settings={{ reloadToken: 0 }}
+        title="本地化展品标题"
       />,
     );
 
-    const frame = screen.getByTitle(roomId);
+    const frame = screen.getByTitle('本地化展品标题');
     expect(frame).toHaveAttribute('allow', expectedAllow);
     expect(frame).toHaveAttribute('allowfullscreen');
   });

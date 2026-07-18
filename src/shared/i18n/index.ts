@@ -1,17 +1,31 @@
-export type Locale = 'en' | 'zh-CN';
+export const localeManifest = [
+  { code: 'en', labelKey: 'app.locales.english' },
+  { code: 'zh-CN', labelKey: 'app.locales.simplifiedChinese' },
+] as const;
 
-interface MessageTree {
-  [key: string]: string | MessageTree;
-}
-export type MessageCatalog = Record<string, MessageTree>;
+export type Locale = (typeof localeManifest)[number]['code'];
+export type TranslationParams = Readonly<Record<string, string | number>>;
+export type Translator = (key: string, params?: TranslationParams) => string;
+
+type MessageTree = { readonly [key: string]: string | MessageTree };
+type CatalogShape<T> = {
+  readonly [Key in keyof T]: T[Key] extends string
+    ? string
+    : T[Key] extends MessageTree
+      ? CatalogShape<T[Key]>
+      : never;
+};
 
 export const defaultLocale: Locale = 'en';
 
-export const messages: MessageCatalog = {
-  en: {
+const englishMessages = {
     app: {
       title: 'Shader Demo Room',
       subtitle: 'Static technical-art showroom',
+      locales: {
+        english: 'English',
+        simplifiedChinese: '简体中文',
+      },
       rooms: 'Rooms',
       viewport: 'Shader viewport',
       inspector: 'Room inspector',
@@ -20,6 +34,7 @@ export const messages: MessageCatalog = {
       sceneStats: 'Scene statistics',
       embeddedRuntime: 'Embedded runtime',
       standaloneExhibit: 'Standalone exhibit',
+      loadingRoom: 'Loading {room}…',
       telemetry: {
         liveTelemetry: 'Live telemetry',
         cadence: 'Cadence',
@@ -37,6 +52,14 @@ export const messages: MessageCatalog = {
         p95Warming: 'P95 warming up',
         externalRuntime: 'External runtime',
         unavailable: 'Telemetry unavailable',
+        units: {
+          fps: 'FPS',
+          milliseconds: 'ms',
+          p95: 'P95',
+          textures: 'TX',
+          geometries: 'GEO',
+          programs: 'PGM',
+        },
         environment: {
           software: 'SW GL',
           hardware: 'GPU',
@@ -49,6 +72,9 @@ export const messages: MessageCatalog = {
       navigationHint: 'Switch rooms without remounting the WebGL shell.',
       reset: 'Reset',
       preset: 'Preset',
+      units: {
+        degrees: '°',
+      },
     },
     controls: {
       enabled: 'Enabled',
@@ -86,6 +112,8 @@ export const messages: MessageCatalog = {
           clear: 'Clear',
           rainy: 'Rain',
           storm: 'Storm',
+          stormPreset: 'Storm preset',
+          calmPreset: 'Calm preset',
         },
       },
       glassOptics: {
@@ -105,6 +133,8 @@ export const messages: MessageCatalog = {
           thickness: 'Thickness',
           autoRotate: 'Auto Rotate',
           showCaustics: 'Show Caustics',
+          focusBeam: 'Focus beam',
+          crystalPreset: 'Crystal preset',
         },
       },
       animeLiquidOrb: {
@@ -136,11 +166,16 @@ export const messages: MessageCatalog = {
         },
       },
     },
-  },
-  'zh-CN': {
+} as const;
+
+const simplifiedChineseMessages = {
     app: {
       title: 'Shader Demo Room',
       subtitle: '静态技术美术展厅',
+      locales: {
+        english: 'English',
+        simplifiedChinese: '简体中文',
+      },
       rooms: '展览室',
       viewport: 'Shader 视窗',
       inspector: '展厅控制器',
@@ -149,6 +184,7 @@ export const messages: MessageCatalog = {
       sceneStats: '场景统计',
       embeddedRuntime: '嵌入式运行时',
       standaloneExhibit: '独立展品',
+      loadingRoom: '正在加载 {room}…',
       telemetry: {
         liveTelemetry: '实时遥测',
         cadence: '帧节奏',
@@ -166,6 +202,14 @@ export const messages: MessageCatalog = {
         p95Warming: 'P95 正在预热',
         externalRuntime: '外部运行时',
         unavailable: '遥测暂不可用',
+        units: {
+          fps: 'FPS',
+          milliseconds: '毫秒',
+          p95: 'P95',
+          textures: '纹理',
+          geometries: '几何体',
+          programs: '程序',
+        },
         environment: {
           software: '软件 GL',
           hardware: 'GPU',
@@ -178,6 +222,9 @@ export const messages: MessageCatalog = {
       navigationHint: '切换展厅时保持 WebGL 外壳稳定。',
       reset: '重置',
       preset: '预设',
+      units: {
+        degrees: '°',
+      },
     },
     controls: {
       enabled: '开启',
@@ -215,6 +262,8 @@ export const messages: MessageCatalog = {
           clear: '晴朗',
           rainy: '降雨',
           storm: '风暴',
+          stormPreset: '风暴预设',
+          calmPreset: '平静预设',
         },
       },
       glassOptics: {
@@ -234,6 +283,8 @@ export const messages: MessageCatalog = {
           thickness: '厚度',
           autoRotate: '自动旋转',
           showCaustics: '显示焦散',
+          focusBeam: '聚焦光束',
+          crystalPreset: '晶体预设',
         },
       },
       animeLiquidOrb: {
@@ -265,30 +316,69 @@ export const messages: MessageCatalog = {
         },
       },
     },
-  },
-};
+} satisfies CatalogShape<typeof englishMessages>;
 
-function lookup(catalog: MessageTree | undefined, key: string): string | undefined {
-  if (!catalog) {
-    return undefined;
+const catalogs = {
+  en: englishMessages,
+  'zh-CN': simplifiedChineseMessages,
+} satisfies Record<Locale, CatalogShape<typeof englishMessages>>;
+
+const supportedLocaleSet: ReadonlySet<string> = new Set(
+  localeManifest.map(({ code }) => code),
+);
+
+export function parseLocale(value: string): Locale {
+  if (!supportedLocaleSet.has(value)) {
+    throw new Error(`Unsupported locale: ${JSON.stringify(value)}.`);
   }
 
-  let cursor: string | MessageTree | undefined = catalog;
+  return value as Locale;
+}
+
+function lookup(catalog: MessageTree, key: string): string {
+  let cursor: string | MessageTree = catalog;
 
   for (const part of key.split('.')) {
-    if (!cursor || typeof cursor === 'string') {
-      return undefined;
+    if (typeof cursor === 'string' || !Object.hasOwn(cursor, part)) {
+      throw new Error(`Missing translation key: ${JSON.stringify(key)}.`);
     }
     cursor = cursor[part];
   }
 
-  return typeof cursor === 'string' ? cursor : undefined;
+  if (typeof cursor !== 'string') {
+    throw new Error(`Translation key does not resolve to text: ${JSON.stringify(key)}.`);
+  }
+
+  return cursor;
 }
 
-export function createTranslator(
-  catalog: MessageCatalog,
-  locale: string = defaultLocale,
-) {
-  return (key: string) =>
-    lookup(catalog[locale], key) ?? lookup(catalog[defaultLocale], key) ?? key;
+function interpolate(message: string, key: string, params?: TranslationParams): string {
+  const expectedNames = new Set(
+    Array.from(message.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/g), (match) => match[1]),
+  );
+  const providedNames = Object.keys(params ?? {});
+  const missingNames = [...expectedNames].filter((name) => !params || !Object.hasOwn(params, name));
+  const extraNames = providedNames.filter((name) => !expectedNames.has(name));
+
+  if (missingNames.length > 0) {
+    throw new Error(
+      `Missing translation params for ${JSON.stringify(key)}: ${missingNames.join(', ')}.`,
+    );
+  }
+  if (extraNames.length > 0) {
+    throw new Error(
+      `Unexpected translation params for ${JSON.stringify(key)}: ${extraNames.join(', ')}.`,
+    );
+  }
+
+  return message.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (_, name: string) =>
+    String(params![name]),
+  );
+}
+
+export function createTranslator(locale: Locale): Translator {
+  const parsedLocale = parseLocale(locale);
+  const catalog = catalogs[parsedLocale];
+
+  return (key, params) => interpolate(lookup(catalog, key), key, params);
 }

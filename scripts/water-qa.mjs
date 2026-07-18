@@ -19,9 +19,6 @@ const preset = process.env.QA_PRESET ?? 'default';
 const locale = process.env.QA_LOCALE ?? 'en';
 const reducedMotion = process.env.QA_REDUCED_MOTION ?? 'no-preference';
 
-if (!['en', 'zh-CN'].includes(locale)) {
-  throw new Error(`QA_LOCALE must be "en" or "zh-CN"; received "${locale}".`);
-}
 if (!['no-preference', 'reduce'].includes(reducedMotion)) {
   throw new Error(
     `QA_REDUCED_MOTION must be "no-preference" or "reduce"; received "${reducedMotion}".`,
@@ -87,6 +84,7 @@ const regions = regionMetrics(frames[0], sampleScale);
 const result = {
   baseUrl,
   label,
+  locale,
   preset,
   reducedMotion,
   screenshots: {
