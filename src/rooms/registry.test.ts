@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { getRoomById, roomRegistry } from './registry';
 
+const supportedEmbeddedPermissions = new Set(['autoplay', 'microphone']);
+
 describe('roomRegistry', () => {
   it('registers the showroom rooms with unique ids', () => {
     expect(roomRegistry.map((room) => room.id)).toEqual([
@@ -24,8 +26,25 @@ describe('roomRegistry', () => {
         expect(typeof room.loadScene).toBe('function');
       } else {
         expect(room.embedPath).toMatch(/^exhibits\/.+\/index\.html$/);
+        expect(new Set(room.permissions).size).toBe(room.permissions.length);
+        for (const permission of room.permissions) {
+          expect(supportedEmbeddedPermissions.has(permission)).toBe(true);
+        }
       }
     }
+  });
+
+  it('declares the least privileges required by each embedded exhibit', () => {
+    const embeddedPermissions = Object.fromEntries(
+      roomRegistry
+        .filter((room) => room.kind === 'embedded')
+        .map((room) => [room.id, room.permissions]),
+    );
+
+    expect(embeddedPermissions).toEqual({
+      'anime-liquid-orb': ['autoplay', 'microphone'],
+      'ninth-tide-archive': ['autoplay'],
+    });
   });
 
   it('finds rooms by id', () => {
