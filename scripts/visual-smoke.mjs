@@ -3,6 +3,18 @@ import { chromium } from 'playwright';
 
 const baseUrl = process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
 const outputDir = 'output/playwright';
+const settleScaleSource = process.env.QA_SETTLE_SCALE ?? '1';
+if (!/^(?:[1-9]\d*(?:\.\d+)?|0\.\d*[1-9]\d*)$/.test(settleScaleSource)) {
+  throw new Error(
+    `QA_SETTLE_SCALE must be a positive decimal number; received "${settleScaleSource}".`,
+  );
+}
+const settleScale = Number(settleScaleSource);
+if (!Number.isFinite(settleScale)) {
+  throw new Error(
+    `QA_SETTLE_SCALE must be finite; received "${settleScaleSource}".`,
+  );
+}
 const desktopRooms = [
   'voxel-water',
   'glass-optics',
@@ -95,7 +107,7 @@ async function updateStageHudOverlap() {
 for (const room of desktopRooms) {
   await page.goto(`${baseUrl}/#/room/${room}`, { waitUntil: 'domcontentloaded' });
   await prepareRoom(room);
-  await page.waitForTimeout(1600);
+  await page.waitForTimeout(Math.round(1600 * settleScale));
   await assertTelemetry(room, false);
   await updateStageHudOverlap();
   const screenshotPath = `${outputDir}/${room}-desktop.png`;
@@ -110,7 +122,7 @@ await page.setViewportSize({ width: 390, height: 844 });
 for (const room of mobileRooms) {
   await page.goto(`${baseUrl}/#/room/${room}`, { waitUntil: 'domcontentloaded' });
   await prepareRoom(room);
-  await page.waitForTimeout(1400);
+  await page.waitForTimeout(Math.round(1400 * settleScale));
   await assertTelemetry(room, true);
   await updateStageHudOverlap();
   const screenshotPath = `${outputDir}/${room}-mobile.png`;
@@ -143,6 +155,7 @@ console.log(
   JSON.stringify(
     {
       baseUrl,
+      settleScale,
       screenshots,
       consoleErrors: 0,
       mobileHorizontalOverflow: false,

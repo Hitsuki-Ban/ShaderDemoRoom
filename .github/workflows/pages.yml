@@ -1,4 +1,4 @@
-name: Build and deploy GitHub Pages
+name: Build, verify, and deploy GitHub Pages
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -6,12 +6,12 @@ env:
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -38,24 +38,87 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
       - name: Test
         run: pnpm test
 
-      - name: Build
+      - name: Build production site
         run: pnpm build
 
       - name: Verify exhibit snapshots
         run: node scripts/check-exhibit-sync.mjs
 
+      # Headless software GL is deterministic enough for layout/error gates, but
+      # its FPS is not representative of hardware and is intentionally not asserted.
+      - name: Run production visual QA
+        id: visual_qa
+        shell: bash
+        env:
+          QA_SETTLE_SCALE: '2'
+          SHOWROOM_URL: http://127.0.0.1:4173/ShaderDemoRoom
+        run: |
+          mkdir -p output/playwright output/water-qa
+          preview_log="output/showroom-preview.log"
+          pnpm preview > "$preview_log" 2>&1 &
+          preview_pid=$!
+          cleanup() {
+            kill "$preview_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          for attempt in {1..60}; do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:4173/ShaderDemoRoom/ > /dev/null; then
+              break
+            fi
+            if ! kill -0 "$preview_pid" 2>/dev/null; then
+              cat "$preview_log"
+              exit 1
+            fi
+            if [[ "$attempt" -eq 60 ]]; then
+              cat "$preview_log"
+              exit 1
+            fi
+            sleep 1
+          done
+          pnpm qa:visual
+          pnpm qa:water
+
+      - name: Upload QA artifacts
+        if: ${{ !cancelled() && steps.visual_qa.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: qa-artifacts-${{ github.run_id }}
+          path: |
+            output/playwright
+            output/water-qa
+            output/showroom-preview.log
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Configure Pages
+        if: ${{ success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
         uses: actions/configure-pages@v6
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
+        if: ${{ success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
   deploy:
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

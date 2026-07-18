@@ -7,7 +7,7 @@ import {
   summarize,
 } from './water-qa-metrics.mjs';
 
-const baseUrl = process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173';
+const baseUrl = process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
 const label = process.env.QA_LABEL ?? 'water';
 const outputDir = process.env.QA_OUTPUT_DIR ?? 'output/water-qa';
 const frameCount = Number(process.env.QA_FRAMES ?? 8);
@@ -126,4 +126,6 @@ const result = {
   })),
 };
 
-console.log(JSON.stringify(result, null, 2));
+const report = `${JSON.stringify(result, null, 2)}\n`;
+await writeFile(`${outputDir}/${label}-report.json`, report);
+console.log(report);
