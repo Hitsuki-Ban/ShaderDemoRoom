@@ -1,0 +1,18 @@
+# Normalize all text to LF so builds are byte-reproducible across platforms.
+# ref/ sources are embedded verbatim into built artifacts (vite sourcesContent),
+# so CRLF working copies would desynchronize public/exhibits from CI builds.
+* text=auto eol=lf
+
+# Windows launchers need CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.mp3 binary
+*.woff binary
+*.woff2 binary
