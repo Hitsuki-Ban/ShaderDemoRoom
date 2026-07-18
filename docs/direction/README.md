@@ -31,7 +31,7 @@
 - **最新スクリーンショット**: `output/playwright/`(qa:visual で再取得済み。gitignore対象なのでローカルのみ)
 - **Ninth Tide 本編キャプチャ(初)**: `captures/ninth-tide-opening.png`, `ninth-tide-ch1..9.png`, `ninth-tide-ending.png` — `?preview=main&section=0..8` 機構で全9章+開幕+終幕を取得。これまでタイトルゲートしか証拠がなかったギャップ(NT-1)を解消。再取得手順: `pnpm build && vite preview` 起動後 `node docs/direction/captures/capture.mjs`
 - **旧 FPS チップ実測**: `captures/fps-samples-2026-07-18.json` + `captures/voxel-water-hud-evidence.png` / `glass-optics-hud-evidence.png` — 丸め済み HUD 文字列を読む旧手順の履歴証拠。新しい性能基準には使用しない。
-- **Telemetry protocol v1 参照記録**: `captures/telemetry-reference-2026-07-18.json` — Voxel Water / 1440×900 / 5秒 warm-up + 15秒 measurement。SwiftShader は median 14.52 FPS / 68.88 ms、system Chrome D3D11 (RTX 4070 Ti) は median 200 FPS / 5.00 ms。両方 19 logical-frame calls、renderer raw string と software/hardware 三態を記録。
+- **Telemetry protocol v1 参照記録**: `captures/telemetry-reference-2026-07-18.json` — Voxel Water / 1440×900 / 5秒 warm-up + 15秒 measurement。SwiftShader は median 15.37 FPS / 65.05 ms、system Chrome D3D11 (RTX 4070 Ti) は median 200 FPS / 5.00 ms。両方 19 logical-frame calls、renderer raw string と software/hardware 三態を記録。T-SH-02 baseline / T-SH-03 candidate の同一 hardware renderer 5組交錯測定は paired median regression 0.00% で、5% overhead gate を通過。
 
 ## 統合優先度ビュー(カルテP1 × リサーチP0 の整合)
 
