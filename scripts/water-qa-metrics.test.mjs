@@ -3,6 +3,9 @@ import {
   compareFrames,
   hue,
   luma,
+  MAX_STORM_FOREGROUND_SEAM_SCORE,
+  measurePersistentVerticalSeam,
+  measureVerticalSeam,
   measureRegion,
 } from './water-qa-metrics.mjs';
 
@@ -77,5 +80,89 @@ describe('water QA pixel metrics', () => {
       strongRatio: 0.25,
       maxDelta: 30,
     });
+  });
+
+  it('reports no vertical seam in a uniform frame', () => {
+    const frame = makeFrame(100, 100, Array.from({ length: 10_000 }, () => [80, 120, 140]));
+
+    expect(measureVerticalSeam(frame).score).toBe(0);
+  });
+
+  it('detects a continuous vertical RGB outlier', () => {
+    const width = 100;
+    const height = 100;
+    const colors = Array.from({ length: width * height }, () => [80, 120, 140]);
+    for (let y = Math.floor(height * 0.28); y < Math.floor(height * 0.94); y += 1) {
+      colors[y * width + 50] = [10, 20, 30];
+    }
+    const seam = measureVerticalSeam(makeFrame(width, height, colors));
+
+    expect(seam.score).toBeGreaterThan(50);
+    expect(seam.xTop).toBe(50);
+    expect(seam.slope).toBe(0);
+  });
+
+  it('tracks a slightly slanted vertical RGB outlier', () => {
+    const width = 100;
+    const height = 100;
+    const yStart = Math.floor(height * 0.28);
+    const colors = Array.from({ length: width * height }, () => [80, 120, 140]);
+    for (let y = yStart; y < Math.floor(height * 0.94); y += 1) {
+      const x = Math.round(60 - 0.1 * (y - yStart));
+      colors[y * width + x] = [10, 20, 30];
+    }
+    const seam = measureVerticalSeam(makeFrame(width, height, colors));
+
+    expect(seam.score).toBeGreaterThan(50);
+    expect(seam.xTop).toBe(60);
+    expect(seam.slope).toBeCloseTo(-0.1, 10);
+  });
+
+  it('detects a low-contrast seam in the storm foreground scan', () => {
+    const width = 100;
+    const height = 100;
+    const yStart = Math.floor(height * 0.72);
+    const colors = Array.from({ length: width * height }, () => [34, 128, 137]);
+    for (let y = yStart; y < Math.floor(height * 0.94); y += 1) {
+      colors[y * width + 82] = [30, 124, 133];
+    }
+    const seam = measureVerticalSeam(makeFrame(width, height, colors), {
+      yStartRatio: 0.72,
+      yEndRatio: 0.94,
+      xStartRatio: 0.75,
+      xEndRatio: 0.95,
+    });
+
+    expect(seam.score).toBeGreaterThan(MAX_STORM_FOREGROUND_SEAM_SCORE);
+    expect(seam.xTop).toBe(82);
+  });
+
+  it('gates a persistent seam without treating one transient frame as persistent', () => {
+    const width = 100;
+    const height = 100;
+    const uniformColors = () => Array.from({ length: width * height }, () => [80, 120, 140]);
+    const transientColors = uniformColors();
+    for (let y = Math.floor(height * 0.28); y < Math.floor(height * 0.94); y += 1) {
+      transientColors[y * width + 50] = [10, 20, 30];
+    }
+    const uniformFrame = () => makeFrame(width, height, uniformColors());
+    const transient = measurePersistentVerticalSeam([
+      uniformFrame(),
+      uniformFrame(),
+      makeFrame(width, height, transientColors),
+      uniformFrame(),
+      uniformFrame(),
+    ]);
+    const persistent = measurePersistentVerticalSeam([
+      uniformFrame(),
+      makeFrame(width, height, transientColors),
+      makeFrame(width, height, transientColors),
+      makeFrame(width, height, transientColors),
+      uniformFrame(),
+    ]);
+
+    expect(transient.score).toBe(0);
+    expect(transient.maxScore).toBeGreaterThan(50);
+    expect(persistent.score).toBeGreaterThan(50);
   });
 });

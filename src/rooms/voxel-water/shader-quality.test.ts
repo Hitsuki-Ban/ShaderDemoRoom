@@ -4,11 +4,13 @@ import {
   Camera,
   InstancedMesh,
   LineSegments,
+  Matrix4,
   Mesh,
   PerspectiveCamera,
   Points,
   Scene,
   ShaderMaterial,
+  Vector3,
   type Object3D,
 } from 'three';
 import type { RoomRuntimeContext, VoxelWaterSettings } from '../types';
@@ -170,7 +172,7 @@ describe('voxel water runtime contracts', () => {
     runtime.dispose();
   });
 
-  it('builds a non-empty square instanced field and deterministic seeded rain layout', () => {
+  it('builds a seamless square instanced field and deterministic seeded rain layout', () => {
     const first = createRuntimeHarness();
     const second = createRuntimeHarness();
     const firstColumns = findObject(
@@ -193,6 +195,28 @@ describe('voxel water runtime contracts', () => {
     expect(firstColumns.count).toBeGreaterThan(0);
     expect(Number.isInteger(Math.sqrt(firstColumns.count))).toBe(true);
     expect(secondColumns.count).toBe(firstColumns.count);
+    const firstColumnMatrix = new Matrix4();
+    const adjacentColumnMatrix = new Matrix4();
+    const nextRowColumnMatrix = new Matrix4();
+    firstColumns.getMatrixAt(0, firstColumnMatrix);
+    firstColumns.getMatrixAt(1, adjacentColumnMatrix);
+    firstColumns.getMatrixAt(Math.sqrt(firstColumns.count), nextRowColumnMatrix);
+    const firstColumnPosition = new Vector3().setFromMatrixPosition(firstColumnMatrix);
+    const adjacentColumnPosition = new Vector3().setFromMatrixPosition(adjacentColumnMatrix);
+    const nextRowColumnPosition = new Vector3().setFromMatrixPosition(nextRowColumnMatrix);
+    const gridAxisX = adjacentColumnPosition.clone().sub(firstColumnPosition);
+    const gridAxisZ = nextRowColumnPosition.clone().sub(firstColumnPosition);
+    gridAxisX.y = 0;
+    gridAxisZ.y = 0;
+    const columnAxisX = new Vector3().setFromMatrixColumn(firstColumnMatrix, 0).normalize();
+    const columnAxisZ = new Vector3().setFromMatrixColumn(firstColumnMatrix, 2).normalize();
+    const columnGeometry = firstColumns.geometry as typeof firstColumns.geometry & {
+      parameters: { depth: number; width: number };
+    };
+    expect(Math.abs(columnAxisX.dot(gridAxisX.clone().normalize()))).toBeCloseTo(1, 6);
+    expect(Math.abs(columnAxisZ.dot(gridAxisZ.clone().normalize()))).toBeCloseTo(1, 6);
+    expect(gridAxisX.length() - columnGeometry.parameters.width).toBeLessThan(0.00001);
+    expect(gridAxisZ.length() - columnGeometry.parameters.depth).toBeLessThan(0.00001);
     expect(firstRain.geometry.getAttribute('position').count).toBeGreaterThan(0);
     expect(secondRain.geometry.getAttribute('position').count)
       .toBe(firstRain.geometry.getAttribute('position').count);

@@ -2,6 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import {
   compareFrames,
+  MAX_STORM_FOREGROUND_SEAM_SCORE,
+  MAX_VERTICAL_SEAM_SCORE,
+  measurePersistentVerticalSeam,
   parsePng,
   regionMetrics,
   summarize,
@@ -80,6 +83,16 @@ for (let i = 1; i < frames.length; i += 1) {
 }
 
 const regions = regionMetrics(frames[0], sampleScale);
+const verticalSeam = measurePersistentVerticalSeam(frames);
+const stormForegroundSeam = measurePersistentVerticalSeam(frames, {
+  yStartRatio: 0.72,
+  yEndRatio: 0.94,
+  xStartRatio: 0.75,
+  xEndRatio: 0.95,
+});
+const verticalSeamGate = preset === 'storm'
+  ? { ...stormForegroundSeam, maxAllowed: MAX_STORM_FOREGROUND_SEAM_SCORE, scan: 'storm-foreground' }
+  : { ...verticalSeam, maxAllowed: MAX_VERTICAL_SEAM_SCORE, scan: 'full-water' };
 
 const result = {
   baseUrl,
@@ -117,6 +130,22 @@ const result = {
   },
   skyLuma: regions.sky.skyLuma,
   voxelLocalContrast: regions.water.voxelLocalContrast,
+  verticalSeam: {
+    score: Number(verticalSeamGate.score.toFixed(3)),
+    maxAllowed: verticalSeamGate.maxAllowed,
+    scan: verticalSeamGate.scan,
+    frameIndex: verticalSeamGate.frameIndex,
+    path: {
+      xTop: verticalSeamGate.xTop,
+      yTop: verticalSeamGate.yTop,
+      xBottom: verticalSeamGate.xBottom,
+      yBottom: verticalSeamGate.yBottom,
+      slope: verticalSeamGate.slope,
+    },
+    fullWaterMax: Number(verticalSeam.maxScore.toFixed(3)),
+    stormForegroundMax: Number(stormForegroundSeam.maxScore.toFixed(3)),
+    frameScores: verticalSeamGate.frameScores.map((score) => Number(score.toFixed(3))),
+  },
   diffs: diffs.map((diff) => ({
     meanDelta: Number(diff.meanDelta.toFixed(3)),
     strongRatio: Number(diff.strongRatio.toFixed(5)),
@@ -127,3 +156,9 @@ const result = {
 const report = `${JSON.stringify(result, null, 2)}\n`;
 await writeFile(`${outputDir}/${label}-report.json`, report);
 console.log(report);
+
+if (verticalSeamGate.score > verticalSeamGate.maxAllowed) {
+  throw new Error(
+    `Vertical seam score ${verticalSeamGate.score.toFixed(3)} exceeds ${verticalSeamGate.maxAllowed} in ${verticalSeamGate.scan}.`,
+  );
+}
