@@ -32,11 +32,25 @@ describe('roomRegistry', () => {
     );
   });
 
+  it('declares the governed shell chrome stage profile for every room', () => {
+    expect(
+      Object.fromEntries(
+        roomRegistry.map((room) => [room.id, room.stageProfile.shellChrome]),
+      ),
+    ).toEqual({
+      'voxel-water': 'default',
+      'glass-optics': 'default',
+      'anime-liquid-orb': 'default',
+      'ninth-tide-archive': 'dim',
+    });
+  });
+
   it('keeps each room modular with scene, controller, presets, and i18n namespace', () => {
     for (const room of roomRegistry) {
       expect(room.titleKey).toMatch(/^rooms\.[a-zA-Z0-9]+\.title$/);
       expect(room.i18nNamespace).toMatch(/^rooms\.[a-zA-Z0-9]+$/);
       expect(room.defaultPreset).toBeDefined();
+      expect(['default', 'dim']).toContain(room.stageProfile.shellChrome);
       expect(typeof room.loadControls).toBe('function');
       if (room.kind === 'shader') {
         expect(typeof room.loadScene).toBe('function');

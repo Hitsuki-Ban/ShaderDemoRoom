@@ -1,13 +1,49 @@
 .showroom-shell {
+  --shell-glow-background:
+    linear-gradient(180deg, rgba(15, 24, 34, 0.9), rgba(6, 9, 14, 0.94) 48%),
+    radial-gradient(circle at 22% 0%, rgba(52, 213, 255, 0.1), transparent 34%),
+    radial-gradient(circle at 80% 10%, rgba(255, 189, 90, 0.08), transparent 28%);
+  --shell-topbar-surface: rgba(6, 10, 15, 0.78);
+  --shell-side-surface: rgba(8, 13, 19, 0.74);
+  --shell-soft-surface: var(--surface-soft);
+  --shell-room-surface: rgba(13, 21, 30, 0.52);
+  --shell-room-active-surface: color-mix(
+    in srgb,
+    var(--room-accent),
+    rgba(13, 21, 30, 0.7) 88%
+  );
+  --shell-telemetry-strong-surface: var(--surface-strong);
+  --shell-telemetry-surface: var(--surface);
+  --shell-control-surface: rgba(12, 19, 27, 0.62);
+  --shell-input-surface: rgba(3, 8, 12, 0.84);
+  --shell-button-surface: rgba(14, 23, 32, 0.86);
   position: relative;
   display: grid;
   grid-template-rows: var(--topbar-height) minmax(0, 1fr);
   width: 100%;
   height: 100%;
-  background:
-    linear-gradient(180deg, rgba(15, 24, 34, 0.9), rgba(6, 9, 14, 0.94) 48%),
-    radial-gradient(circle at 22% 0%, rgba(52, 213, 255, 0.1), transparent 34%),
-    radial-gradient(circle at 80% 10%, rgba(255, 189, 90, 0.08), transparent 28%);
+  background: var(--shell-glow-background);
+}
+
+.showroom-shell[data-shell-chrome="dim"] {
+  --shell-glow-background:
+    linear-gradient(180deg, rgba(2, 3, 5, 0.98), rgba(1, 2, 3, 0.99) 48%),
+    radial-gradient(circle at 22% 0%, rgba(52, 213, 255, 0.012), transparent 34%),
+    radial-gradient(circle at 80% 10%, rgba(255, 189, 90, 0.01), transparent 28%);
+  --shell-topbar-surface: rgba(1, 2, 3, 0.96);
+  --shell-side-surface: rgba(2, 3, 5, 0.96);
+  --shell-soft-surface: rgba(2, 4, 6, 0.9);
+  --shell-room-surface: rgba(2, 4, 6, 0.9);
+  --shell-room-active-surface: color-mix(
+    in srgb,
+    var(--room-accent),
+    rgba(2, 3, 5, 0.96) 97%
+  );
+  --shell-telemetry-strong-surface: rgba(1, 2, 3, 0.98);
+  --shell-telemetry-surface: rgba(2, 3, 5, 0.98);
+  --shell-control-surface: rgba(2, 4, 6, 0.94);
+  --shell-input-surface: rgba(1, 2, 3, 0.96);
+  --shell-button-surface: rgba(2, 4, 6, 0.96);
 }
 
 .topbar {
@@ -17,7 +53,7 @@
   gap: 16px;
   min-width: 0;
   border-bottom: 1px solid var(--border);
-  background: rgba(6, 10, 15, 0.78);
+  background: var(--shell-topbar-surface);
   backdrop-filter: blur(18px);
   padding: 0 18px;
   z-index: 5;
@@ -102,7 +138,7 @@
   height: 34px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--surface-soft);
+  background: var(--shell-soft-surface);
   color: var(--muted);
   padding: 0 10px;
   font-size: 12px;
@@ -125,7 +161,7 @@
 .inspector {
   min-width: 0;
   border-color: var(--border);
-  background: rgba(8, 13, 19, 0.74);
+  background: var(--shell-side-surface);
   backdrop-filter: blur(18px);
 }
 
@@ -165,7 +201,7 @@
   gap: 11px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: rgba(13, 21, 30, 0.52);
+  background: var(--shell-room-surface);
   padding: 12px;
   color: var(--muted);
   transition:
@@ -202,7 +238,7 @@
 .room-link.active,
 .room-link:hover {
   border-color: color-mix(in srgb, var(--room-accent), transparent 42%);
-  background: color-mix(in srgb, var(--room-accent), rgba(13, 21, 30, 0.7) 88%);
+  background: var(--shell-room-active-surface);
   color: var(--text);
   transform: translateY(-1px);
 }
@@ -287,7 +323,7 @@
   display: grid;
   min-width: 0;
   border-top: 1px solid var(--border);
-  background: var(--surface-strong);
+  background: var(--shell-telemetry-strong-surface);
 }
 
 .telemetry-rail {
@@ -362,7 +398,7 @@
   gap: 3px;
   overflow: hidden;
   border-right: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--shell-telemetry-surface);
   padding: 9px 12px;
 }
 
@@ -464,7 +500,7 @@
 .control-group {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: rgba(12, 19, 27, 0.62);
+  background: var(--shell-control-surface);
   padding: 14px;
 }
 
@@ -529,7 +565,7 @@
   height: 24px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: rgba(3, 8, 12, 0.84);
+  background: var(--shell-input-surface);
 }
 
 .toggle-track::after {
@@ -587,7 +623,7 @@
   gap: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: rgba(14, 23, 32, 0.86);
+  background: var(--shell-button-surface);
   color: var(--muted);
   cursor: pointer;
   font-size: 12px;

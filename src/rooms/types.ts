@@ -115,6 +115,10 @@ export interface RoomControlsProps<TSettings extends AnyRoomSettings = AnyRoomSe
   t: (key: string) => string;
 }
 
+export interface RoomStageProfile {
+  readonly shellChrome: 'default' | 'dim';
+}
+
 interface BaseRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> {
   readonly id: RoomId;
   readonly kind: 'shader' | 'embedded';
@@ -124,6 +128,7 @@ interface BaseRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings
   readonly shortDescriptionKey: string;
   readonly i18nNamespace: string;
   readonly accent: RoomAccentToken;
+  readonly stageProfile: RoomStageProfile;
   readonly techTags: readonly string[];
   readonly defaultPreset: DeepReadonly<TSettings>;
   readonly loadControls: () => Promise<{
