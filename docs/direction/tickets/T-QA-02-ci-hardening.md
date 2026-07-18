@@ -61,3 +61,23 @@ research-webgl-platform.md §2.6 の段階導入プランに従い、2段階で�
 - **Pages デプロイ経路の保全**: configure-pages → upload-pages-artifact → deploy-pages の流れと `concurrency: group: pages` に触れない。PR トリガー追加時は deploy ジョブが `github.event_name == 'push'` 条件等で確実にスキップされることを確認する
 - **永続レンダラー設計との順序**: 承認済み設計(WebGLRenderer をルーティング上位で1個生成・antialias 常時有効・内部解像度スケーリング)が着地すると描画特性が変わる。段階2のバジェット較正は永続レンダラーチケットの後に行うのが効率的(先に較正すると再較正が必要になる)
 - **renderOrder 連鎖(横断注意5)**: 本チケット自体は描画に触れないが、段階2のバジェットは透明パス構成の変更(VW-9 等)で分布が動く。バジェット逸脱時の一次切り分け手順(どのチケットが較正値を動かしたか)をレポート JSON の label 運用に含めること
+
+## 完了レポート (2026-07-18)
+
+### 判断
+
+- T-QA-01 / T-SH-01〜03 の前提が完了したため、段階1を PR ごとの恒常ゲートとして導入した。10連続実行、故障注入、water metric 閾値は段階2へ昇格するための較正証拠に残し、今回の完了条件とは混同しない。
+- software GL の絶対 FPS は実機性能を代表しないため CI gate にしない。console/page error、responsive layout、telemetry state、water motion/region report と renderer counter の既存テストを組み合わせる。
+- PR/build は相互に queue cancellation させず並行可能とし、`concurrency: pages` は production deploy job だけに限定した。Pages の configure/upload/deploy は main push または manual dispatch 以外では実行しない。
+
+### 実装
+
+- workflow に `pull_request: main` を追加し、lint / typecheck / 20 files・76 tests / production build / exhibit snapshot sync / Playwright Chromium visual+water QA を同じ build job で fail-fast 実行する。
+- production preview は同一 step 内で起動・URL polling・process liveness check・QA・trap cleanup まで完結する。visual QA は正数だけを受ける単一 `QA_SETTLE_SCALE` を持ち、CI では 2、ローカル既定は 1 とした。
+- `qa:water` の既定 URL を `/ShaderDemoRoom` 配下へ修正し、console 出力と同じ unrounded report を `water-report.json` に保存する。7枚の showroom capture、water page/canvas、JSON、preview log は Actions artifact として14日保存する。
+
+### 検証
+
+- ローカル production preview で `QA_SETTLE_SCALE=2 pnpm qa:visual` と、`SHOWROOM_URL` 未指定の `pnpm qa:water` を実行。7 capture、console error 0、mobile overflow 0、HUD overlap 0、water PNG 2枚 + JSON report を確認した。`QA_SETTLE_SCALE=0` は browser 起動前に exit 1。
+- PR #9 の初回 Actions run `29645086476` は Chromium install、lint、typecheck、76 tests、build、snapshot sync、visual/water QA、artifact upload をすべて通過し、deploy は skipped。artifact は 11 files / 3.25 MB で内容をダウンロード確認した。
+- 独立审查で workflow 全体の concurrency group が PR と production deploy を同じ pending queue に入れる P1 を発見。group を deploy job へ限定し、PR 同士および PR/main build が互いの required check を置換しない構造へ修正した。
