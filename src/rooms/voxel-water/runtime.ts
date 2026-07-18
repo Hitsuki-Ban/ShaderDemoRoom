@@ -41,7 +41,7 @@ import skyFragmentShader from './sky.frag.glsl?raw';
 import skyVertexShader from './sky.vert.glsl?raw';
 import vertexShader from './water.vert.glsl?raw';
 
-type WeatherLook = {
+export type WeatherLook = {
   strength: number;
   waterTint: Color;
   fogColor: Color;
@@ -68,7 +68,7 @@ type WeatherLook = {
   cloudOpacityBase: number;
 };
 
-const WEATHER_LOOKS = {
+export const WEATHER_LOOKS = {
   clear: {
     strength: 0,
     waterTint: new Color(0x6dffdd),
@@ -296,6 +296,7 @@ export function createRoomRuntime(
   );
   plane.rotation.x = -Math.PI / 2;
   plane.position.y = -0.08;
+  plane.name = 'voxel-water-surface';
   plane.renderOrder = 1;
   plane.userData.oceanStrategy = INFINITE_OCEAN_STRATEGY;
   root.add(plane);
@@ -321,6 +322,7 @@ export function createRoomRuntime(
   columns.instanceColor = new InstancedBufferAttribute(new Float32Array(columnCount * 3).fill(1), 3);
   columns.instanceMatrix.setUsage(DynamicDrawUsage);
   columns.rotation.y = VOXEL_FIELD_YAW;
+  columns.name = 'voxel-water-columns';
   columns.renderOrder = 2;
   root.add(columns);
 
@@ -369,6 +371,7 @@ export function createRoomRuntime(
   });
   const gridOverlay = new LineSegments(gridLineGeometry, gridLineMaterial);
   gridOverlay.rotation.y = VOXEL_FIELD_YAW;
+  gridOverlay.name = 'voxel-water-grid';
   gridOverlay.renderOrder = 5;
   root.add(gridOverlay);
 
@@ -388,6 +391,7 @@ export function createRoomRuntime(
     depthWrite: false,
   });
   const rain = new Points(rainGeometry, rainMaterial);
+  rain.name = 'voxel-water-rain';
   rain.renderOrder = 4;
   root.add(rain);
 
@@ -407,6 +411,7 @@ export function createRoomRuntime(
     depthWrite: false,
   });
   const spray = new Points(sprayGeometry, sprayMaterial);
+  spray.name = 'voxel-water-spray';
   spray.renderOrder = 3;
   root.add(spray);
 

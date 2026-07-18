@@ -4,6 +4,7 @@
 - 優先度: P1(review-framework.md ロングリスト SH-11 の仮 P2・優先度定義の P3 例示からの**昇格判断** — 文字列ピン留めが全アート調整チケットのブロッカーであるため。昇格理由の詳細は「問題」節)
 - 評価軸: TA「QA担保」(テストが挙動でなく文字列をピン留めしていないか)
 - 依存: なし(本チケットが全アート調整チケットのブロッカー解除。VW-*/GO-* 系および永続レンダラーチケットより先に着地させる)
+- 状態: **完了 (2026-07-18)**
 
 ## 現状(証拠)
 
@@ -74,5 +75,49 @@ research-webgl-platform.md §2.7(QA注入のURL化にも言及)および dossier
 - **横断注意2(water-qa セレクタ連動)は本チケットに内包**: data-testid 化完了までは 'Storm preset' / 'Calm preset' の文言変更・i18n 化(GO-8 / SH-8 系)を着手禁止とする
 - shader-quality.test.ts:5 の `water-qa.mjs?raw` import を廃止することで、T-QA-02(baseUrl 修正・メトリクスアサート化)が water-qa.mjs を自由にリファクタできるようになる — **T-QA-02 より先に着地させること**
 - **renderOrder 連鎖(横断注意5)**: 新設する順序関係テストは今後の透明要素追加・削除時の再監査を自動化する資産になる。透明要素を増減するチケットはこのテストの順序表を必ず更新する
-- ShaderCanvas.test.ts の `antialias: room.id !== 'voxel-water'` ピン(14行)は承認済み永続レンダラー設計で削除されるコードを保護している。永続レンダラーチケットの前提として、本チケットで「AA 方針」「解像度スケーリング」を挙動レベルの契約テストに置き換えておく
+- ShaderCanvas.test.ts の `antialias: room.id !== 'voxel-water'` ピン(14行)は承認済み永続レンダラー設計で削除されるコードを保護している。本チケットでは旧 AA 方針の pin を削除し、永続レンダラー着地時に新しい「AA 常時有効・内部解像度スケーリング」契約を T-SH-01 側で追加する
 - Controls.tsx への data-testid 付与は DOM 属性の追加のみで視覚に影響しないが、`pnpm qa:visual` のハードフェイル3条件(console error / 横スクロール / HUD オーバーラップ)で回帰確認する
+
+## 完了レポート (2026-07-18)
+
+### 実装概要
+
+- `ShaderCanvas` の pixel ratio と frame timing を `renderPolicy.ts` の純粋関数へ分離した。負の browser timer jitter は 0 として扱い、非有限値は fail fast、simulation delta のみ 50ms で clamp する。現行 AA 分岐は製品挙動を変えないため残したが、T-SH-01 で削除される旧方針をテスト契約にはしていない。
+- voxel-water runtime の scene object に安定した意味名を付与し、実際に生成した scene graph 上で transparent/depthWrite、相対 render order、uniform 宣言と runtime binding、settings 更新、seeded layout、camera resize を検証するようにした。粒子数・grid side・hex・camera 座標などの調整値は固定していない。
+- glass-optics の material、light path、TubeGeometry、preset domain を実オブジェクト/共有 domain で検証するようにした。slider domain は `state.ts` に一元化し、Controls と test が同じ契約を参照する。
+- water QA の PNG/色/輝度/フレーム差分計算を `water-qa-metrics.mjs` へ分離し、合成 pixel fixture で luma、hue、color signature、water coverage、toon band separation、frame delta を unit test 化した。
+- storm/calm/rain の QA 操作を `data-testid` に移行し、`QA_LOCALE=en|zh-CN` を明示的に選択してから操作する。zh-CN の component test と実ブラウザー rain run の両方を通した。
+
+### 旧テストからの置換マッピング
+
+| 旧 pin / 意図 | 新しい不変条件、または削除理由 |
+|---|---|
+| `ShaderCanvas` の変数名・`Math.min` 実装文字列 | `getFrameTiming` と `getRenderPixelRatio` の入出力契約。DPR 0.5/1/2/3、長短/負/非有限 delta を直接検証 |
+| voxel AA=false / glass AA=true の文字列 | T-SH-01 で廃止予定のため pin を削除。現行表示は維持するが、将来設計を阻害する契約にはしない |
+| WEATHER_LOOKS の hex/式/個別数値 | 全 look の field 集合、型、定義域、clear < rain < storm の強度関係 |
+| `plane.renderOrder` 等の部分文字列 | stable scene name で実オブジェクトを特定し、surface < columns < spray < rain < grid の相対順序を検証 |
+| transparent/depthWrite の source token | runtime が生成した material の実 property を検証 |
+| shader/runtime の uniform 名断片 | GLSL の宣言集合と実 `ShaderMaterial.uniforms` の key 集合を一致検証し、settings 更新後の実値も検証 |
+| grid side、rain/spray count、camera 座標 | count の絶対値は削除し、非空の正方 field、2 runtime 間の同一 seeded layout、camera aspect/clipping 関係を検証 |
+| GLSL の係数、hex、`step`/derivative token | 美術/実装調整値のため削除。shader compile と見た目は build、visual smoke、water QA で保護 |
+| glass preset の数値 literal | defaults/focus/crystal に存在する全 numeric field が共有 controller domain 内であることを検証 |
+| glass material/light-path/caustics の source expression | 実 `MeshPhysicalMaterial` property、計算済み beam/caustics の幾何関係、実 `TubeGeometry` を検証 |
+| `water-qa.mjs` の metric 識別子 | metric 純粋関数を合成 pixels で数値検証 |
+| Storm/Calm/Rain の表示文字列 selector | locale 非依存の test ID。zh-CN の「降雨」表示でも同じ操作契約を検証 |
+
+### Mutation 検証
+
+以下はいずれも一時変更で対象テストが red になることを確認し、その後元へ戻した。
+
+1. rain renderOrder を surface より前へ変更: 相対順序 test が fail
+2. water の transparent material で depthWrite=true: material contract test が fail
+3. voxel pixelRatio cap を除去: render policy test が fail
+4. fragment shader から `uRain` 宣言のみ削除: uniform 集合 test が fail
+
+### 回帰・実ブラウザー確認
+
+- `pnpm test`: 8 files / 26 tests pass（旧 raw-source 重複を削除したため件数は減少）
+- `pnpm lint` / `pnpm typecheck` / `pnpm build`: pass
+- `pnpm qa:visual`: desktop/mobile 合計7 capture、console error 0、横 overflow 0、scene/HUD overlap 0
+- `pnpm qa:water`: default/en、storm/en、calm/en、rain/zh-CN の4 run が完走し、console error 0。最終 run の代表値は default `waterLuma=162.45, toonBandSeparation=8.551`、storm `108.02, 1.005`、calm `162.33, 8.841`、rain/zh-CN `115.97, 6.701`
+- runtime の美術定数、shader、camera、geometry budget は変更していない。製品側の差分は test hook、意味名、純粋関数抽出、同値の domain/material/light-path 整理のみで、visual/water QA に新規エラーや構造回帰はなかった。

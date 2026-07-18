@@ -77,7 +77,7 @@ export function ToggleControl({ label, value, onChange }: ToggleControlProps) {
 interface SegmentedControlProps<TValue extends string> {
   label: string;
   value: TValue;
-  options: { label: string; value: TValue }[];
+  options: { label: string; value: TValue; testId?: string }[];
   onChange: (value: TValue) => void;
 }
 
@@ -95,6 +95,7 @@ export function SegmentedControl<TValue extends string>({
           <button
             key={option.value}
             type="button"
+            data-testid={option.testId}
             className={option.value === value ? 'active' : ''}
             onClick={() => onChange(option.value)}
           >
