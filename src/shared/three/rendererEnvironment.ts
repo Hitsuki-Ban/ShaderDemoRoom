@@ -24,10 +24,29 @@ interface RendererClassification {
 
 const SOFTWARE_RENDERER_MARKERS = [
   'swiftshader',
+  'lavapipe',
   'llvmpipe',
   'softpipe',
+  'openswr',
+  'warp',
   'software rasterizer',
   'microsoft basic render driver',
+] as const;
+
+const HARDWARE_RENDERER_MARKERS = [
+  'nvidia',
+  'geforce',
+  'quadro',
+  'amd',
+  'radeon',
+  'intel',
+  'apple gpu',
+  'adreno',
+  'mali',
+  'powervr',
+  'imagination',
+  'vivante',
+  'tegra',
 ] as const;
 
 const environmentCache = new WeakMap<WebGLRenderer, RendererEnvironment>();
@@ -55,16 +74,21 @@ export function classifyRendererEnvironment(
     };
   }
 
-  if (identity.unmaskedRenderer?.trim()) {
+  const hardwareMarker = HARDWARE_RENDERER_MARKERS.find((marker) =>
+    rawIdentity.includes(marker),
+  );
+  if (identity.unmaskedRenderer?.trim() && hardwareMarker) {
     return {
       classification: 'hardware',
-      classificationReason: 'unmasked renderer available without a software marker',
+      classificationReason: `hardware renderer marker matched: ${hardwareMarker}`,
     };
   }
 
   return {
     classification: 'unknown',
-    classificationReason: 'unmasked renderer unavailable',
+    classificationReason: identity.unmaskedRenderer?.trim()
+      ? 'unmasked renderer has no recognized hardware or software marker'
+      : 'unmasked renderer unavailable',
   };
 }
 

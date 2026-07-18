@@ -44,9 +44,9 @@ Environment classification has three values: `software`, `hardware`, and `unknow
 
 1. Read masked vendor/renderer strings from WebGL.
 2. If `WEBGL_debug_renderer_info` is available, also record its unmasked vendor/renderer strings.
-3. Classify as `software` only when a normalized raw string matches a documented software renderer marker: `SwiftShader`, `llvmpipe`, `softpipe`, `Software Rasterizer`, or `Microsoft Basic Render Driver`.
-4. Classify as `hardware` only when an unmasked renderer string is available and no software marker matches.
-5. Otherwise classify as `unknown`. Absence of a software marker is not sufficient evidence of hardware.
+3. Classify as `software` only when a normalized raw string matches a documented software renderer marker: `SwiftShader`, `llvmpipe`, `softpipe`, `lavapipe`, `OpenSWR`, `WARP`, `Software Rasterizer`, or `Microsoft Basic Render Driver`.
+4. Classify as `hardware` only when an unmasked renderer string contains an explicit hardware-family marker: NVIDIA/GeForce/Quadro, AMD/Radeon, Intel, Apple GPU, Adreno, Mali, PowerVR/Imagination, Vivante, or Tegra.
+5. Otherwise classify as `unknown`. The classifier is fail-closed: an unmasked string and absence of a known software marker are not sufficient evidence of hardware.
 
 The public label is localized as `Software renderer`, `GPU renderer`, or `Renderer unknown`. Raw strings and the match reason belong in QA records and optional tooltips. Headless mode alone is never a classifier.
 
@@ -64,43 +64,56 @@ The shell serializes the current unrounded `RoomStats` object on the telemetry r
 {
   "schemaVersion": 1,
   "recordedAt": "2026-07-18T00:00:00.000Z",
-  "commit": "git-sha",
+  "buildId": "index-HASH.js+index-HASH.css",
+  "sourceRevision": "git-sha-containing-the-measured-code",
   "room": { "id": "voxel-water", "preset": "default" },
-  "environment": {
-    "browser": "Chromium 140",
-    "os": "Windows 11",
-    "viewport": { "width": 1440, "height": 900, "deviceScaleFactor": 1 },
-    "rendererPixelRatio": 1,
-    "contextAttributes": {},
-    "maskedVendor": "WebKit",
-    "maskedRenderer": "WebKit WebGL",
-    "unmaskedVendor": null,
-    "unmaskedRenderer": null,
-    "classification": "unknown",
-    "classificationReason": "unmasked renderer unavailable"
-  },
-  "measurement": {
-    "warmupSeconds": 5,
-    "durationSeconds": 15,
-    "frameCount": 0,
-    "cadenceMs": { "mean": 0, "p50": 0, "p95": 0, "p99": 0, "min": 0, "max": 0 },
-    "submitMs": { "mean": 0, "p95": 0 },
-    "calls": { "average": 0, "maximum": 0 },
-    "triangles": { "average": 0, "maximum": 0 },
-    "longAnimationFrames": { "count": 0, "maximumDurationMs": 0 },
-    "telemetryEnabled": true
-  },
-  "samples": []
+  "references": [
+    {
+      "label": "bundled-chromium-swiftshader",
+      "browserVersion": "148.0.0.0",
+      "platform": "Win32",
+      "userAgent": "...",
+      "viewport": { "width": 1440, "height": 900, "deviceScaleFactor": 1 },
+      "environment": {
+        "maskedVendor": "WebKit",
+        "maskedRenderer": "WebKit WebGL",
+        "unmaskedVendor": "Google Inc.",
+        "unmaskedRenderer": "ANGLE (... SwiftShader ...)",
+        "classification": "software",
+        "classificationReason": "software renderer marker matched: swiftshader"
+      },
+      "method": { "warmupSeconds": 5, "measurementSeconds": 15, "sampleIntervalSeconds": 1 },
+      "aggregates": {
+        "fpsMedian": 0,
+        "frameTimeMsMedian": 0,
+        "frameTimeP95MsMedian": 0,
+        "drawCallsAverageMedian": 0,
+        "drawCallsMaximum": 0,
+        "trianglesAverageMedian": 0
+      },
+      "samples": []
+    }
+  ],
+  "overhead": {
+    "comparison": "T-SH-02 baseline build vs T-SH-03 candidate build",
+    "baselineUrl": "https://example.invalid/baseline",
+    "candidateUrl": "http://127.0.0.1:4173/ShaderDemoRoom",
+    "method": { "pairs": 5, "order": "interleaved and alternating", "warmupSeconds": 5, "measurementSeconds": 15 },
+    "pairedMedianRegressionPercent": 0,
+    "pairs": []
+  }
 }
 ```
+
+Each reference sample contains `second`, the unrounded cadence and renderer-counter fields exported by `RoomStats`, and its sample state. Each overhead pair contains its execution order, independent rAF cadence measurements for baseline and candidate, renderer strings, and the paired regression percentage. `sourceRevision` identifies the commit that contains the measured executable code; a later evidence-only commit may add the generated record.
 
 The historic `fps-samples-2026-07-18.json` remains provenance for the old rounded-HUD procedure; it is not silently upgraded or treated as a schema-v1 baseline.
 
 ## 8. Performance acceptance
 
 - Deterministic software-renderer QA gates calls, triangles, lifecycle, sample cadence, and absence of browser errors. Absolute FPS is not a cross-machine hard gate.
-- Hardware overhead is measured on one fixed machine/browser/viewport/DPR/preset with at least five interleaved telemetry-on/off runs after a 5-second warm-up and 15-second measurement.
-- Compare paired median cadence. The telemetry-enabled median must not regress by more than 5%; retain raw JSON and environment classification.
+- Hardware overhead is measured on one fixed machine/browser/viewport/DPR/preset by comparing the last accepted T-SH-02 baseline build with the T-SH-03 candidate build. Run at least five interleaved, alternating baseline/candidate pairs after a 5-second warm-up and 15-second measurement for every run.
+- Compare the median of the paired cadence regressions. The candidate median must not regress by more than 5%; retain every raw pair, renderer string, reference sample, and environment classification in the JSON record.
 - HUD publication must remain at or below 4Hz. Canvas redraw and React commits must not run once per render frame.
 
 ## 9. References
@@ -110,4 +123,6 @@ The historic `fps-samples-2026-07-18.json` remains provenance for the old rounde
 - [Three.js WebGLRenderer.info](https://threejs.org/docs/pages/WebGLRenderer.html#WebGLRenderer.info)
 - [WEBGL_debug_renderer_info](https://registry.khronos.org/webgl/extensions/WEBGL_debug_renderer_info/)
 - [EXT_disjoint_timer_query_webgl2](https://registry.khronos.org/webgl/extensions/EXT_disjoint_timer_query_webgl2/)
+- [Mesa source tree: LLVMpipe, Softpipe, and Lavapipe software rasterizers](https://docs.mesa3d.org/sourcetree.html)
+- [Chromium SwiftShader documentation](https://chromium.googlesource.com/chromium/src/+/main/docs/gpu/swiftshader.md)
 - [WCAG 2.2 contrast requirements](https://www.w3.org/TR/WCAG22/#contrast-minimum)

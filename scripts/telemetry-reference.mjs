@@ -4,12 +4,20 @@ import { chromium } from 'playwright';
 const baseUrl = process.env.SHOWROOM_URL;
 const buildId = process.env.TELEMETRY_BUILD_ID;
 const sourceRevision = process.env.TELEMETRY_SOURCE_REVISION;
+const baselineUrl = process.env.TELEMETRY_BASELINE_URL;
 const cliArgs = process.argv.slice(2).filter((argument) => argument !== '--');
 const [outputPath] = cliArgs;
 
-if (!baseUrl || !buildId || !sourceRevision || cliArgs.length !== 1 || !outputPath) {
+if (
+  !baseUrl ||
+  !baselineUrl ||
+  !buildId ||
+  !sourceRevision ||
+  cliArgs.length !== 1 ||
+  !outputPath
+) {
   throw new Error(
-    'SHOWROOM_URL, TELEMETRY_BUILD_ID, TELEMETRY_SOURCE_REVISION, and an output path are required.',
+    'SHOWROOM_URL, TELEMETRY_BASELINE_URL, TELEMETRY_BUILD_ID, TELEMETRY_SOURCE_REVISION, and one output path are required.',
   );
 }
 
@@ -118,6 +126,125 @@ async function captureReference({ expectedClassification, label, launchOptions }
   }
 }
 
+async function measurePageCadence(browser, url, label) {
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: 1,
+  });
+  try {
+    await page.goto(`${url}/#/room/voxel-water`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.waitForSelector('canvas[data-renderer-host="shell"]', {
+      timeout: 15_000,
+    });
+    await page.waitForTimeout(warmupSeconds * 1000);
+    const measurement = await page.evaluate(
+      (durationMs) =>
+        new Promise((resolve) => {
+          const intervals = [];
+          let firstTimestamp = null;
+          let previousTimestamp = null;
+          const tick = (timestamp) => {
+            if (firstTimestamp === null) {
+              firstTimestamp = timestamp;
+            }
+            if (previousTimestamp !== null) {
+              intervals.push(timestamp - previousTimestamp);
+            }
+            previousTimestamp = timestamp;
+            if (timestamp - firstTimestamp >= durationMs) {
+              const elapsedMs = intervals.reduce(
+                (total, interval) => total + interval,
+                0,
+              );
+              resolve({
+                elapsedMs,
+                fps: (1000 * intervals.length) / elapsedMs,
+                frameTimeMs: elapsedMs / intervals.length,
+                intervals: intervals.length,
+              });
+              return;
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+      measurementSeconds * 1000,
+    );
+    const renderer = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas[data-renderer-host="shell"]');
+      const context = canvas?.getContext('webgl2');
+      const debugInfo = context?.getExtension('WEBGL_debug_renderer_info');
+      return debugInfo
+        ? context.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+        : null;
+    });
+    return { label, renderer, ...measurement };
+  } finally {
+    await page.close();
+  }
+}
+
+async function capturePairedOverhead() {
+  const browser = await chromium.launch({
+    channel: 'chrome',
+    headless: true,
+    args: ['--use-angle=d3d11', '--disable-software-rasterizer'],
+  });
+  try {
+    const pairs = [];
+    for (let pair = 1; pair <= 5; pair += 1) {
+      const candidateFirst = pair % 2 === 0;
+      const first = candidateFirst
+        ? await measurePageCadence(browser, baseUrl, 'candidate')
+        : await measurePageCadence(browser, baselineUrl, 'baseline');
+      const second = candidateFirst
+        ? await measurePageCadence(browser, baselineUrl, 'baseline')
+        : await measurePageCadence(browser, baseUrl, 'candidate');
+      const candidate = candidateFirst ? first : second;
+      const baseline = candidateFirst ? second : first;
+      assert(candidate.renderer, `Pair ${pair} candidate renderer is unavailable.`);
+      assert(baseline.renderer, `Pair ${pair} baseline renderer is unavailable.`);
+      assert(
+        candidate.renderer === baseline.renderer,
+        `Pair ${pair} renderer mismatch: ${candidate.renderer} / ${baseline.renderer}.`,
+      );
+      pairs.push({
+        pair,
+        order: candidateFirst ? ['candidate', 'baseline'] : ['baseline', 'candidate'],
+        baseline,
+        candidate,
+        regressionPercent:
+          ((baseline.fps - candidate.fps) / baseline.fps) * 100,
+      });
+    }
+
+    const pairedMedianRegressionPercent = median(
+      pairs.map(({ regressionPercent }) => regressionPercent),
+    );
+    assert(
+      pairedMedianRegressionPercent <= 5,
+      `Telemetry cadence regression ${pairedMedianRegressionPercent.toFixed(2)}% exceeds 5%.`,
+    );
+    return {
+      comparison: 'T-SH-02 baseline build vs T-SH-03 candidate build',
+      baselineUrl,
+      candidateUrl: baseUrl,
+      method: {
+        pairs: 5,
+        order: 'interleaved and alternating',
+        warmupSeconds,
+        measurementSeconds,
+      },
+      pairedMedianRegressionPercent,
+      pairs,
+    };
+  } finally {
+    await browser.close();
+  }
+}
+
 const software = await captureReference({
   expectedClassification: 'software',
   label: 'bundled-chromium-swiftshader',
@@ -132,6 +259,7 @@ const hardware = await captureReference({
     args: ['--use-angle=d3d11', '--disable-software-rasterizer'],
   },
 });
+const overhead = await capturePairedOverhead();
 
 const record = {
   schemaVersion: 1,
@@ -140,10 +268,14 @@ const record = {
   sourceRevision,
   room: { id: 'voxel-water', preset: 'default' },
   references: [software, hardware],
+  overhead,
 };
 
 await writeFile(outputPath, `${JSON.stringify(record, null, 2)}\n`);
 console.log(`telemetry reference: ${outputPath}`);
 console.log(
   `software median ${software.aggregates.fpsMedian.toFixed(2)} FPS; hardware median ${hardware.aggregates.fpsMedian.toFixed(2)} FPS`,
+);
+console.log(
+  `paired overhead regression ${overhead.pairedMedianRegressionPercent.toFixed(2)}%`,
 );

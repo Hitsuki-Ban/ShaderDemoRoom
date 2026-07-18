@@ -50,7 +50,7 @@ research-exhibition-direction.md §6(Tufte スパークライン論・stats.js/r
 ### 判断と設計
 
 - `docs/design/telemetry-protocol.md` を単一情報源として追加し、rAF cadence、2秒 headline window、10秒 p95 window、250ms/4Hz publish、nearest-rank p95、15秒/60 bucket sparkline、logical-frame renderer counters、QA schema を定義した。rAF cadence は present/GPU time ではなく、submit time も GPU time ではないことを明記した。
-- renderer は `software | hardware | unknown` の三態。SwiftShader / llvmpipe / softpipe / Software Rasterizer / Microsoft Basic Render Driver の明示 match だけを software とし、unmasked renderer が取得できない場合は hardware と推測せず unknown にする。
+- renderer は `software | hardware | unknown` の三態。SwiftShader / llvmpipe / softpipe / lavapipe / OpenSWR / WARP / Software Rasterizer / Microsoft Basic Render Driver の明示 match だけを software とし、NVIDIA / AMD / Intel / Apple GPU 等の正向 hardware-family marker がない文字列は unmasked でも unknown にする fail-closed 分類とした。
 - 3案の静止モックを `docs/direction/mocks/` に保存し、`docs/direction/t-sh-03-telemetry-design.md` で比較した。採用は viewport 下の full-width instrument rail。corner overlay は作品を覆い、status ledger は topbar と重複するため不採用。gizmo / minimap / camera overlay は実データ seam がなく虚偽装飾になるため本票では採用しない。
 
 ### 実装
@@ -63,7 +63,7 @@ research-exhibition-direction.md §6(Tufte スパークライン論・stats.js/r
 ### 検証
 
 - `pnpm test` 20 files / 72 tests、`pnpm lint`、token lint、`pnpm typecheck`、`pnpm build`、exhibit sync、`git diff --check`: pass。synthetic 60/30/4 FPS、jitter/long frame、p95 nearest-rank、bucket gaps、reset、renderer classifier、Glass 19 calls、HUD native/external states を固定した。
-- `pnpm qa:renderer`: 2訪問順序 × 20切替、canvas/context 各1、context lost / browser error 0。Voxel 8窓 mean 15.078 FPS、全19 calls。T-SH-02 baseline 15.125 FPS比 -0.31% で ±5% overhead budget 内。Glass 8窓 3.09–4.62 FPS、全19 calls。
+- `pnpm qa:renderer`: 2訪問順序 × 20切替、canvas/context 各1、context lost / browser error 0。Voxel 8窓 mean 15.078 FPS、全19 calls。Glass 8窓 3.09–4.62 FPS、全19 calls。この実行は lifecycle/counter 回帰の証拠であり、overhead 判定には流用しない。
 - `pnpm qa:visual`: desktop/mobile 7 captures、console error 0、mobile horizontal overflow 0、HUD/viewport overlap 0。desktop は5セル、mobile は2セル、embedded は external state の hard assertion を追加。初回 critique で resources cell の密度を下げ、`TX/GEO` と `PGM/context` の2階層へ修正後に再撮影した。
-- `pnpm qa:telemetry-reference`: 1440×900 Voxel default、5秒 warm-up + 15秒 measurement を schema v1 JSON に記録。bundled Chromium / SwiftShader median 14.52 FPS / 68.88 ms、system Chrome D3D11 / RTX 4070 Ti median 200 FPS / 5.00 ms。両環境とも15 sampleすべて 19 calls。記録は `docs/direction/captures/telemetry-reference-2026-07-18.json`。
+- `pnpm qa:telemetry-reference`: 1440×900 Voxel default、5秒 warm-up + 15秒 measurement の software/hardware 参照に加え、同じ system Chrome D3D11 renderer で T-SH-02 baseline build と T-SH-03 candidate build を5組交錯・交互順序で直接測定する。paired median regression を ±5% gate とし、全 raw pair を schema v1 JSON に保存する。記録は `docs/direction/captures/telemetry-reference-2026-07-18.json`。
 - 通常 Chrome の hardware renderer string も確認したが、拡張制御タブは background rAF throttling を受けるため、その約1 FPS値は性能記録から明示的に除外した。正式値は `--disable-software-rasterizer` かつ classification=`hardware` を hard assert する専用 D3D11 capture だけを採用した。
