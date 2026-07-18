@@ -25,36 +25,28 @@ export default function GlassOpticsControls({
         <SliderControl
           locale={locale}
           label={t('rooms.glassOptics.controls.lightX')}
-          min={glassOpticsDomains.lightX.min}
-          max={glassOpticsDomains.lightX.max}
-          step={0.01}
+          {...glassOpticsDomains.lightX}
           value={settings.lightX}
           onChange={(lightX) => onPatch({ lightX })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.glassOptics.controls.lightY')}
-          min={glassOpticsDomains.lightY.min}
-          max={glassOpticsDomains.lightY.max}
-          step={0.01}
+          {...glassOpticsDomains.lightY}
           value={settings.lightY}
           onChange={(lightY) => onPatch({ lightY })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.glassOptics.controls.lightZ')}
-          min={glassOpticsDomains.lightZ.min}
-          max={glassOpticsDomains.lightZ.max}
-          step={0.01}
+          {...glassOpticsDomains.lightZ}
           value={settings.lightZ}
           onChange={(lightZ) => onPatch({ lightZ })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.glassOptics.controls.beamSpread')}
-          min={glassOpticsDomains.beamSpread.min}
-          max={glassOpticsDomains.beamSpread.max}
-          step={0.01}
+          {...glassOpticsDomains.beamSpread}
           value={settings.beamSpread}
           onChange={(beamSpread) => onPatch({ beamSpread })}
         />
@@ -64,27 +56,21 @@ export default function GlassOpticsControls({
         <SliderControl
           locale={locale}
           label={t('rooms.glassOptics.controls.ior')}
-          min={glassOpticsDomains.ior.min}
-          max={glassOpticsDomains.ior.max}
-          step={0.01}
+          {...glassOpticsDomains.ior}
           value={settings.ior}
           onChange={(ior) => onPatch({ ior })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.glassOptics.controls.roughness')}
-          min={glassOpticsDomains.roughness.min}
-          max={glassOpticsDomains.roughness.max}
-          step={0.01}
+          {...glassOpticsDomains.roughness}
           value={settings.roughness}
           onChange={(roughness) => onPatch({ roughness })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.glassOptics.controls.thickness')}
-          min={glassOpticsDomains.thickness.min}
-          max={glassOpticsDomains.thickness.max}
-          step={0.01}
+          {...glassOpticsDomains.thickness}
           value={settings.thickness}
           onChange={(thickness) => onPatch({ thickness })}
         />

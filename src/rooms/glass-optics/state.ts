@@ -1,14 +1,22 @@
 import type { DeepReadonly, GlassOpticsSettings } from '../types';
 
+type GlassOpticsNumericSetting = Exclude<
+  keyof GlassOpticsSettings,
+  'autoRotate' | 'showCaustics'
+>;
+
 export const glassOpticsDomains = {
-  lightX: { min: -6, max: 6 },
-  lightY: { min: 0.8, max: 6 },
-  lightZ: { min: -6, max: 6 },
-  beamSpread: { min: 0.05, max: 0.9 },
-  ior: { min: 1, max: 2.4 },
-  roughness: { min: 0, max: 0.55 },
-  thickness: { min: 0.2, max: 2.4 },
-} as const;
+  lightX: { min: -6, max: 6, step: 0.01 },
+  lightY: { min: 0.8, max: 6, step: 0.01 },
+  lightZ: { min: -6, max: 6, step: 0.01 },
+  beamSpread: { min: 0.05, max: 0.9, step: 0.01 },
+  ior: { min: 1, max: 2.4, step: 0.01 },
+  roughness: { min: 0, max: 0.55, step: 0.01 },
+  thickness: { min: 0.2, max: 2.4, step: 0.01 },
+} as const satisfies Record<
+  GlassOpticsNumericSetting,
+  { readonly min: number; readonly max: number; readonly step: number }
+>;
 
 export const glassOpticsDefaults: DeepReadonly<GlassOpticsSettings> = {
   lightX: -0.05,

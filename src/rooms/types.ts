@@ -48,10 +48,14 @@ export interface EmbeddedExhibitSettings {
 
 export type EmbeddedPermission = 'autoplay' | 'microphone';
 
-export type AnyRoomSettings =
-  | VoxelWaterSettings
-  | GlassOpticsSettings
-  | EmbeddedExhibitSettings;
+export interface RoomSettingsById {
+  'voxel-water': VoxelWaterSettings;
+  'glass-optics': GlassOpticsSettings;
+  'anime-liquid-orb': EmbeddedExhibitSettings;
+  'ninth-tide-archive': EmbeddedExhibitSettings;
+}
+
+export type AnyRoomSettings = RoomSettingsById[RoomId];
 
 export type DeepReadonly<T> = T extends object
   ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }

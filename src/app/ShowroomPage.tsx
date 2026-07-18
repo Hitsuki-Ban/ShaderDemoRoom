@@ -1,6 +1,12 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useLayoutEffect, useRef, useState } from 'react';
 import { Code, Languages, RadioTower } from 'lucide-react';
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { getRoomById, roomRegistry } from '../rooms/registry';
 import {
   cloneRoomSettings,
@@ -22,13 +28,44 @@ import { useI18n } from '../shared/i18n/useI18n';
 import { TelemetryPanel } from '../shared/telemetry/TelemetryPanel';
 import { ShaderCanvas } from '../shared/three/ShaderCanvas';
 import { Button } from '../shared/ui/Button';
+import {
+  parseRoomUrlSettings,
+  serializeRoomUrlSettings,
+  URL_STATE_DEBOUNCE_MS,
+} from '../shared/url-state';
 import { RoomRail } from './RoomRail';
 
 export function ShowroomPage() {
   const { roomId } = useParams();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { locale, setLocale, t } = useI18n();
-  const [settingsByRoom, setSettingsByRoom] = useState(createInitialSettings);
+  const activeRoom = getRoomById(roomId);
+  const searchParamsKey = searchParams.toString();
+  const navigationIdentity = `${activeRoom?.id ?? 'invalid'}\u0000${location.key}\u0000${searchParamsKey}`;
+  const [settingsState, setSettingsState] = useState(() => {
+    const initialSettings = createInitialSettings();
+    if (activeRoom) {
+      initialSettings[activeRoom.id] = parseRoomUrlSettings(
+        activeRoom.id,
+        new URLSearchParams(searchParamsKey),
+      );
+    }
+    return { navigationIdentity, settingsByRoom: initialSettings };
+  });
+  let settingsByRoom = settingsState.settingsByRoom;
+  if (settingsState.navigationIdentity !== navigationIdentity) {
+    settingsByRoom = { ...settingsState.settingsByRoom };
+    if (activeRoom) {
+      settingsByRoom[activeRoom.id] = parseRoomUrlSettings(
+        activeRoom.id,
+        new URLSearchParams(searchParamsKey),
+      );
+    }
+    setSettingsState({ navigationIdentity, settingsByRoom });
+  }
+  const pendingUrlWrite = useRef<number | null>(null);
+  const committedNavigationIdentity = useRef(navigationIdentity);
   const [shaderTelemetry, setShaderTelemetry] = useState<{
     locationKey: string;
     roomId: RoomId;
@@ -42,7 +79,16 @@ export function ShowroomPage() {
     stats: EmbeddedRoomStats | null;
   } | null>(null);
 
-  const activeRoom = getRoomById(roomId);
+  useLayoutEffect(() => {
+    committedNavigationIdentity.current = navigationIdentity;
+
+    return () => {
+      if (pendingUrlWrite.current !== null) {
+        window.clearTimeout(pendingUrlWrite.current);
+        pendingUrlWrite.current = null;
+      }
+    };
+  }, [navigationIdentity]);
 
   if (!activeRoom) {
     return <Navigate to="/room/voxel-water" replace />;
@@ -65,28 +111,47 @@ export function ShowroomPage() {
       : null;
   const roomLabel = t(activeRoom.titleKey);
 
-  const updateSettings = (nextSettings: AnyRoomSettings) => {
-    setSettingsByRoom((current) => ({
+  const scheduleUrlWrite = (nextSettings: AnyRoomSettings) => {
+    if (pendingUrlWrite.current !== null) {
+      window.clearTimeout(pendingUrlWrite.current);
+      pendingUrlWrite.current = null;
+    }
+    if (activeRoom.kind === 'embedded') return;
+
+    const nextSearchParams = serializeRoomUrlSettings(activeRoom.id, nextSettings);
+    if (nextSearchParams.toString() === searchParamsKey) return;
+
+    pendingUrlWrite.current = window.setTimeout(() => {
+      pendingUrlWrite.current = null;
+      if (committedNavigationIdentity.current !== navigationIdentity) return;
+      setSearchParams(nextSearchParams, { replace: true });
+    }, URL_STATE_DEBOUNCE_MS);
+  };
+
+  const applySettings = (nextSettings: AnyRoomSettings) => {
+    setSettingsState((current) => ({
       ...current,
-      [activeRoom.id]: nextSettings,
+      settingsByRoom: {
+        ...current.settingsByRoom,
+        [activeRoom.id]: nextSettings,
+      },
     }));
+    scheduleUrlWrite(nextSettings);
+  };
+
+  const updateSettings = (nextSettings: AnyRoomSettings) => {
+    applySettings(nextSettings);
   };
 
   const patchSettings = (patch: Partial<AnyRoomSettings>) => {
-    setSettingsByRoom((current) => ({
-      ...current,
-      [activeRoom.id]: {
-        ...current[activeRoom.id],
-        ...patch,
-      } as AnyRoomSettings,
-    }));
+    applySettings({
+      ...settings,
+      ...patch,
+    } as AnyRoomSettings);
   };
 
   const resetSettings = () => {
-    setSettingsByRoom((current) => ({
-      ...current,
-      [activeRoom.id]: cloneRoomSettings(activeRoom.defaultPreset),
-    }));
+    applySettings(cloneRoomSettings(activeRoom.defaultPreset));
   };
 
   return (
