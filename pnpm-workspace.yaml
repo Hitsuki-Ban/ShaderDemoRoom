@@ -1,0 +1,9 @@
+packages:
+  - ref/mizu-kokoro-2-source
+  - ref/archive_of_the_ninth_tide_shoreless_web
+
+allowBuilds:
+  esbuild: true
+failIfNoMatch: true
+saveExact: true
+sharedWorkspaceLockfile: true

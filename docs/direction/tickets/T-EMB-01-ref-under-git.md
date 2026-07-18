@@ -64,3 +64,12 @@ review-framework.md 横断注意4 と research-webgl-platform.md §2.6(CI とビ
 - **ルート .gitignore の非アンカーパターン**: `dist` / `node_modules` / `output` は ref サブディレクトリにも波及する。ref に「コミットしたい dist」を将来置く場合は `!ref/**/dist` の否定パターンが必要になる — 本チケットでは逆にこの挙動を利用するため、意図をコメントで残すこと。
 - **preview.png 等のバイナリ**: orb の `preview.png`(1.3MB)+ `docs/screenshots/`、tide の `preview*.png`(計約1MB)がコミット対象に入る。ヒーローショット参照資産として保持推奨だが、初回コミットのサイズ増(mp3 8.28MB 含め約15MB)を PR 説明に明記する。
 - **エージェント/後続作業者への注意**: 本チケット以降、`public/exhibits/**` への直接編集は禁止(必ず ref 側を編集して `pnpm exhibits:build`)。この規約を docs/direction/README.md か CONTRIBUTING 相当へ1行で追記すること。
+
+## 作業報告 (2026-07-18)
+
+- `ref/` の両展示について、編集可能ソース、文書、参照画像、ライセンス、Tide の音源正本を版管理対象化した。両 `package-lock.json`、Orb の `dist/`、Tide の旧ルート `app.js` / 新 `dist/` は生成物として除外した。
+- pnpm 11.5.2 の単一 workspace / root lock を導入した。直接依存は exact pin、依存 build は審査済みの `esbuild` のみ許可し、未一致 filter と lock drift は fail fast とした。未使用だった Tide の `playwright-core` は依存から除去した。
+- Tide は `build.mjs` で完全な `dist/` (`index.html`, `app.js`, `archive.mp3`, Three.js license) を生成する形へ統一した。ルートの `pnpm exhibits:build` は両 package の build 成功と全入力の存在を確認してから、固定された `public/exhibits/*` の2ディレクトリを丸ごと置換する。`archive.mp3` の正本は ref 側だけであり、public は公開スナップショットである。
+- ルート `pnpm build` と Pages workflow を再生成経路へ接続し、`scripts/check-exhibit-sync.mjs` で tracked 差分と新しい hash asset の untracked 差分をともに拒否するようにした。`docs/direction/README.md` と各 ref README に public 直接編集禁止を記録した。
+- D-3 は **source map 維持**と決定した。fork のソースは公開済みで秘匿効果がなく、外部 map は通常のページロード payload に含まれず、オンラインデバッグ / QA に有用なため。初回 pnpm workspace build では map 内の15件の Three.js source path のみ npm 配置から pnpm virtual-store 配置へ変化し、`sourcesContent` / `mappings`、JS / CSS / HTML は不変だった。Tide bundle と音源も従来スナップショットと SHA-256 一致を確認した。
+- 検証: `pnpm install --frozen-lockfile`、`pnpm test` (12 files / 44 tests)、`pnpm lint`、`pnpm typecheck`、`pnpm build`、`pnpm qa:visual` (desktop/mobile 7 captures、console error 0、overflow/overlap なし)、`pnpm qa:exhibits` (Tide 9章、各 canvas 1、Orb 4相、LIQUID→CRYSTAL→LIQUID、console error 0) を通過した。独立レビューは P0–P2 指摘なしで APPROVE。
