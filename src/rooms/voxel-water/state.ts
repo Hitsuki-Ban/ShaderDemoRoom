@@ -1,6 +1,6 @@
-import type { VoxelWaterSettings } from '../types';
+import type { DeepReadonly, VoxelWaterSettings } from '../types';
 
-export const voxelWaterDefaults: VoxelWaterSettings = {
+export const voxelWaterDefaults: DeepReadonly<VoxelWaterSettings> = {
   weather: 'clear',
   wind: 0.82,
   rain: 0.12,
@@ -19,7 +19,7 @@ export const voxelWaterDefaults: VoxelWaterSettings = {
   voxelColorVariance: 0.26,
 };
 
-export const voxelWaterStormPreset: VoxelWaterSettings = {
+export const voxelWaterStormPreset: DeepReadonly<VoxelWaterSettings> = {
   ...voxelWaterDefaults,
   weather: 'storm',
   wind: 2.1,
@@ -38,7 +38,7 @@ export const voxelWaterStormPreset: VoxelWaterSettings = {
   voxelColorVariance: 0.46,
 };
 
-export const voxelWaterCalmPreset: VoxelWaterSettings = {
+export const voxelWaterCalmPreset: DeepReadonly<VoxelWaterSettings> = {
   ...voxelWaterDefaults,
   weather: 'clear',
   wind: 0.46,

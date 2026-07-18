@@ -1,4 +1,4 @@
-import type { GlassOpticsSettings } from '../types';
+import type { DeepReadonly, GlassOpticsSettings } from '../types';
 
 export const glassOpticsDomains = {
   lightX: { min: -6, max: 6 },
@@ -10,7 +10,7 @@ export const glassOpticsDomains = {
   thickness: { min: 0.2, max: 2.4 },
 } as const;
 
-export const glassOpticsDefaults: GlassOpticsSettings = {
+export const glassOpticsDefaults: DeepReadonly<GlassOpticsSettings> = {
   lightX: -0.05,
   lightY: 2.42,
   lightZ: 2.05,
@@ -22,16 +22,16 @@ export const glassOpticsDefaults: GlassOpticsSettings = {
   showCaustics: true,
 };
 
-export const glassOpticsFocusPreset = {
+export const glassOpticsFocusPreset: DeepReadonly<Partial<GlassOpticsSettings>> = {
   lightX: -0.28,
   lightY: 2.85,
   lightZ: 1.45,
   beamSpread: 0.18,
-} satisfies Partial<GlassOpticsSettings>;
+};
 
-export const glassOpticsCrystalPreset = {
+export const glassOpticsCrystalPreset: DeepReadonly<Partial<GlassOpticsSettings>> = {
   ior: 1.72,
   thickness: 1.8,
   roughness: 0.01,
   showCaustics: true,
-} satisfies Partial<GlassOpticsSettings>;
+};

@@ -1,5 +1,5 @@
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
-import type { WebGLRenderer } from 'three';
+import type { Camera, Object3D, PMREMGenerator } from 'three';
 import type { RoomAccentToken } from '../styles/designTokens';
 
 export type RoomId =
@@ -50,9 +50,16 @@ export type AnyRoomSettings =
   | GlassOpticsSettings
   | EmbeddedExhibitSettings;
 
+export type DeepReadonly<T> = T extends object
+  ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+  : T;
+
 export interface RoomStats {
   fps: number;
+  frameTimeMs: number;
   drawCalls: number;
+  drawCallsMax: number;
+  trianglesAvg: number;
 }
 
 export interface RoomFrame {
@@ -68,57 +75,67 @@ export interface RoomSize {
 
 export interface RoomRuntimeContext {
   canvas: HTMLCanvasElement;
-  renderer: WebGLRenderer;
-  onStats: (stats: RoomStats) => void;
+  renderer: {
+    render: (scene: Object3D, camera: Camera) => void;
+  };
+  createPmremGenerator: () => PMREMGenerator;
+  motionScale: number;
 }
 
 export interface RoomRuntime<TSettings extends AnyRoomSettings = AnyRoomSettings> {
-  updateSettings: (settings: TSettings) => void;
+  updateSettings: (settings: DeepReadonly<TSettings>) => void;
+  setMotionScale: (scale: number) => void;
   resize: (size: RoomSize) => void;
   render: (frame: RoomFrame) => void;
+  pause?: () => void;
+  resume?: () => void;
   dispose: () => void;
 }
 
 export interface RoomRuntimeModule<TSettings extends AnyRoomSettings = AnyRoomSettings> {
   createRoomRuntime: (
     context: RoomRuntimeContext,
-    initialSettings: TSettings,
+    initialSettings: DeepReadonly<TSettings>,
   ) => RoomRuntime<TSettings>;
 }
 
 export interface RoomControlsProps<TSettings extends AnyRoomSettings = AnyRoomSettings> {
-  settings: TSettings;
+  settings: DeepReadonly<TSettings>;
   onChange: (settings: TSettings) => void;
-  onPatch: (patch: Partial<TSettings>) => void;
+  onPatch: (patch: DeepReadonly<Partial<TSettings>>) => void;
   onReset: () => void;
   t: (key: string) => string;
 }
 
 interface BaseRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> {
-  id: RoomId;
-  kind: 'shader' | 'embedded';
-  titleKey: string;
-  kickerKey: string;
-  descriptionKey: string;
-  shortDescriptionKey: string;
-  i18nNamespace: string;
-  accent: RoomAccentToken;
-  techTags: string[];
-  defaultPreset: TSettings;
-  loadControls: () => Promise<{ default: ComponentType<RoomControlsProps<AnyRoomSettings>> }>;
-  ControlsComponent: LazyExoticComponent<ComponentType<RoomControlsProps<AnyRoomSettings>>>;
+  readonly id: RoomId;
+  readonly kind: 'shader' | 'embedded';
+  readonly titleKey: string;
+  readonly kickerKey: string;
+  readonly descriptionKey: string;
+  readonly shortDescriptionKey: string;
+  readonly i18nNamespace: string;
+  readonly accent: RoomAccentToken;
+  readonly techTags: readonly string[];
+  readonly defaultPreset: DeepReadonly<TSettings>;
+  readonly loadControls: () => Promise<{
+    default: ComponentType<RoomControlsProps<AnyRoomSettings>>;
+  }>;
+  readonly ControlsComponent: LazyExoticComponent<
+    ComponentType<RoomControlsProps<AnyRoomSettings>>
+  >;
 }
 
 export interface ShaderRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings>
   extends BaseRoomDefinition<TSettings> {
   kind: 'shader';
-  loadScene: () => Promise<RoomRuntimeModule<TSettings>>;
+  readonly loadScene: () => Promise<RoomRuntimeModule<TSettings>>;
 }
 
 export interface EmbeddedRoomDefinition extends BaseRoomDefinition<EmbeddedExhibitSettings> {
   kind: 'embedded';
-  embedPath: string;
-  permissions: readonly EmbeddedPermission[];
+  readonly embedPath: string;
+  readonly permissions: readonly EmbeddedPermission[];
 }
 
 export type RoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> =

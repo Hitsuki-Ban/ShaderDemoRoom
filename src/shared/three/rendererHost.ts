@@ -22,6 +22,8 @@ export function createPersistentRendererHost(): PersistentRendererHost {
     powerPreference: 'high-performance',
   });
   renderer.outputColorSpace = SRGBColorSpace;
+  renderer.info.autoReset = false;
+  renderer.info.reset();
   renderer.setClearColor(
     readRequiredRootColorToken(colorTokenNames.shellBackground),
     1,

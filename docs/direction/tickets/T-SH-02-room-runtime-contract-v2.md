@@ -47,3 +47,22 @@ research-webgl-platform.md §2.5 / §2.9 / §3 P1-5・P2-7、review-framework.md
 - **renderOrder 連鎖**: 両ルームの描画内容には触れないが、autoReset=false 化はマルチパス描画の info 集計に影響するため、glass の transmission パス込みで calls 値を実機確認する。
 - **T-SH-03 との境界**: 本チケットは「契約とシーム」まで。計測窓・平滑化定数・SW GL 判定・HUD 表現は T-SH-03 が所掌(二重定義しない)。
 - **T-SH-04 との連携**: toneMapping / exposure をルーム別に設定する仕組み(ステージプロファイル)は T-SH-04。本チケットの save/restore はその前提となる安全網。
+
+## 完了レポート (2026-07-18)
+
+### 実装
+
+- shell の runtime session が共有 renderer の tone mapping / exposure / transmission scale / output color space / clear color+alpha / auto-clear 4項目を生成前に snapshot し、通常 dispose と生成・dispose 例外の双方で `finally` 復元するようにした。room へは `render()` と PMREM factory だけを渡し、`src/rooms/**` の `renderer.info` 接触を 0 件にした。
+- animation loop を hidden / inactive の独立 pause reason、active-time clock、0.5 秒 telemetry window を持つ shell controller に統一した。pause 中は loop を止め、復帰時は wall time を破棄する。`info.autoReset=false` の下で logical frame 全 pass 後に calls / triangles を採取して reset し、FPS、frame time、calls 平均/最大、triangles 平均を報告する。
+- shell の単一 `matchMedia('(prefers-reduced-motion: reduce)')` store が 1 / 0.15 を初期値と live update の両方で runtime に渡す。Voxel Water / Glass Optics は `motionElapsed += delta * motionScale` と速度項だけを縮小し、色・形状・settings は変更しない。
+- `DeepReadonly` を registry defaults、runtime 初期値/保持値、controls 入力まで貫通させ、初期化と reset は `structuredClone` で別オブジェクトを作る。`docs/design/adding-a-room.md` に runtime v2、renderer 禁止事項、motion、i18n、registry、QA、T-SH-04 境界を集約した。
+- `pnpm qa:motion` を追加し、同一ページで Playwright の reduced-motion を live 切替して meanDelta / strongRatio を比較する。校准 gate は reduced meanDelta ≤ normal の 35%、strongRatio ≤ 25%。`qa:renderer` は production preview の FPS/calls を各8窓記録し、Glass の logical-frame baseline 19 calls を hard fail 化した。
+
+### 検証
+
+- `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm build` / `git diff --check`: pass。最終 unit suite は 18 files / 56 tests。
+- renderer state の全 governed fields、5セッション連続切替、factory/dispose 例外、info ownership grep、pause reason 交差、pause 後 delta、stats 平均/最大、matchMedia change、readonly 負向型、reset clone を自動テストした。
+- `pnpm qa:renderer`: 2訪問順序 × 20切替、canvas/context 各1、shader loop active / embedded loop stopped、context lost / browser error 0。Voxel 8窓は全て 19 calls、FPS mean 15.125。Glass 8窓は全て 19 calls (3–5 FPS) で、transmission を含む logical-frame 集計値を baseline として固定した。
+- `pnpm qa:motion`: normal `meanDelta=3.261 / strongRatio=0.02672`、reduce `0.622 / 0`、比率 `0.191 / 0` で gate pass。個別 `qa:water` でも normal `3.241 / 0.02808`、reduce `0.590 / 0`。水面 signature は coverage 1、luma 162.40、toon-band 7.841、hue 177.31 と従来同水準。
+- `pnpm qa:visual`: desktop/mobile 7 captures、console error 0、horizontal overflow 0、HUD overlap 0。独立审查发现的 readonly P1 与真实 Glass telemetry P2 均已修复，并追加负向类型测试与生产预览硬门禁后复核。
+- Windows `core.autocrlf=true` 下で既存 exhibit sync build が4つの生成物を EOL-only dirty にする非阻塞問題も確認した。bundle hash / sourcemap sources+mappings / 正規化後 sourcesContent は不変で、本チケットには無関係な生成物差分を含めず、committed exhibit snapshot の sync check は pass した。

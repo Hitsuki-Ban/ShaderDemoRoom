@@ -175,16 +175,18 @@ async function readPixelRatio(page) {
   });
 }
 
-async function sampleFps(page, room) {
+async function sampleTelemetry(page, room) {
   await openRoom(page, room);
   await page.waitForTimeout(2500);
   const samples = [];
   for (let index = 0; index < 8; index += 1) {
     await page.waitForTimeout(1000);
-    const text = await page.locator('.scene-hud span').first().textContent();
-    const fps = Number.parseInt(text ?? '', 10);
-    assert(Number.isFinite(fps), `Could not read the ${room} FPS chip: ${text}.`);
-    samples.push(fps);
+    const chips = await page.locator('.scene-hud span').allTextContents();
+    const fps = Number.parseInt(chips[0] ?? '', 10);
+    const calls = Number.parseFloat(chips[1] ?? '');
+    assert(Number.isFinite(fps), `Could not read the ${room} FPS chip: ${chips[0]}.`);
+    assert(Number.isFinite(calls), `Could not read the ${room} calls chip: ${chips[1]}.`);
+    samples.push({ calls, fps });
   }
   return samples;
 }
@@ -210,19 +212,28 @@ async function runScenario(firstRoom) {
   assert(initialAudit.contexts[0].actual?.antialias === true, 'The shell context is not antialiased.');
   assert(initialAudit.creationErrors.length === 0, 'The shell reported context creation errors.');
 
-  const fpsSamples = firstRoom === 'voxel-water'
+  const telemetrySamples = firstRoom === 'voxel-water'
     ? {
-        'voxel-water': await sampleFps(page, 'voxel-water'),
-        'glass-optics': await sampleFps(page, 'glass-optics'),
+        'voxel-water': await sampleTelemetry(page, 'voxel-water'),
+        'glass-optics': await sampleTelemetry(page, 'glass-optics'),
       }
     : null;
-  if (fpsSamples) {
+  if (telemetrySamples) {
     const voxelMean =
-      fpsSamples['voxel-water'].reduce((total, fps) => total + fps, 0) /
-      fpsSamples['voxel-water'].length;
-    console.log(`voxel FPS samples: ${fpsSamples['voxel-water'].join(', ')} (mean ${voxelMean})`);
-    console.log(`glass FPS samples: ${fpsSamples['glass-optics'].join(', ')}`);
+      telemetrySamples['voxel-water'].reduce((total, sample) => total + sample.fps, 0) /
+      telemetrySamples['voxel-water'].length;
+    const glassCalls = telemetrySamples['glass-optics'].map((sample) => sample.calls);
+    console.log(
+      `voxel telemetry: ${telemetrySamples['voxel-water'].map(({ calls, fps }) => `${fps} FPS/${calls} calls`).join(', ')} (FPS mean ${voxelMean})`,
+    );
+    console.log(
+      `glass telemetry: ${telemetrySamples['glass-optics'].map(({ calls, fps }) => `${fps} FPS/${calls} calls`).join(', ')}`,
+    );
     assert(voxelMean >= 14.9, `Voxel FPS regressed below the 10% budget: ${voxelMean}.`);
+    assert(
+      glassCalls.every((calls) => calls === 19),
+      `Glass logical-frame calls changed from the calibrated 19-call baseline: ${glassCalls.join(', ')}.`,
+    );
   }
 
   const pixelRatios = {};
@@ -261,7 +272,7 @@ async function runScenario(firstRoom) {
     errors,
     finalAudit,
     firstRoom,
-    fpsSamples,
+    telemetrySamples,
     pixelRatios,
     switches: switchSequence.length,
   };
