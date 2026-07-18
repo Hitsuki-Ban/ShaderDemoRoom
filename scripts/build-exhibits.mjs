@@ -4,35 +4,13 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
+import { resolvePnpmInvocation } from './pnpm-invocation.mjs';
+
 const run = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const publicRoot = join(root, 'public', 'exhibits');
 const pnpmCli = process.env.npm_execpath;
-
-if (!pnpmCli || !isAbsolute(pnpmCli)) {
-  throw new Error('Run this build through `pnpm exhibits:build`.');
-}
-
-// npm_execpath is only node-runnable for JS-CLI installs (corepack, pnpm/action-setup).
-// @pnpm/exe installs point it at a non-runnable placeholder, with the real binary
-// as a sibling (`pnpm.exe` on Windows, or npm_execpath itself is the binary on POSIX).
-async function resolvePnpmInvocation() {
-  if (/\.[cm]?js$/i.test(pnpmCli)) {
-    return { command: process.execPath, prefixArgs: [pnpmCli] };
-  }
-  if (process.platform === 'win32') {
-    const exeSibling = `${pnpmCli}.exe`;
-    try {
-      await access(exeSibling);
-      return { command: exeSibling, prefixArgs: [] };
-    } catch {
-      return { command: 'pnpm.exe', prefixArgs: [] };
-    }
-  }
-  return { command: pnpmCli, prefixArgs: [] };
-}
-
-const pnpmInvocation = await resolvePnpmInvocation();
+const pnpmInvocation = await resolvePnpmInvocation(pnpmCli);
 
 const exhibits = [
   {
