@@ -188,6 +188,7 @@ const screenshots = [];
 let stageProfileMetrics = [];
 let hasHorizontalOverflow = false;
 let hasStageHudOverlap = false;
+let i18nIntegrity = null;
 
 async function updateStageHudOverlap() {
   const overlapsViewport = await page.evaluate(() => {
@@ -244,6 +245,78 @@ for (const room of mobileRooms) {
   hasHorizontalOverflow = hasHorizontalOverflow || roomHasHorizontalOverflow;
 }
 
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'domcontentloaded' });
+await page.locator('.language-select select').selectOption('zh-CN');
+await page.getByTestId('voxel-water-preset-storm').waitFor();
+await page.waitForFunction(
+  () => document.querySelector('.shader-canvas')?.getAttribute('aria-label') === '体素水体'
+    && document.querySelector('[data-testid="voxel-water-preset-storm"]')?.textContent?.trim() === '风暴预设',
+);
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.getByTestId('voxel-water-preset-storm').waitFor();
+
+const shaderLocaleState = await page.evaluate(() => ({
+  canvasLabel: document.querySelector('.shader-canvas')?.getAttribute('aria-label'),
+  documentLanguage: document.documentElement.lang,
+  locale: document.querySelector('.language-select select')?.value,
+  stormLabel: document.querySelector('[data-testid="voxel-water-preset-storm"]')?.textContent?.trim(),
+  telemetryTitle: document.querySelector('[data-renderer-class]')?.getAttribute('title'),
+}));
+if (
+  shaderLocaleState.locale !== 'zh-CN'
+  || shaderLocaleState.documentLanguage !== 'zh-CN'
+  || shaderLocaleState.canvasLabel !== '体素水体'
+  || shaderLocaleState.stormLabel !== '风暴预设'
+) {
+  throw new Error(`Persisted shader locale contract failed: ${JSON.stringify(shaderLocaleState)}`);
+}
+if (
+  shaderLocaleState.telemetryTitle
+  && /marker matched|unmasked renderer unavailable|renderer identity did not match/i.test(
+    shaderLocaleState.telemetryTitle,
+  )
+) {
+  throw new Error(`Renderer diagnostic leaked into localized UI: ${shaderLocaleState.telemetryTitle}`);
+}
+
+await page.goto(`${baseUrl}/#/room/ninth-tide-archive`, { waitUntil: 'domcontentloaded' });
+const localizedFrame = page.locator('iframe.embedded-exhibit-frame');
+await localizedFrame.waitFor({ timeout: 10000 });
+await localizedFrame.evaluate((frame) => {
+  frame.dataset.i18nInstance = 'preserved';
+});
+await page.locator('.language-select select').selectOption('en');
+await page.waitForFunction(
+  () => document.querySelector('iframe.embedded-exhibit-frame')?.getAttribute('title') === 'Ninth Tide Archive',
+);
+await page.locator('.language-select select').selectOption('zh-CN');
+await page.waitForFunction(
+  () => document.querySelector('iframe.embedded-exhibit-frame')?.getAttribute('title') === '第九潮汐档案馆',
+);
+const iframeTitle = await localizedFrame.getAttribute('title');
+if (iframeTitle !== '第九潮汐档案馆') {
+  throw new Error(`Localized iframe title is "${iframeTitle}"; expected "第九潮汐档案馆".`);
+}
+const iframeInstancePreserved = await localizedFrame.getAttribute('data-i18n-instance');
+if (iframeInstancePreserved !== 'preserved') {
+  throw new Error('Locale switching remounted the embedded exhibit iframe.');
+}
+const i18nScreenshotPath = `${outputDir}/voxel-water-zh-CN-persisted.png`;
+await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'domcontentloaded' });
+await page.getByTestId('voxel-water-preset-storm').waitFor();
+await page.screenshot({ path: i18nScreenshotPath, fullPage: false });
+screenshots.push(i18nScreenshotPath);
+i18nIntegrity = {
+  locale: shaderLocaleState.locale,
+  documentLanguage: shaderLocaleState.documentLanguage,
+  canvasLabel: shaderLocaleState.canvasLabel,
+  stormLabel: shaderLocaleState.stormLabel,
+  iframeTitle,
+  iframeInstancePreserved: true,
+  persistedAcrossReload: true,
+};
+
 await browser.close();
 
 if (consoleErrors.length > 0) {
@@ -266,6 +339,7 @@ console.log(
       screenshots,
       stageProfileMetricsPath,
       stageProfileMetrics,
+      i18nIntegrity,
       consoleErrors: 0,
       mobileHorizontalOverflow: false,
       sceneHudViewportOverlap: false,

@@ -8,9 +8,10 @@ import { getEmbeddedSrc } from './url';
 interface EmbeddedExhibitFrameProps {
   room: EmbeddedRoomDefinition;
   settings: EmbeddedExhibitSettings;
+  title: string;
 }
 
-export function EmbeddedExhibitFrame({ room, settings }: EmbeddedExhibitFrameProps) {
+export function EmbeddedExhibitFrame({ room, settings, title }: EmbeddedExhibitFrameProps) {
   const src = useMemo(
     () => getEmbeddedSrc(room.embedPath, settings.reloadToken),
     [room.embedPath, settings.reloadToken],
@@ -22,7 +23,7 @@ export function EmbeddedExhibitFrame({ room, settings }: EmbeddedExhibitFramePro
         key={`${room.id}-${settings.reloadToken}`}
         className="embedded-exhibit-frame"
         src={src}
-        title={room.id}
+        title={title}
         allow={room.permissions.join('; ')}
         allowFullScreen
       />

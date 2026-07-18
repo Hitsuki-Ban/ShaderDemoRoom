@@ -16,12 +16,14 @@ export default function GlassOpticsControls({
   settings,
   onPatch,
   onReset,
+  locale,
   t,
 }: RoomControlsProps<GlassOpticsSettings>) {
   return (
     <div className="inspector-controls">
       <ControlGroup title={t('rooms.glassOptics.controls.lightPath')}>
         <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.lightX')}
           min={glassOpticsDomains.lightX.min}
           max={glassOpticsDomains.lightX.max}
@@ -30,6 +32,7 @@ export default function GlassOpticsControls({
           onChange={(lightX) => onPatch({ lightX })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.lightY')}
           min={glassOpticsDomains.lightY.min}
           max={glassOpticsDomains.lightY.max}
@@ -38,6 +41,7 @@ export default function GlassOpticsControls({
           onChange={(lightY) => onPatch({ lightY })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.lightZ')}
           min={glassOpticsDomains.lightZ.min}
           max={glassOpticsDomains.lightZ.max}
@@ -46,6 +50,7 @@ export default function GlassOpticsControls({
           onChange={(lightZ) => onPatch({ lightZ })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.beamSpread')}
           min={glassOpticsDomains.beamSpread.min}
           max={glassOpticsDomains.beamSpread.max}
@@ -57,6 +62,7 @@ export default function GlassOpticsControls({
 
       <ControlGroup title={t('rooms.glassOptics.title')}>
         <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.ior')}
           min={glassOpticsDomains.ior.min}
           max={glassOpticsDomains.ior.max}
@@ -65,6 +71,7 @@ export default function GlassOpticsControls({
           onChange={(ior) => onPatch({ ior })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.roughness')}
           min={glassOpticsDomains.roughness.min}
           max={glassOpticsDomains.roughness.max}
@@ -73,6 +80,7 @@ export default function GlassOpticsControls({
           onChange={(roughness) => onPatch({ roughness })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.thickness')}
           min={glassOpticsDomains.thickness.min}
           max={glassOpticsDomains.thickness.max}
@@ -97,13 +105,13 @@ export default function GlassOpticsControls({
           icon={<Lightbulb size={16} />}
           onClick={() => onPatch(glassOpticsFocusPreset)}
         >
-          Focus beam
+          {t('rooms.glassOptics.controls.focusBeam')}
         </Button>
         <Button
           icon={<Sparkles size={16} />}
           onClick={() => onPatch(glassOpticsCrystalPreset)}
         >
-          Crystal preset
+          {t('rooms.glassOptics.controls.crystalPreset')}
         </Button>
         <Button variant="ghost" icon={<RotateCcw size={16} />} onClick={onReset}>
           {t('app.reset')}

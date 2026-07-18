@@ -12,6 +12,7 @@ export default function VoxelWaterControls({
   settings,
   onPatch,
   onReset,
+  locale,
   t,
 }: RoomControlsProps<VoxelWaterSettings>) {
   return (
@@ -40,6 +41,7 @@ export default function VoxelWaterControls({
           onChange={(weather) => onPatch({ weather })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.rain')}
           min={0}
           max={1}
@@ -48,6 +50,7 @@ export default function VoxelWaterControls({
           onChange={(rain) => onPatch({ rain })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.cloudCover')}
           min={0}
           max={1}
@@ -56,6 +59,7 @@ export default function VoxelWaterControls({
           onChange={(cloudCover) => onPatch({ cloudCover })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.clarity')}
           min={0}
           max={1}
@@ -67,6 +71,7 @@ export default function VoxelWaterControls({
 
       <ControlGroup title={t('rooms.voxelWater.controls.waveHeight')}>
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.wind')}
           min={0.2}
           max={3}
@@ -75,6 +80,7 @@ export default function VoxelWaterControls({
           onChange={(wind) => onPatch({ wind })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.waveHeight')}
           min={0.1}
           max={1.6}
@@ -83,6 +89,7 @@ export default function VoxelWaterControls({
           onChange={(waveHeight) => onPatch({ waveHeight })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.swell')}
           min={0}
           max={1.2}
@@ -91,6 +98,7 @@ export default function VoxelWaterControls({
           onChange={(swell) => onPatch({ swell })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.chop')}
           min={0}
           max={1}
@@ -99,6 +107,7 @@ export default function VoxelWaterControls({
           onChange={(chop) => onPatch({ chop })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.toonSteps')}
           min={2}
           max={9}
@@ -110,6 +119,7 @@ export default function VoxelWaterControls({
 
       <ControlGroup title={t('rooms.voxelWater.controls.surfaceDetail')}>
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.foam')}
           min={0}
           max={1}
@@ -118,6 +128,7 @@ export default function VoxelWaterControls({
           onChange={(foam) => onPatch({ foam })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.surfaceDetail')}
           min={0}
           max={1}
@@ -129,15 +140,17 @@ export default function VoxelWaterControls({
 
       <ControlGroup title={t('rooms.voxelWater.controls.current')}>
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.currentDirection')}
           min={0}
           max={360}
           step={1}
-          unit="deg"
+          unit={t('app.units.degrees')}
           value={settings.currentDirection}
           onChange={(currentDirection) => onPatch({ currentDirection })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.currentStrength')}
           min={0}
           max={1}
@@ -149,6 +162,7 @@ export default function VoxelWaterControls({
 
       <ControlGroup title={t('rooms.voxelWater.controls.skyAndColor')}>
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.skyTime')}
           min={0}
           max={1}
@@ -157,6 +171,7 @@ export default function VoxelWaterControls({
           onChange={(skyTime) => onPatch({ skyTime })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.colorTemperature')}
           min={-1}
           max={1}
@@ -165,6 +180,7 @@ export default function VoxelWaterControls({
           onChange={(colorTemperature) => onPatch({ colorTemperature })}
         />
         <SliderControl
+          locale={locale}
           label={t('rooms.voxelWater.controls.voxelColorVariance')}
           min={0}
           max={1}
@@ -180,14 +196,14 @@ export default function VoxelWaterControls({
           icon={<CloudRain size={16} />}
           onClick={() => onPatch(voxelWaterStormPreset)}
         >
-          Storm preset
+          {t('rooms.voxelWater.controls.stormPreset')}
         </Button>
         <Button
           data-testid="voxel-water-preset-calm"
           icon={<Waves size={16} />}
           onClick={() => onPatch(voxelWaterCalmPreset)}
         >
-          Calm preset
+          {t('rooms.voxelWater.controls.calmPreset')}
         </Button>
         <Button
           variant="ghost"
