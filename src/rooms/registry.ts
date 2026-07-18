@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import type { ComponentType } from 'react';
+import { roomAccentTokens } from '../styles/designTokens';
 import { animeLiquidOrbDefaults } from './anime-liquid-orb/state';
 import { glassOpticsDefaults } from './glass-optics/state';
 import { ninthTideArchiveDefaults } from './ninth-tide-archive/state';
@@ -38,7 +39,7 @@ export const roomRegistry = [
     descriptionKey: 'rooms.voxelWater.description',
     shortDescriptionKey: 'rooms.voxelWater.shortDescription',
     i18nNamespace: 'rooms.voxelWater',
-    accent: '#34d5ff',
+    accent: roomAccentTokens.cyan,
     techTags: ['Toon Shader', 'Voxel Surface', 'Weather Uniforms'],
     defaultPreset: voxelWaterDefaults,
     loadScene: loadVoxelWaterScene,
@@ -53,7 +54,7 @@ export const roomRegistry = [
     descriptionKey: 'rooms.glassOptics.description',
     shortDescriptionKey: 'rooms.glassOptics.shortDescription',
     i18nNamespace: 'rooms.glassOptics',
-    accent: '#ffbd5a',
+    accent: roomAccentTokens.amber,
     techTags: ['MeshPhysicalMaterial', 'IOR', 'Light Path'],
     defaultPreset: glassOpticsDefaults,
     loadScene: loadGlassOpticsScene,
@@ -68,7 +69,7 @@ export const roomRegistry = [
     descriptionKey: 'rooms.animeLiquidOrb.description',
     shortDescriptionKey: 'rooms.animeLiquidOrb.shortDescription',
     i18nNamespace: 'rooms.animeLiquidOrb',
-    accent: '#ff56d8',
+    accent: roomAccentTokens.magenta,
     techTags: ['NPR Fluid', 'Post FX', 'Interactive Phase'],
     defaultPreset: animeLiquidOrbDefaults,
     embedPath: 'exhibits/anime-liquid-orb/index.html',
@@ -85,7 +86,7 @@ export const roomRegistry = [
     descriptionKey: 'rooms.ninthTideArchive.description',
     shortDescriptionKey: 'rooms.ninthTideArchive.shortDescription',
     i18nNamespace: 'rooms.ninthTideArchive',
-    accent: '#79ead9',
+    accent: roomAccentTokens.mint,
     techTags: ['Audio Reactive', 'Archive Core', 'Post FX'],
     defaultPreset: ninthTideArchiveDefaults,
     embedPath: 'exhibits/ninth-tide-archive/index.html',

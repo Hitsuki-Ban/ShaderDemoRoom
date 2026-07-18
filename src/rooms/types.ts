@@ -1,5 +1,6 @@
 import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import type { WebGLRenderer } from 'three';
+import type { RoomAccentToken } from '../styles/designTokens';
 
 export type RoomId =
   | 'voxel-water'
@@ -101,7 +102,7 @@ interface BaseRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings
   descriptionKey: string;
   shortDescriptionKey: string;
   i18nNamespace: string;
-  accent: string;
+  accent: RoomAccentToken;
   techTags: string[];
   defaultPreset: TSettings;
   loadControls: () => Promise<{ default: ComponentType<RoomControlsProps<AnyRoomSettings>> }>;

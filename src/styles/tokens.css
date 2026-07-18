@@ -1,20 +1,35 @@
 :root {
   color-scheme: dark;
-  --bg: #06090e;
-  --bg-elevated: #0b1118;
+
+  /* Primitive palette: opaque shell colors are declared only here. */
+  --palette-ink-950: #06090e;
+  --palette-ink-900: #0b1118;
+  --palette-ink-50: #eef7f8;
+  --palette-ink-400: #91a6b2;
+  --palette-cyan-400: #34d5ff;
+  --palette-mint-400: #5af2d1;
+  --palette-amber-400: #ffbd5a;
+  --palette-magenta-400: #ff56d8;
+  --palette-red-400: #ff6c7a;
+  --palette-cyan-200: #8cecff;
+
+  /* Semantic roles: components consume these names, never palette literals. */
+  --bg: var(--palette-ink-950);
+  --bg-elevated: var(--palette-ink-900);
   --surface: rgba(13, 20, 28, 0.92);
   --surface-strong: rgba(18, 27, 37, 0.96);
   --surface-soft: rgba(19, 31, 42, 0.72);
   --border: rgba(147, 197, 211, 0.16);
   --border-strong: rgba(164, 223, 235, 0.3);
-  --text: #eef7f8;
-  --muted: #91a6b2;
-  --subtle: #647883;
-  --cyan: #34d5ff;
-  --teal: #5af2d1;
-  --amber: #ffbd5a;
-  --danger: #ff6c7a;
-  --focus: #8cecff;
+  --text: var(--palette-ink-50);
+  --muted: var(--palette-ink-400);
+  --microcopy: var(--palette-ink-50);
+  --accent-cyan: var(--palette-cyan-400);
+  --accent-mint: var(--palette-mint-400);
+  --accent-amber: var(--palette-amber-400);
+  --accent-magenta: var(--palette-magenta-400);
+  --danger: var(--palette-red-400);
+  --focus: var(--palette-cyan-200);
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
   --font-sans:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",

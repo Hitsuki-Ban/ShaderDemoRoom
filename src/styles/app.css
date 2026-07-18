@@ -38,7 +38,7 @@
   border: 1px solid rgba(52, 213, 255, 0.35);
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, rgba(52, 213, 255, 0.2), rgba(90, 242, 209, 0.08));
-  color: var(--cyan);
+  color: var(--accent-cyan);
   font-weight: 800;
 }
 
@@ -83,7 +83,7 @@
   height: 6px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: var(--teal);
+  background: var(--accent-mint);
   box-shadow: 0 0 16px rgba(90, 242, 209, 0.8);
 }
 
@@ -147,7 +147,7 @@
 }
 
 .rail-title strong {
-  color: var(--cyan);
+  color: var(--accent-cyan);
   font-size: 12px;
 }
 
@@ -157,7 +157,7 @@
 }
 
 .room-link {
-  --room-accent: var(--cyan);
+  --room-accent: var(--accent-cyan);
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
@@ -182,14 +182,16 @@
 
 .room-link strong {
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 800;
   line-height: 1.2;
 }
 
 .room-link small {
   margin-top: 5px;
-  color: var(--subtle);
-  font-size: 11px;
+  color: var(--microcopy);
+  font-size: 13px;
+  font-weight: 700;
   line-height: 1.35;
 }
 
@@ -208,8 +210,9 @@
 .rail-note {
   margin-top: auto;
   border-top: 1px solid var(--border);
-  color: var(--subtle);
-  font-size: 11px;
+  color: var(--microcopy);
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.45;
   padding-top: 14px;
 }
@@ -237,7 +240,7 @@
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(5, 8, 13, 0.1), rgba(3, 5, 8, 0.45)),
-    #06090e;
+    var(--bg);
 }
 
 .shader-canvas {
@@ -247,7 +250,7 @@
 }
 
 .embedded-shell {
-  background: #02070d;
+  background: var(--bg);
 }
 
 .embedded-exhibit-frame {
@@ -255,7 +258,7 @@
   width: 100%;
   height: 100%;
   border: 0;
-  background: #02070d;
+  background: var(--bg);
 }
 
 .canvas-loader {
@@ -308,7 +311,7 @@
 }
 
 .panel-heading span {
-  color: var(--cyan);
+  color: var(--accent-cyan);
   font-size: 11px;
   text-transform: uppercase;
 }
@@ -372,7 +375,7 @@
 
 .slider-control input {
   width: 100%;
-  accent-color: var(--cyan);
+  accent-color: var(--accent-cyan);
 }
 
 .toggle-control {
@@ -424,7 +427,7 @@
 
 .toggle-control input:checked + .toggle-track::after {
   transform: translateX(20px);
-  background: var(--cyan);
+  background: var(--accent-cyan);
 }
 
 .segmented-control {
