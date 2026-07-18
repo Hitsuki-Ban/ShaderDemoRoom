@@ -7,7 +7,7 @@
 
 ## 現状(証拠)
 
-チケット索引(tickets/README.md「未起票」)で「MIZU//KOKORO exhibit 内 HUD の FPS『—』表示修理(ref/ fork 側)」は T-SH-03 のスコープ外として委譲された。**現行 ref HEAD を照合した結果、主要部分は T-EMB-02 で既に実装済み**:
+第1バッチの T-SH-03 では「MIZU//KOKORO exhibit 内 HUD の FPS『—』表示修理(ref/ fork 側)」が後続作業として委譲された。**現行 ref HEAD を照合した結果、主要部分は T-EMB-02 で既に実装済み**:
 
 - **exhibit 内 HUD の FPS 表示は配線済み**: `animate()` が 500ms 窓で実測サンプリングし(main.js:2685-2696)、`fpsEl.textContent = `${fps} FPS``(main.js:2692)で `#fps`(index.html:29 の FRAME 欄)を更新する。カルテ記載の「fpsLastUpdate は書くだけで読まれない」デッドコードは現行に存在しない(stats 実装に置換済み)。
 - **シェル telemetry への stats 供給も実装済み**: bridge capabilities `['pause','stats','set-mode','set-quality']`(main.js:35)、`publishRuntimeStats()` が `{fps, frameTimeMs, frameCount, paused}` を 500ms cadence で親へ送信(main.js:2340-2346, 2693)、ready ハンドシェイク(main.js:2710-2713)。shell 側は `src/shared/embedded/bridge.ts`(`EmbeddedRoomStats` :15-20)で strict parse し TelemetryPanel が実測2指標を表示する(T-EMB-02 完了レポートで検証済み)。

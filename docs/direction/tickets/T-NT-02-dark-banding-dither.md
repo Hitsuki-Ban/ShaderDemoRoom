@@ -3,7 +3,7 @@
 - 分類: TA
 - 優先度: P2
 - 評価軸: 描画正当性(近黒階調の量子化)/ QA 担保(決定論キャプチャとの両立)
-- 依存: T-EMB-01(完了済み)。T-NT-05 の章別キャプチャ QA があると検収が容易(推奨先行)
+- 依存: T-NT-05(必須の変更前 baseline gate) / T-EMB-01(完了済み)
 
 ## 現状(証拠)
 
@@ -24,11 +24,11 @@ deep `#000405` 系の近黒グラデーション + 露出 0.04 倍域 + damp 0.9
 
 research-audio-reactive.md §2.5 の決定版レシピをそのまま適用する:
 
-- **IGN(Interleaved Gradient Noise)1/255 ディザを OutputPass の後段に注入**する。振幅 `1.0/255.0`、平均輝度保存のため `0.5/255.0` を減算、座標は `gl_FragCoord.xy`。
-- 注入位置は AfterimagePass のフィードバックループ**より後**(= トーンマップ + sRGB 変換後)を厳守。ループ内に入れると damp 0.94–0.982 で蓄積して汚れる。実装は (a) OutputPass 後に ShaderPass 1 枚、または (b) OutputPass のフラグメントシェーダ文字列置換で sRGB 変換直後に加算(パス増なし、推奨)。
+- **プロジェクト所有の `DitheredOutputPass` を実装し、既存 `OutputPass` を置き換える。** この pass は three の現行 OutputPass と同じ tone mapping + sRGB 出力を明示的に行った直後、IGN(Interleaved Gradient Noise) 1/255 を加える。振幅 `1.0/255.0`、平均輝度保存のため `0.5/255.0` を減算、座標は `gl_FragCoord.xy`。
+- `DitheredOutputPass` は `ref/archive_of_the_ninth_tide_shoreless_web/src/` 内の独立 module とし、main.js はそれを直接 import/instantiate する。three の `OutputPass` shader 文字列置換、実行時 monkey patch、失敗時に素の OutputPass へ戻る fallback は禁止する。必須 shader chunk/API がない場合は build を失敗させる。
+- ディザ位置は AfterimagePass のフィードバックループ**より後**(= tone mapping + sRGB 変換後)を厳守する。ループ内に入れると damp 0.94–0.982 で蓄積して汚れる。
 - 時間アニメーション(毎フレーム時間オフセット)で時間平均をさらに滑らかにするが、**静止画 QA のため seed を uniform 化**し、`?preview=` 経路では固定 seed にする。
 - 併せて検証系を1本: 近黒ランプ領域の 8-bit ヒストグラムから隣接階調ジャンプを測る小スクリプト(検収と将来の回帰検知を兼ねる)。half-float 前提(r152+ デフォルト)と afterimage フィードバックの色空間が想定通りかもこのとき現物確認する。
-- blue-noise テクスチャ(momentsingraphics 配布)は代替案として温存。IGN で不足する場合のみ。
 
 ## 受け入れ基準
 
@@ -36,13 +36,14 @@ research-audio-reactive.md §2.5 の決定版レシピをそのまま適用す�
 - 数値: 対象領域の 8-bit ヒストグラムで、現行の「階調の孤立ピーク + 空白帯」が連続分布化すること。平均輝度シフトは ±0.5/255 以内(ディザは明るさを変えない)。
 - 決定論: 固定 seed で同一 preview URL の連続2回キャプチャが一致すること(`qa:exhibits` / T-NT-05 キャプチャ基盤の決定論を壊さない)。
 - ゴースト: shutdown 中(damp 0.982)にディザ粒がフィードバック蓄積で汚れないこと(ending キャプチャの残像領域を確認)。
-- 性能: フルスクリーン 1 パス追加なし(方式 b)または追加 1 パスでフレームタイム退行 5% 以内(bridge stats で before/after)。
+- 構造: composer の最終出力 owner が `DitheredOutputPass` 1つだけであり、`new OutputPass()`、shader 文字列置換、fallback 分岐がソースに存在しない。
+- 性能: 既存 OutputPass を1対1で置換し、フルスクリーン pass 数を増やさず、frameTimeMs 退行 5% 以内(bridge stats で before/after)。
 - `pnpm lint` / `pnpm test` / `pnpm build` / `pnpm exhibits:check` / `qa:exhibits` / `qa:visual` 通過。
 
 ## 影響範囲・注意
 
 - **改修は ref/ 側で行い `pnpm exhibits:build` で public/exhibits を再生成**(public 手編集禁止、`exhibits:check` が同期強制)。
-- OutputPass のシェーダ文字列置換(方式 b)は three のバージョン更新で壊れうる。T-DEP-01 のピン戦略下では安全だが、three 更新チケットの検収項目に「IGN 注入の生存確認」を残すこと。
+- `DitheredOutputPass` が参照する three shader chunk/API は T-DEP-01 の更新時に compile と near-black histogram を再検収する。
 - CSS スケーリングが 1:1 でないとディザ粒が潰れる(§2.5 注意)。pixelRatio 1.6 → CSS ダウンスケールは平均化方向で実害小だが、将来の動的解像度(<1.0)導入時は再確認。
 - ディスプレイ内蔵ディザ(6-bit パネル)との二重ディザは環境要因として 8-bit 基準で検収する。
 - 検収キャプチャは T-NT-05 の章別キャプチャ QA に載せると before/after が自動化できる。

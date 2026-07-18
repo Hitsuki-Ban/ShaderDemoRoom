@@ -1,55 +1,47 @@
-# [T-AO-03] sculpt 時FPSをプロファイル実測し、実測に基づいて最適化する
+# [T-AO-03] sculpt 性能の baseline/profile を確立し最適化対象を決定する
 
-- 分類: TA
-- 優先度: P2
-- 評価軸: フレームバジェット
-- 依存: なし(T-SH-03 の FPS 計測プロトコル v1 と T-EMB-02 の bridge stats を計測手段として利用)
+- 分類: TA / QA
+- 優先度: P1
+- 評価軸: フレームバジェット / 証拠の再現性
+- 依存: なし(T-SH-03 の計測プロトコル v1 と T-EMB-02 の bridge stats は完了済み)
 
 ## 現状(証拠)
 
-- 実測の症状: スタンドアロン 1440×900 でも sculpt 中 22 FPS まで低下(visual-refs.json、`v2-sculpt-hold.png` の FRAME 表示)。showroom 同居ではさらに予算が厳しい。
-- **規模訂正(2026-07-18 監査)**: `IcosahedronGeometry(1.65, 5)`(main.js:922)は **720 tris/シェル(非インデックス約 2,160 頂点)**。当初の「≒20k tris」は約28倍の過大見積りで、「頂点コストが主犯」の断定は撤回済み(research-npr-liquid.md §2.8、README 修正履歴)。
-- 現行 `ref/mizu-kokoro-2-source/src/main.js` のコスト構造(行番号は現行 HEAD):
-  - **フルシーン2回描画**: `renderRefractionBuffer()`(main.js:2580-2590)で orbGroup 以外の全シーンを `refractionTarget` へ描画後、`composer.render()`(main.js:2682-2683)で本描画。
-  - **ポストチェーン**: RenderPass → UnrealBloomPass → FinalGradeShader → SMAAPass(LOW では無効)→ OutputPass。
-  - **`preserveDrawingBuffer: true`**(main.js:180)が常時有効。ただし CAPTURE ボタンは toBlob 直前に明示的に再レンダしている(main.js:2290-2306)ため、同期レンダ→toBlob の流れなら preserveDrawingBuffer なしでも成立する可能性が高い(要検証)。
-  - **頂点側**: 法線の有限差分再構築が liquid 頂点シェーダ(eps 評価 main.js:528-530)と outline 頂点シェーダ(main.js:713-734、`deformPosition` 呼び出し ×3 = :720, :727, :728)の両方で走り、頂点あたり毎フレーム6回の変位場フル評価。ただし総量は約 4,320 頂点 × 6 で、絶対量は小さい。
-  - 品質ノブ: pixelRatio 上限 1.5/1.25/1.0(main.js:2269)、屈折バッファスケール 0.82/0.66/0.5(main.js:2316)、SMAA/影の LOW 無効(main.js:2272-2273)。
-- 計測チャネル: bridge stats(`fps` / `frameTimeMs`、500ms サンプリング、main.js:2685-2696)が T-EMB-02 で実装済み。shell 側 telemetry からも読める。
+- 既存資料には sculpt 中 22 FPS の観測があるが、GPU・ブラウザ・解像度・warm-up・測定窓を揃えたパス別 baseline はない。
+- `IcosahedronGeometry(1.65, 5)` は 720 tris/シェルであり、過去の「約20k tris」見積りは誤りだった。頂点シェーダを主因とみなす証拠はない。
+- 候補コストは屈折用フルシーン描画、メイン描画、bloom、SMAA、pixel ratio、屈折 RT、`preserveDrawingBuffer`、液体/outline の変位評価に分散している。
 
 ## 問題
 
-22 FPS の主犯が未特定のまま最適化すると、当初の「20k tris」誤認のように誤った標的へ工数を投じ、最悪アート(法線品質・輪郭線)を毀損して性能が戻らない。有力仮説はフルシーン2回描画+bloom/SMAA+preserveDrawingBuffer のフィルレート側だが、これも**実測されていない**。
+baseline がない状態で shader/outline を変更すると、視覚品質を落としても本当のボトルネックを改善しない危険がある。現在の証拠は最適化実装を正当化しない。
 
-## 改善方向
+## 本票の唯一の結果
 
-**プロファイル第一**。順序を固定する:
+**同一環境で再実行できる sculpt baseline/profile を保存し、次の最適化票が扱う単一ボトルネックを証拠で決定する。** 本票では製品コード、shader、outline、品質ノブを変更しない。
 
-1. **第一手(実測不要・無条件に安価)**: outline シェルの法線再構築廃止(research-npr-liquid.md §2.8-1)。反転ハルは法線方向へ 0.046 押すだけなので、`baseNormal`(+必要なら大域変位の粗い勾配)での押し出しに置換し、±eps の `deformPosition` 2回評価(main.js:727-728)を削る。頂点あたり評価 6→4回。視覚差はシルエット比較で検収。
-2. **プロファイル実測**: 同一ハードウェアで sculpt 保持状態(自動化する場合は synthetic pointer で drag 維持)を対象に:
-   - Spector.js または Chrome tracing でフレーム内訳(屈折パス / メイン / bloom / SMAA / grade)を取得。
-   - **パス無効化マトリクス**: 一時ビルドで SMAA off / bloom off / preserveDrawingBuffer false / 屈折バッファスケール sweep(0.82→0.5→0.33)/ pixelRatio sweep を1変数ずつ切り替え、bridge stats(500ms サンプル)で frameTimeMs を記録。
-   - 計測は T-SH-03 のプロトコル v1 に従う(5s warm-up + 15s measurement、環境・renderer raw string 併記。環境を跨いだ比較や hard gate は行わない)。
-   - 結果は `docs/direction/captures/orb-profile-<date>.json`(+要約 md)として保存。
-3. **実測に従った処置**(候補、上から可能性が高い順):
-   - `preserveDrawingBuffer: false` 化 + CAPTURE の同期再レンダ維持(main.js:2290-2306 は既にその形。全ブラウザで toBlob が空にならないことを確認)。
-   - sculpt 中の一時的な屈折バッファスケール降格 or 屈折パスのフレームスキップ(1/2 レート更新)。ヒステリシス付きで復帰。
-   - bloom 解像度 / SMAA の動的降格(既存 quality 系のノブを流用)。
-   - 頂点側が支配的と判明した場合のみ: 解析的微分化(§2.8-2)。GPGPU ベイク(§2.8-3)は最後の手段。
-4. LOW 品質規約(本体変形・表面フロー場・結晶化シルエットは削らない — ref README)を全処置で維持する。
+## 実施内容
+
+1. T-SH-03 protocol v1 に従い、環境・GPU renderer raw string・viewport・DPR・品質 tier を固定し、5秒 warm-up + 15秒 measurement を行う。
+2. idle と synthetic pointer による sculpt 保持をそれぞれ計測し、median / p95 frameTimeMs、fps、frame count を保存する。
+3. 一時ビルドだけで SMAA、bloom、`preserveDrawingBuffer`、屈折 RT scale、pixel ratio を1変数ずつ切り替える。Spector.js または Chrome tracing で屈折パス、main、post の内訳を取る。一時変更はコミットしない。
+4. shader/outline の評価が必要なら、同じ一時ビルドでのみ測る。baseline/profile 成果物とレビュー結論が揃うまで恒久変更を始めない。
+5. `docs/direction/captures/orb-profile-<date>.json` と要約 md に、生データ、再現手順、最大寄与パス、次票で扱う単一処置を記録する。
+
+## ハードゲート
+
+- **本票が完了する前に、AO の shader、outline、屈折、post chain、pixel ratio、`preserveDrawingBuffer` を最適化目的で変更してはならない。**
+- 次の最適化票は profile で最大寄与が確認された1項目だけを所有する。候補をまとめた実装票や「念のため」の複数調整は作らない。
+- 必須の計測環境・renderer 情報が得られない場合は推測値で続行せず fail fast とする。
 
 ## 受け入れ基準
 
-- プロファイル成果物(パス別内訳+無効化マトリクスの frameTimeMs 表、環境併記)が captures/ にコミットされ、ボトルネックの結論が本票に追記されている。
-- outline 法線再構築廃止後、4相 × freeze × sculpt のスクリーンショット比較で輪郭線の視覚回帰なし(太さ・途切れ・ジッタ)。
-- 同一ハードウェアのペア計測で、sculpt 保持中の median frameTimeMs が処置前より改善している(目標: sculpt 時 30 FPS 以上/1440×900・実GPU。ただし環境依存のため hard gate ではなく計測記録で判断)。
-- アイドル時(非 sculpt)の FPS・見た目に回帰がない。CAPTURE(PNG保存)が全処置後も機能する。
-- LOW/MID/HIGH の品質規約(削ってよいもの・削ってはいけないもの)が維持されている。
+- baseline/profile JSON と要約 md がコミットされ、再現コマンド、環境、idle/sculpt の全測定値、無効化マトリクス、パス内訳を含む。
+- 同一条件を2回走らせ、結論が再現する。
+- 最大寄与パスと次票の単一処置が数値で説明され、独立レビューで承認されている。
+- `git diff` で本票による製品コード・shader・outline の恒久変更がない。
 
 ## 影響範囲・注意
 
-- **改修は必ず `ref/mizu-kokoro-2-source/` 側で行い、`pnpm exhibits:build` で `public/exhibits/` を再生成する。public 配下の手編集は禁止(`pnpm exhibits:check` と CI が同期を強制)**。プロファイル用の一時ビルドは絶対にコミットしない。
-- `preserveDrawingBuffer` 変更は WebGL コンテキスト属性の変更 = 全ブラウザ実機確認が必要(特に Safari の toBlob タイミング)。
-- シェーダ変更は 4相すべての見た目に影響しうる。検収は 4相 × freeze の全状態スクリーンショット比較で行う(review-framework 横断注意3の精神)。
-- bridge stats のスキーマ(fps/frameTimeMs/frameCount/paused)には触れない。qa:exhibits が envelope を hard assert している。
-- FPS 数値を資料に書くときは必ず環境を併記する(README「要確認事項」の規約)。
+- プロファイル用の一時ビルドはコミットしない。
+- 環境を跨いだ FPS 比較や絶対 FPS hard gate を置かない。
+- bridge stats の schema/cadence は変更しない。

@@ -3,7 +3,7 @@
 - 分類: TA
 - 優先度: P2
 - 評価軸: 描画正当性 / フレームバジェット / デッドコード・デッド出力(columnOpacity 恒等1)
-- 依存: T-VW-05 と同時実施を推奨(柱材質の onBeforeCompile 移行と transparent:false 化を一度のシェーダー検証で済ませる)。T-VW-03 の原因確定が先(描画順変更で再現条件が変わるため)
+- 依存: T-VW-03(シーム原因を確定) / T-VW-05(波モデルと柱 onBeforeCompile 境界を独立検証)。両票完了後に着手する
 
 ## 現状(証拠)
 
@@ -38,5 +38,5 @@ research-stylized-water.md §2.10 選択肢1(本命・ほぼ無料)を実施す�
 - **テスト契約の書き換えが必須**: `shader-quality.test.ts:105-145` は現行の意図(plane.renderOrder < columns.renderOrder、全5オブジェクト transparent:true)をピン留めしている。新しい意図(柱 opaque・depth 書き込み、プレーンは柱の後、spray/rain/grid は透明のまま)に合わせて**契約テストを書き換える**こと。挙動ベーステスト(T-QA-01)の趣旨どおり「新しい正しさ」を検証する形にする。
 - **WEATHER_LOOKS 構造テスト**: columnOpacity 削除は `shader-quality.test.ts:67-85` のキー完全性テスト(77-78行が columnOpacity を直接参照)の同期更新を要する。
 - **renderOrder 網の再監査**: review-framework.md 横断注意5のとおり、透明要素の順序変更は連鎖全体(sky 0 / spray / rain / grid)の再監査が必要。特に gridOverlay(depthTest:false、renderOrder 5)は柱の depth に関係なく最前面のまま — T-VW-10 の見直しと独立であることを確認。
-- **T-VW-05 との同時実施**: 柱材質を onBeforeCompile で触るタイミングと合わせると、シェーダー再コンパイル起因の見た目検証(3状態キャプチャ)が一度で済む。
+- **T-VW-05 との境界**: T-VW-05 の波モデル変更を先に独立検収し、本票は透明合成と `transparent:false` の視覚差分だけを所有する。
 - 柱が不透明化すると柱の描画は early-z が効く順序依存になる — 描画順そのものに視覚依存はなくなるため、将来の柱追加(T-VW-01 のランドマーク)にも安全側。

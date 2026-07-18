@@ -1,51 +1,37 @@
-# [T-AO-02] タッチ double-tap freeze の二重発火を修正する
+# [T-AO-02] PointerEvent 単一所有者で double-tap freeze を1回だけ発火させる
 
 - 分類: TA
 - 優先度: P2
-- 評価軸: 対応環境(モバイル/タッチ) / QA担保
+- 評価軸: 対応環境(マウス/タッチ/ペン) / QA担保
 - 依存: なし
 
 ## 現状(証拠)
 
-現行 `ref/mizu-kokoro-2-source/src/main.js`(2,715行)で freeze トグルの入口が2系統ある:
-
-1. **タッチ用の手動 double-tap 判定**: `endPointer()`(main.js:2102-2128)の末尾で、sculpt 終了かつ coarse pointer のとき前回タップからの経過が 285ms 未満なら `toggleFreeze()` を呼ぶ:
-   - `let lastTapTime = 0;`(main.js:2010)
-   - `if (wasSculpting && isCoarsePointer) { ... if (now - lastTapTime < 285) toggleFreeze(currentTouchPoint); lastTapTime = now; }`(main.js:2123-2127)
-   - `endPointer` は `pointerup` / `pointercancel` に登録(main.js:2129-2130)。
-2. **`dblclick` リスナー**: `canvas.addEventListener('dblclick', ...)` が `toggleFreeze(hit?.localPoint || currentTouchPoint)` を呼ぶ(main.js:2163-2167)。
-
-多くのモバイルブラウザはダブルタップ後に合成 `dblclick` を発火するため、**1回のダブルタップで両経路が発火し、freeze→即 melt(または melt→即 freeze)の2回転**が起きうる。`toggleFreeze()`(main.js:2135-2162)は結晶亀裂再構築・バースト・トースト・ping まで実行するため、二重発火時は演出も二重になる。
-
-補足の現物確認:
-
-- `isCoarsePointer` はロード時に1回だけ評価される matchMedia(main.js:27)。ハイブリッド端末(タッチ+マウス)ではポインタ種別と一致しない場合がある。
-- `dblclick` ハンドラは MouseEvent で `pointerType` を持たないため、ハンドラ単体ではタッチ由来かを判別できない。
+`ref/mizu-kokoro-2-source/src/main.js` では freeze の double-tap 判定を `endPointer()` の手動タップ窓と canvas の `dblclick` が別々に所有する。タッチ由来の合成 `dblclick` が発生する環境では、1回の操作で `toggleFreeze()` が2回呼ばれ、freeze→melt が即時に往復する。ロード時に一度だけ評価される `isCoarsePointer` も、ハイブリッド端末の実際の入力種別を表さない。
 
 ## 問題
 
-CRYSTAL·NUCLEATION(freeze)は visual-refs.json で「サーフェス構造を変える唯一の状態・最大の単一フレームデルタ = 来場者の足を止める筆頭」と評価された本展示最大の見せ場。それがタッチデバイスでは double-tap の度に freeze→即 melt で潰れうる。モバイル来場者にとってショーストッパーが壊れているに等しい。
+同じジェスチャに2つの所有者があり、どちらが発火したかを後段の時間ガードで推測しなければならない。最大の見せ場である結晶化が入力デバイス依存で消える。
 
 ## 改善方向
 
-freeze トグルの発火権限を一本化する:
+**double-tap の所有者を `pointerup` の1経路だけにする。**
 
-1. **直近ポインタ種別の記録**: `pointerdown` で `event.pointerType` を変数(例 `lastPointerType`)に保存し、`dblclick` ハンドラの先頭で `lastPointerType !== 'mouse'` なら early return(タッチ/ペンは endPointer 経路が担当、マウスは dblclick 経路が担当)。ロード時固定の `isCoarsePointer` ではなくイベント実測を使う。
-2. **保険のデバウンス**: `toggleFreeze()` 側に「前回トグルから 300ms 以内の再トグルは無視」のガードを追加(手動判定と合成 dblclick のタイミング揺れ、および OS 側 dblclick 間隔設定の差異への防御)。285ms 判定窓との整合を取ること。
-3. 端末側ジェスチャとの競合確認: canvas の `touch-action` 設定を確認し、double-tap zoom が発生しないこと(発生する場合は `touch-action: manipulation` 等を併せて検討)。
-4. 手動判定を残す理由(pointer capture 中は環境により dblclick が飛ばないケースがある)をコードコメントに1行残し、将来の「dblclick に一本化すればよいのでは」という再発見を防ぐ。
+1. `dblclick` リスナーと、`isCoarsePointer` を使った旧 double-tap 分岐を削除する。`toggleFreeze()` に 300ms デバウンスや重複抑止は追加しない。
+2. `pointerup` が受け取る実測 `event.pointerType` ごとに、直前の有効タップの時刻・位置・pointerType を1件だけ保持する。時間窓と移動距離の両方を満たす2回目の `pointerup` だけが `toggleFreeze()` を1回呼ぶ。
+3. sculpt/drag と判定された操作、`pointercancel`、異なる pointerType、距離閾値を超えた操作は候補を明示的に破棄する。`pointercancel` から freeze を発火させない。
+4. mouse / touch / pen を同じ PointerEvent 状態機械で処理する。別イベント型への互換入口や silent fallback は設けない。
 
 ## 受け入れ基準
 
-- タッチエミュレーション(Playwright touch)および実機で、ダブルタップ1回につき freeze/melt がちょうど1回転する(HUD の `#matter-state` が LIQUID→CRYSTAL→(次のダブルタップで)LIQUID と遷移し、往復しない)。
-- マウスのダブルクリック挙動は無変化(freeze/melt 1回転、ヒット点核形成も維持)。
-- sculpt(長押しドラッグ)→ release がダブルタップと誤認されない(既存の `wasSculpting` 条件の挙動を維持)。
-- 可能なら `qa:exhibits` にタッチ double-tap シナリオ(synthetic pointer events で2連タップ→ freeze 状態を assert)を追加し、回帰を恒常 gate 化する。
-- 4相すべてで確認(VOID は posterize が乗るため視認確認しづらい — `#matter-state` テキストで判定)。
+- Playwright の synthetic PointerEvent で mouse / touch / pen を各2回送ると、1ジェスチャにつき `#matter-state` が LIQUID→CRYSTAL の1遷移だけを行う。次の double-tap で CRYSTAL→LIQUID の1遷移だけを行う。
+- 同じシナリオで `toggleFreeze()` の呼び出し回数を計測し、各 double-tap につき厳密に1回である。
+- sculpt/drag→release、単発 tap、`pointercancel`、閾値外の2 tap では状態が変わらない。
+- ソースに canvas の `dblclick` freeze リスナー、二つ目の double-tap 判定、300ms 重複抑止が残っていないことをコードレビューで確認する。
+- 4相で `#matter-state` と核形成位置を確認し、`qa:exhibits` / `qa:visual` が通る。
 
 ## 影響範囲・注意
 
-- **改修は必ず `ref/mizu-kokoro-2-source/` 側で行い、`pnpm exhibits:build` で `public/exhibits/` を再生成する。public 配下の手編集は禁止(`pnpm exhibits:check` と CI が同期を強制)**。
-- `toggleFreeze` へのガード追加は Space パルスや自動展示モードの経路には影響しない(freeze の入口は上記2系統のみ)ことを確認済みだが、実装時に再確認する。
-- `qa:exhibits`(`scripts/exhibit-smoke.mjs`)は standalone freeze シナリオを hard assert している(T-EMB-02 完了レポート参照)。デバウンス導入でテストのトグル間隔が 300ms を割る場合、テスト側の待機を調整する。
-- ブリッジ契約(envelope / capabilities)には触れない。
+- 改修は `ref/mizu-kokoro-2-source/` で行い、`pnpm exhibits:build` で `public/exhibits/` を再生成する。public の手編集は禁止。
+- ブリッジ契約には触れない。
+- 時間窓と距離閾値は単一 PointerEvent 状態機械の入力条件であり、二重発火を隠す後段デバウンスとして実装しない。
