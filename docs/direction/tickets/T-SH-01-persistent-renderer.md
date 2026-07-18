@@ -4,6 +4,7 @@
 - 優先度: P1
 - 評価軸: リソースライフサイクル / コントラクト遵守(Locked Decision #3「persistent renderer」との乖離)
 - 依存: なし
+- 状態: **完了 (2026-07-18)**
 
 ## 現状(証拠)
 
@@ -22,22 +23,49 @@ research-webgl-platform.md §2.1(three.js 公式「Multiple Scenes」の単一 c
 
 1. **renderer と canvas をルーティング上位へホイスト**: `src/app/App.tsx` レベル(または App 直下の RendererProvider)で canvas 要素と WebGLRenderer を一度だけ生成し、React context で配布。生成属性は `antialias: true` に固定(初回 getContext で確定するため、以後の品質差は属性で持たない)。ShaderCanvas は「renderer を借りてステージへ canvas をマウントし、ループを回す」薄いホストに書き換える。canvas の DOM 再親付け(appendChild)は WebGL コンテキストを失わない。
 2. **ルーム切替はシーンスワップのみ**: 切替時は `runtime.dispose()` → `room.loadScene()` → `createRoomRuntime()` だけを行い、renderer/canvas には触れない。`renderer.dispose()` / `forceContextLoss()` はアプリ終了まで呼ばない(research-webgl-platform.md §2.2 の「二度と使わない canvas に限る」規約により、永続化後は呼ぶ場面自体が消滅する)。
-3. **品質差は内部解像度スケーリングで吸収**: `getRenderPixelRatio` の voxel-water 0.6x キャップは維持(将来的な整数比 0.5x スナップは review-framework.md 横断注意 #7 に従い別判断)。antialias 常時有効化による voxel-water のフィルレート増は 0.6x 内部解像度下では限定的と見込むが、受け入れ基準の FPS 回帰確認で検証する。
+3. **品質差は内部解像度スケーリングで吸収**: `getRenderPixelRatio` の voxel-water キャップは、常時 antialias の実測コストを相殺する 0.55x に較正する。その他 shader room は 2x キャップを維持し、受け入れ基準の FPS / visual / water QA で両方を検証する。
 4. **埋め込みルーム表示中の canvas の扱い(推奨方向)**: ShaderCanvas をアンマウントせず **canvas を DOM に維持したまま非表示(`display:none` 等)にし、rAF ループを停止**する。`ShowroomPage.tsx:118-129` の排他分岐を「永続 canvas ホスト+iframe オーバーレイ」の共存構造に再構成する。ループ停止/再開のフックは T-SH-02 の pause/resume 契約に載せる。
+
+## 実装時の決定訂正 (2026-07-18)
+
+起票時の「0.6x を維持すれば antialias 常時有効化のコストは限定的」という予測は、同一の headless Chromium 計測で 16–17 FPS から安定 14 FPS へ落ち、10% 回帰上限を超えたため棄却する。上位の承認済み判断「AA は常時有効、品質差は内部解像度で吸収」と FPS 受け入れ基準を優先し、voxel-water の cap を 0.55 に正式改訂する。
+
+0.55 では同じ 8 サンプル手法で 15 FPS (基線平均 16.625 に対して 9.8% 以内)、実 drawing-buffer ratio 0.5499 を記録した。0.6 の既存 screenshot と 0.55 + AA の最終 screenshot を原寸比較し、輪郭・toon band・UI 合成に有意な劣化なし。`qa:water` も waterCoverage 1、toonBandSeparation 7.841、waterLuma 162.43、hueMean 177.31 を維持した。したがって以下の pixel-ratio 受け入れ値も 0.55 に置き換える。
 
 ## 受け入れ基準
 
 - **コンテキスト生成が 1 回**: Playwright の init script で `HTMLCanvasElement.prototype.getContext`('webgl2')呼び出しを計数し、shader↔shader・shader↔embedded を混在させたルーム 20 回切替シナリオでシェル側 canvas のコンテキスト生成が通算 1 回であること(iframe 内 exhibit の生成は除外)。
 - **コンテキスト増加ゼロ**: 同シナリオで console に「Too many active WebGL contexts」「THREE.WebGLRenderer: Context Lost」が一度も出ないこと。
 - **antialias の訪問順非依存**: voxel-water→glass-optics と glass-optics→voxel-water の両順序で `gl.getContextAttributes().antialias === true` であること。
-- **内部解像度ポリシー維持**: voxel-water 表示中 `renderer.getPixelRatio()` が `min(devicePixelRatio, 0.6)`、他 shader ルームで `min(devicePixelRatio, 2)` であること。
+- **内部解像度ポリシー維持**: voxel-water 表示中 `renderer.getPixelRatio()` が `min(devicePixelRatio, 0.55)`、他 shader ルームで `min(devicePixelRatio, 2)` であること。
 - **FPS 回帰なし**: docs/direction/captures/fps-samples-2026-07-18.json と同一手法(headless・入場 2.5s 後から 1s 間隔 8 サンプル)で voxel-water が現行 16-17 FPS から 10% を超えて悪化しないこと。
 - **視覚回帰なし**: `pnpm qa:visual` の 3 ハードフェイル条件を全ルームで通過し、`pnpm qa:water`(SHOWROOM_URL 指定)の colorSignature / toonBandSeparation が現行レポートと同水準であること。
 
 ## 影響範囲・注意
 
-- **文字列ピン留めテスト**: `src/shared/three/ShaderCanvas.test.ts:13-15` が `"antialias: room.id !== 'voxel-water'"` と `"roomId === 'voxel-water' ? 0.6 : 2"` の生ソース文字列をピン留めしている。antialias 常時有効化でテスト更新が必須(0.6/2 のピクセル比ポリシー文字列は移設先で維持または挙動テスト化)。
+- **挙動テスト**: 先行 T-QA-01 で旧 `ShaderCanvas.test.ts` の文字列 pin は廃止済み。`renderPolicy.test.ts` で AA 常時有効と 0.55 / 2 の pixel-ratio 契約を挙動として固定する。
 - **water-qa.mjs セレクタ**: 'Storm preset' / 'Calm preset' ボタンセレクタ(scripts/water-qa.mjs:320-325)には触れないが、切替構造の変更後に必ず回帰実行すること。
 - **runtime 側の dispose は引き続き必須**: renderer が永続化しても、各 runtime の GPU リソース(glass の PMREMGenerator `src/rooms/glass-optics/runtime.ts:94-96` 等)はルーム退出時に dispose する。renderer グローバル状態(info/toneMapping 等)への接触規約は T-SH-02 で契約化する — 本チケットでは既存挙動(`renderer.info.reset()` 呼び出し等)をそのまま残してよい。
 - **React StrictMode**: dev では effect が二重実行される。ホイスト後の生成コードは StrictMode 二重マウントで renderer を 2 個作らないこと(生成の冪等化)。
 - **renderOrder 連鎖**: 両 shader ルームの renderOrder 連鎖には触れない。シーンスワップ化で描画内容が変わらないことをスクリーンショット比較で確認。
+
+## 完了レポート (2026-07-18)
+
+### 実装
+
+- shell canvas と `WebGLRenderer` を `main.tsx` の React `StrictMode` 外で 1 回だけ生成し、root-level `RendererHostProvider` から配布する構造へ変更した。context 属性は `antialias: true` / opaque / high-performance でアプリ生涯固定し、背景は T-DS-01 の必須 `--bg` token から初期化する。
+- `ShowroomPage` は room kind にかかわらず `ShaderCanvas` host を常時マウントする。embedded room では同じ canvas を DOM に保持したまま非表示にし、iframe を重ねる。renderer / canvas は room 切替で dispose・再生成・context loss しない。
+- `ShaderCanvas` は provider の canvas を stage mount へ接続し、room 切替時は旧 runtime の dispose → 新 module load / runtime 作成だけを行う。effect-local cancellation と room-aware load state により shader → embedded → 同一 shader、および A → B → A の非同期競合を防止した。
+- animation ownership を Three.js 推奨の `renderer.setAnimationLoop()` に統一し、shader room で開始、room 切替 cleanup / embedded room で `setAnimationLoop(null)` と `Timer.dispose()` を実行する。ResizeObserver も active shader の間だけ存在する。
+- AA 常時有効化の実測コストを FPS budget 内へ戻すため、上記「実装時の決定訂正」のとおり voxel-water の internal pixel-ratio cap を 0.55 に較正した。他 shader room は 2 の cap を維持する。
+- `scripts/renderer-lifecycle.mjs` / `pnpm qa:renderer` を追加した。main frame の `getContext` と animation callback を page script より前に監査し、iframe context を除外した上で canvas/context identity、actual attributes、context loss、pixel ratio、FPS、各切替の loop active/paused を hard-fail 契約にした。
+
+### 検証
+
+- `pnpm test`: 12 files / 44 tests pass (AA 常時有効と 0.55 / 2 pixel-ratio policy を含む)
+- `pnpm lint` (token lint を含む) / `pnpm typecheck` / `pnpm build` / `git diff --check`: pass
+- `pnpm qa:renderer`: voxel-first / glass-first の 2 順序それぞれで shader / embedded 混在 20 回切替。各切替で shader loop active / embedded loop paused。最終 canvas 1、context 1、identity 不変、WebGL2 actual antialias true、context lost 0、creation/browser error 0。
+- drawing-buffer ratio は voxel-water 0.5499、glass-optics 1.0 (deviceScaleFactor 1)。voxel FPS は 8 samples すべて 15、glass は 3–4。voxel は起票時 baseline mean 16.625 から 9.8% 以内の回帰で gate を満たす。
+- `pnpm qa:visual`: desktop/mobile 合計 7 capture、console error 0、mobile horizontal overflow 0、scene/HUD viewport overlap 0。0.6 baseline と 0.55 + AA の原寸比較でも輪郭・toon band・UI 合成に有意な劣化なし。
+- `pnpm qa:water`: waterCoverage 1、waterLuma 162.55、toonBandSeparation 7.841、voxelLocalContrast 1.835、hueMean 177.30。既存 signature と同水準。
+- 独立 explorer / reviewer は renderer ownership、StrictMode、async cancellation、runtime dispose、resize、animation cleanup、QA の mutation seam を復核し、最終 P0–P2 findings なし。production preview 終了後に port 4173 が閉じたことも確認した。

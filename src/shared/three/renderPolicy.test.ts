@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   getFrameTiming,
+  getRendererAntialias,
   getRenderPixelRatio,
 } from './renderPolicy';
 
 describe('shader render policy', () => {
+  it('fixes the persistent context antialias attribute for every room', () => {
+    expect(getRendererAntialias()).toBe(true);
+  });
+
   it('caps the fill-rate-heavy voxel room below the other shader room', () => {
-    expect(getRenderPixelRatio('voxel-water', 1)).toBe(0.6);
-    expect(getRenderPixelRatio('voxel-water', 2)).toBe(0.6);
-    expect(getRenderPixelRatio('voxel-water', 3)).toBe(0.6);
+    expect(getRenderPixelRatio('voxel-water', 1)).toBe(0.55);
+    expect(getRenderPixelRatio('voxel-water', 2)).toBe(0.55);
+    expect(getRenderPixelRatio('voxel-water', 3)).toBe(0.55);
     expect(getRenderPixelRatio('glass-optics', 1)).toBe(1);
     expect(getRenderPixelRatio('glass-optics', 2)).toBe(2);
     expect(getRenderPixelRatio('glass-optics', 3)).toBe(2);

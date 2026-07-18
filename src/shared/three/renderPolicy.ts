@@ -7,12 +7,12 @@ export function getRenderPixelRatio(roomId: RoomId, devicePixelRatio: number) {
     throw new Error(`Invalid device pixel ratio: ${devicePixelRatio}`);
   }
 
-  const maxPixelRatio = roomId === 'voxel-water' ? 0.6 : 2;
+  const maxPixelRatio = roomId === 'voxel-water' ? 0.55 : 2;
   return Math.min(devicePixelRatio, maxPixelRatio);
 }
 
-export function getRendererAntialias(roomId: RoomId) {
-  return roomId !== 'voxel-water';
+export function getRendererAntialias() {
+  return true;
 }
 
 export function getFrameTiming(rawDelta: number) {

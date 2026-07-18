@@ -1,82 +1,152 @@
-import { useEffect, useRef, useState } from 'react';
-import { SRGBColorSpace, Timer, WebGLRenderer } from 'three';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Timer, type WebGLRenderer } from 'three';
 import type {
   AnyRoomSettings,
   RoomRuntime,
   RoomStats,
   ShaderRoomDefinition,
 } from '../../rooms/types';
-import {
-  colorTokenNames,
-  readRequiredRootColorToken,
-} from '../../styles/designTokens';
-import {
-  getFrameTiming,
-  getRendererAntialias,
-  getRenderPixelRatio,
-} from './renderPolicy';
+import { getFrameTiming, getRenderPixelRatio } from './renderPolicy';
+import { useRendererHost } from './useRendererHost';
 
 interface ShaderCanvasProps {
-  room: ShaderRoomDefinition<AnyRoomSettings>;
-  settings: AnyRoomSettings;
+  room: ShaderRoomDefinition<AnyRoomSettings> | null;
+  settings: AnyRoomSettings | null;
   onStats: (stats: RoomStats) => void;
 }
 
+interface RuntimeLoadState {
+  ready: boolean;
+  room: ShaderRoomDefinition<AnyRoomSettings> | null;
+}
+
+function resizeStage(
+  canvas: HTMLCanvasElement,
+  renderer: WebGLRenderer,
+  runtime: RoomRuntime | null,
+  roomId: ShaderRoomDefinition<AnyRoomSettings>['id'],
+) {
+  const parent = canvas.parentElement;
+  if (!parent) {
+    throw new Error('The persistent renderer canvas is not mounted.');
+  }
+
+  const rect = parent.getBoundingClientRect();
+  const width = Math.max(1, Math.floor(rect.width));
+  const height = Math.max(1, Math.floor(rect.height));
+  const pixelRatio = getRenderPixelRatio(roomId, window.devicePixelRatio);
+
+  renderer.setPixelRatio(pixelRatio);
+  renderer.setSize(width, height, false);
+  runtime?.resize({ width, height, pixelRatio });
+}
+
 export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rendererRef = useRef<WebGLRenderer | null>(null);
+  const { canvas, renderer } = useRendererHost();
+  const canvasHostRef = useRef<HTMLDivElement | null>(null);
   const runtimeRef = useRef<RoomRuntime | null>(null);
-  const frameRef = useRef<number | null>(null);
   const settingsRef = useRef(settings);
-  const [loading, setLoading] = useState(true);
+  const onStatsRef = useRef(onStats);
+  const [loadState, setLoadState] = useState<RuntimeLoadState>({
+    ready: false,
+    room,
+  });
+
+  if (loadState.room !== room) {
+    setLoadState({ ready: false, room });
+  }
+  const loading = room !== null && !loadState.ready;
+
+  useLayoutEffect(() => {
+    const canvasHost = canvasHostRef.current;
+    if (!canvasHost) {
+      throw new Error('The persistent renderer mount is not available.');
+    }
+
+    canvasHost.append(canvas);
+    return () => {
+      if (canvas.parentElement === canvasHost) {
+        canvasHost.removeChild(canvas);
+      }
+    };
+  }, [canvas]);
+
+  useEffect(() => {
+    if (room) {
+      canvas.setAttribute('aria-label', room.id);
+      canvas.removeAttribute('aria-hidden');
+    } else {
+      canvas.removeAttribute('aria-label');
+      canvas.setAttribute('aria-hidden', 'true');
+    }
+  }, [canvas, room]);
 
   useEffect(() => {
     settingsRef.current = settings;
-    runtimeRef.current?.updateSettings(settings);
+    if (settings) {
+      runtimeRef.current?.updateSettings(settings);
+    }
   }, [settings]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    onStatsRef.current = onStats;
+  }, [onStats]);
 
-    if (!canvas) {
+  useEffect(() => {
+    if (!room) {
       return undefined;
     }
 
-    const renderer = new WebGLRenderer({
-      canvas,
-      antialias: getRendererAntialias(room.id),
-      alpha: false,
-      powerPreference: 'high-performance',
-    });
-
-    renderer.outputColorSpace = SRGBColorSpace;
-    renderer.setClearColor(
-      readRequiredRootColorToken(colorTokenNames.shellBackground),
-      1,
-    );
-    rendererRef.current = renderer;
-
-    const resize = () => {
-      const parent = canvas.parentElement;
-
-      if (!parent) {
-        return;
-      }
-
-      const rect = parent.getBoundingClientRect();
-      const width = Math.max(1, Math.floor(rect.width));
-      const height = Math.max(1, Math.floor(rect.height));
-      const pixelRatio = getRenderPixelRatio(room.id, window.devicePixelRatio);
-
-      renderer.setPixelRatio(pixelRatio);
-      renderer.setSize(width, height, false);
-      runtimeRef.current?.resize({ width, height, pixelRatio });
-    };
-
+    const resize = () => resizeStage(canvas, renderer, runtimeRef.current, room.id);
     resize();
 
     const observer = new ResizeObserver(resize);
     observer.observe(canvas.parentElement ?? canvas);
+    return () => observer.disconnect();
+  }, [canvas, renderer, room]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    runtimeRef.current?.dispose();
+    runtimeRef.current = null;
+
+    if (!room) {
+      return undefined;
+    }
+
+    const initialSettings = settingsRef.current;
+    if (!initialSettings) {
+      throw new Error(`Settings are required for shader room ${room.id}.`);
+    }
+
+    void room.loadScene().then((module) => {
+      if (cancelled) {
+        return;
+      }
+
+      const runtime = module.createRoomRuntime(
+        { canvas, renderer, onStats: (stats) => onStatsRef.current(stats) },
+        settingsRef.current ?? initialSettings,
+      );
+      runtimeRef.current = runtime;
+      resizeStage(canvas, renderer, runtime, room.id);
+      setLoadState((current) =>
+        current.room === room ? { ready: true, room } : current,
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      runtimeRef.current?.dispose();
+      runtimeRef.current = null;
+    };
+  }, [canvas, renderer, room]);
+
+  useEffect(() => {
+    if (!room) {
+      return undefined;
+    }
 
     const timer = new Timer();
     timer.connect(document);
@@ -92,9 +162,8 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
 
       frames += 1;
       fpsElapsed += statsDelta;
-
       if (fpsElapsed >= 0.5) {
-        onStats({
+        onStatsRef.current({
           fps: frames / fpsElapsed,
           drawCalls: renderer.info.render.calls,
         });
@@ -102,71 +171,22 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
         fpsElapsed = 0;
       }
 
-      frameRef.current = window.requestAnimationFrame(tick);
     };
 
-    frameRef.current = window.requestAnimationFrame(tick);
-
+    renderer.setAnimationLoop(tick);
     return () => {
-      if (frameRef.current !== null) {
-        window.cancelAnimationFrame(frameRef.current);
-      }
-      observer.disconnect();
-      runtimeRef.current?.dispose();
-      runtimeRef.current = null;
+      renderer.setAnimationLoop(null);
       timer.dispose();
-      renderer.dispose();
-      rendererRef.current = null;
     };
-  }, [onStats, room.id]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const renderer = rendererRef.current;
-    let cancelled = false;
-
-    if (!canvas || !renderer) {
-      return undefined;
-    }
-
-    setLoading(true);
-    runtimeRef.current?.dispose();
-    runtimeRef.current = null;
-
-    room.loadScene().then((module) => {
-      if (cancelled) {
-        return;
-      }
-
-      const runtime = module.createRoomRuntime(
-        { canvas, renderer, onStats },
-        settingsRef.current,
-      );
-      runtimeRef.current = runtime;
-
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (rect) {
-        runtime.resize({
-          width: Math.max(1, Math.floor(rect.width)),
-          height: Math.max(1, Math.floor(rect.height)),
-          pixelRatio: getRenderPixelRatio(room.id, window.devicePixelRatio),
-        });
-      }
-
-      setLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-      runtimeRef.current?.dispose();
-      runtimeRef.current = null;
-    };
-  }, [room, onStats]);
+  }, [renderer, room]);
 
   return (
-    <div className="canvas-shell">
-      <canvas ref={canvasRef} className="shader-canvas" aria-label={room.id} />
-      {loading ? <div className="canvas-loader">Loading {room.id}</div> : null}
+    <div
+      className={`canvas-shell${room ? '' : ' canvas-shell-inactive'}`}
+      aria-hidden={room ? undefined : true}
+    >
+      <div ref={canvasHostRef} className="shader-canvas-host" />
+      {room && loading ? <div className="canvas-loader">Loading {room.id}</div> : null}
     </div>
   );
 }
