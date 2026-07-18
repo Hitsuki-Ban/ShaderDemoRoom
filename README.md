@@ -24,6 +24,8 @@ pnpm install
 pnpm dev
 ```
 
+Direct dependencies are exact-pinned. Follow [docs/dependency-policy.md](./docs/dependency-policy.md) when adding or upgrading packages; bulk `--latest` updates are not part of the project workflow.
+
 Preview the production GitHub Pages path after a build:
 
 ```powershell
