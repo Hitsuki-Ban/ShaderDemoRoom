@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "qa:visual": "node scripts/visual-smoke.mjs",
     "qa:water": "node scripts/water-qa.mjs",
-    "lint": "eslint .",
+    "lint": "eslint . && pnpm lint:tokens",
+    "lint:tokens": "node scripts/token-lint.mjs",
     "typecheck": "tsc -b"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@types/three": "0.184.1",
+    "apca-w3": "0.1.9",
     "eslint": "10.4.1",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.2",

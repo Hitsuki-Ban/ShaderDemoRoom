@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { roomAccentTokens } from '../styles/designTokens';
 import { getRoomById, roomRegistry } from './registry';
 
 const supportedEmbeddedPermissions = new Set(['autoplay', 'microphone']);
@@ -13,6 +14,21 @@ describe('roomRegistry', () => {
     ]);
     expect(new Set(roomRegistry.map((room) => room.id)).size).toBe(
       roomRegistry.length,
+    );
+  });
+
+  it('assigns every room a unique governed accent token', () => {
+    const accents = roomRegistry.map((room) => room.accent);
+
+    expect(accents).toEqual([
+      roomAccentTokens.cyan,
+      roomAccentTokens.amber,
+      roomAccentTokens.magenta,
+      roomAccentTokens.mint,
+    ]);
+    expect(new Set(accents).size).toBe(accents.length);
+    expect(accents.every((accent) => Object.values(roomAccentTokens).includes(accent))).toBe(
+      true,
     );
   });
 

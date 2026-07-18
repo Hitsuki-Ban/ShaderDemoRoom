@@ -7,6 +7,10 @@ import type {
   ShaderRoomDefinition,
 } from '../../rooms/types';
 import {
+  colorTokenNames,
+  readRequiredRootColorToken,
+} from '../../styles/designTokens';
+import {
   getFrameTiming,
   getRendererAntialias,
   getRenderPixelRatio,
@@ -46,7 +50,10 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
     });
 
     renderer.outputColorSpace = SRGBColorSpace;
-    renderer.setClearColor(0x070b10, 1);
+    renderer.setClearColor(
+      readRequiredRootColorToken(colorTokenNames.shellBackground),
+      1,
+    );
     rendererRef.current = renderer;
 
     const resize = () => {

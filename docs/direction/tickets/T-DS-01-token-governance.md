@@ -4,6 +4,7 @@
 - 優先度: P2
 - 評価軸: AD「パレット規律」(トークン/レジストリ/シェーダー定数が一つの体系か — review-framework.md 評価軸表の不合格例「#79ead9 vs --teal #5af2d1 のドリフト」がそのまま本件)
 - 依存: なし(相互参照: T-SH-04 — ニアブラック統一のレンダラー側実装と同一箇所を触るため実装順を調整すること)
+- 状態: **完了 (2026-07-18)**
 
 ## 現状(証拠)
 
@@ -74,3 +75,32 @@ research-webgl-platform.md §2.4(2 層トークンモデル・ビルド時コン
 - **T-SH-04 との相互参照**: ニアブラック統一のレンダラー側(`ShaderCanvas.tsx:51`)は T-SH-04(永続レンダラー化)と同一ファイル。先行した側が共有定数モジュールを切り、後行側はそれを参照する
 - **water-qa.mjs**: colorSignature / hueMean は水面ピクセルを測るためシェルトークン変更の影響は原則ないが、`.embedded-shell` 背景変更後に embedded 2 室のキャプチャ(visual-smoke)で意図せぬ差分が出ないか確認
 - **renderOrder 連鎖**: 本チケットは CSS/トークン/registry のみで scene graph に触れないため非該当(触れないことを保証する意味で記載)
+
+## 完了レポート (2026-07-18)
+
+### 実装
+
+- `tokens.css` を opaque palette primitive と semantic role の 2 層に整理した。opaque hex は一意な `--palette-*` にだけ存在し、`--bg` / text / accent / danger / focus は primitive を直接参照する。alias、互換名、silent fallback は設けていない。
+- `roomAccentTokens` を型付きの閉集合として追加し、registry の 4 room はすべて `var(--accent-*)` を参照する。旧 Ninth Tide の `#79ead9` は既存 mint `#5af2d1` と OKLab ΔE×100 3.39 しか離れていなかったため、意味のない近似重複として `--accent-mint` に統一した。
+- renderer は root の必須 `--bg` 実値を読み、canvas shell / embedded shell / iframe も同じ semantic token を使う。token 欠落は fail fast とし、`0x070b10` / `#06090e` / `#02070d` の分岐を廃止した。
+- rail microcopy は `--microcopy` (`#eef7f8`) に統一し、room description を 13px/700、navigation hint を 15px/500 にした。弱い階層は低コントラストではなく typography で表現する。
+- `pnpm lint` に token lint を統合した。対象 shell の raw hex / numeric color、重複 primitive、semantic hex、semantic alias、欠落 primitive を拒否し、実 CSS から accent と microcopy typography を動的に読み取って WCAG / APCA font lookup / OKLab の契約を検証する。TS token 集合、CSS 定義、registry、3 種の stage background の跨層契約もテスト化した。
+- `docs/design-token-policy.md` に source/consumption rules、accent 追加手順、色差・contrast guardrail、text contract を記録し、README から導線を追加した。
+
+### 起票時の受け入れ基準の訂正
+
+起票時の「11px なら Lc 75、12px へ変更した場合は Lc 60」および RGB 距離の提案は、現行の公式資料・実装に照らすと成立しないため、次の基準で置き換えた。
+
+- WCAG 2.2 の通常テキスト 4.5:1 を normative gate とし、exact pin した `apca-w3@0.1.9` (0.0.98G-4g beta) の `fontLookupAPCA()` を追加の project quality signal とする。APCA / WCAG 3 compliance は主張しない。
+- 旧 `#647883` 11px/400 は `--bg` 上で 4.33:1 / Lc -29.55。公式 lookup では白でも 11px/400 を満たせないため、色だけでなく size / weight を同時に直した。
+- 新 `#eef7f8` は `--bg` 上で 18.32:1 / Lc -101.31、`--bg-elevated` 上で 17.42:1 / Lc -100.94。lookup の最小値は 700 weight で 13px、500 weight で 14.5px であり、実 CSS の 13px/700 と 15px/500 が双方を満たす。
+- accent の重複判定は知覚一様でない RGB 距離ではなく CSS Color 4 の OKLab ΔE を使う。ΔE×100 ≥ 10 と raw accent |Lc| ≥ 45 は本 showroom の追加/重複防止 guardrail であり、W3C の適合閾値ではない。
+
+### 検証
+
+- `pnpm test`: 12 files / 43 tests pass
+- `pnpm lint` (token lint を含む) / `pnpm typecheck` / `pnpm build` / `git diff --check`: pass
+- `pnpm qa:visual`: desktop/mobile 合計 7 capture、console error 0、mobile horizontal overflow 0、scene/HUD viewport overlap 0。結果は ignored の `output/t-ds-01/after` に保存した。
+- Chromium で 4 room を実測し、root / canvas / embedded shell / iframe の背景はすべて `rgb(6, 9, 14)`。shader → embedded → shader の切替を 40 animation frames 採取し、異なる shell background 0、console error 0。
+- desktop と 279px mobile の実レンダーを比較し、microcopy の階層・折返し・overflow を確認した。active / hover の room accent 表現は token 参照化以外の意図しない変更なし。
+- 独立 explorer / reviewer の mutation review で comment、short/alpha/composite hex、semantic alias、missing primitive の各 bypass を検証・修正し、最終 P0–P2 findings なし。

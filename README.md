@@ -26,6 +26,8 @@ pnpm dev
 
 Direct dependencies are exact-pinned. Follow [docs/dependency-policy.md](./docs/dependency-policy.md) when adding or upgrading packages; bulk `--latest` updates are not part of the project workflow.
 
+Shell colors and room accents follow [docs/design-token-policy.md](./docs/design-token-policy.md); opaque shell colors outside the governed token source fail `pnpm lint`.
+
 Preview the production GitHub Pages path after a build:
 
 ```powershell
