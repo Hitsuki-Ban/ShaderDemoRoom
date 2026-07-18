@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc -b && vite build",
+    "build": "pnpm run exhibits:build && pnpm run build:shell",
+    "build:shell": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
     "test:watch": "vitest",
     "qa:visual": "node scripts/visual-smoke.mjs",
+    "qa:exhibits": "node scripts/exhibit-smoke.mjs",
     "qa:water": "node scripts/water-qa.mjs",
     "qa:renderer": "node scripts/renderer-lifecycle.mjs",
+    "exhibits:build": "node scripts/build-exhibits.mjs",
+    "exhibits:check": "pnpm run exhibits:build && node scripts/check-exhibit-sync.mjs",
     "lint": "eslint . && pnpm lint:tokens",
     "lint:tokens": "node scripts/token-lint.mjs",
     "typecheck": "tsc -b"

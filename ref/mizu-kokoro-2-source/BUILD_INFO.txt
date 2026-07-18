@@ -1,0 +1,7 @@
+MIZU//KOKORO 2.0
+Build date: 2026-06-23
+Three.js: 0.184.0
+Vite: 8.0.16
+Production build: passed
+npm audit: 0 vulnerabilities
+Runtime QA: Chromium WebGL2 / SwiftShader compatibility pass; theme, sculpt, freeze, and pointer-input states exercised.

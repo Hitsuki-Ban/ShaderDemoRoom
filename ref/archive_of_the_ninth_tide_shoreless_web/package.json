@@ -1,0 +1,17 @@
+{
+  "name": "archive-of-the-ninth-tide-shoreless-layer",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nine-part audio-reactive Three.js hadal light installation for Archive of the Ninth Tide",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "pnpm build && uv run python serve.py"
+  },
+  "dependencies": {
+    "three": "0.184.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.5"
+  }
+}
