@@ -17,7 +17,7 @@ baseline がない状態で shader/outline を変更すると、視覚品質を�
 
 ## 本票の唯一の結果
 
-**同一環境で再実行できる sculpt baseline/profile を保存し、次の最適化票が扱う単一ボトルネックを証拠で決定する。** 本票では製品コード、shader、outline、品質ノブを変更しない。
+**同一環境で再実行できる sculpt baseline/profile と AO 専用の決定論 capture hook を保存し、次の最適化票が扱う単一ボトルネックを証拠で決定する。** 本票では見た目、shader、outline、品質ノブを変更しない。
 
 ## 実施内容
 
@@ -25,7 +25,8 @@ baseline がない状態で shader/outline を変更すると、視覚品質を�
 2. idle と synthetic pointer による sculpt 保持をそれぞれ計測し、median / p95 frameTimeMs、fps、frame count を保存する。
 3. 一時ビルドだけで SMAA、bloom、`preserveDrawingBuffer`、屈折 RT scale、pixel ratio を1変数ずつ切り替える。Spector.js または Chrome tracing で屈折パス、main、post の内訳を取る。一時変更はコミットしない。
 4. shader/outline の評価が必要なら、同じ一時ビルドでのみ測る。baseline/profile 成果物とレビュー結論が揃うまで恒久変更を始めない。
-5. `docs/direction/captures/orb-profile-<date>.json` と要約 md に、生データ、再現手順、最大寄与パス、次票で扱う単一処置を記録する。
+5. `?qa=1` だけで有効な `window.__MIZU_KOKORO_STEP__({ mode, freezeProgress, timestamp })` を追加する。standalone / showroom iframeのどちらでも QA query がある場合は通常rAFを停止し、hookごとに Timer、scene/audio state、camera、postprocess seedを初期化して指定 timestamp の1 frameだけを描画し、rAFを予約せず停止状態のまま Promise を解決する。同一入力3回の exact hash、1 call=1 render、queued rAF=0を挙動テストで固定する。QA query がない通常起動ではhookを公開しない。
+6. `docs/direction/captures/orb-profile-<date>.json` と要約 md に、生データ、再現手順、最大寄与パス、次票で扱う単一処置、capture hookのhashを記録する。
 
 ## ハードゲート
 
@@ -36,9 +37,9 @@ baseline がない状態で shader/outline を変更すると、視覚品質を�
 ## 受け入れ基準
 
 - baseline/profile JSON と要約 md がコミットされ、再現コマンド、環境、idle/sculpt の全測定値、無効化マトリクス、パス内訳を含む。
-- 同一条件を2回走らせ、結論が再現する。
+- 同一条件を2回走らせ、profile結論が再現する。決定論hookは同一入力3回でhash一致、1 call=1 render、queued rAF=0を満たす。
 - 最大寄与パスと次票の単一処置が数値で説明され、独立レビューで承認されている。
-- `git diff` で本票による製品コード・shader・outline の恒久変更がない。
+- `git diff` で本票による製品の見た目・shader・outline の恒久変更がなく、恒久コード差分は `?qa=1` の決定論hookとそのテストに限定される。
 
 ## 影響範囲・注意
 

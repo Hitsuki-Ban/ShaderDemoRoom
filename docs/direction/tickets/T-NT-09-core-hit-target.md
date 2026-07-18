@@ -7,7 +7,7 @@
 
 ## 現状(証拠)
 
-click/hover は可視 `core` 自体を raycast する。第VIII章 `[1.46,0.62,0.34]`、第IX章 `[0.48,0.48,0.48]` の scale により、虹彩/真珠として見える領域と hit area が一致せず操作が外れる。
+click/hover は可視 `core` 自体を raycast する。第VIII章 `[1.46,0.62,0.34]`、第IX章 `[0.48,0.48,0.48]` の scale により、虹彩/真珠として見える領域と hit area が一致せず操作が外れる。T-NT-05 の `hit-targets-v1.json` は viewport 1440×900 / DPR 1 / 章別固定 timestamp で全章の positive/negative 座標を固定し、section 7/8 の横方向 edge positive が現行 `beforeHit=false` であることを記録する。
 
 ## 本票の唯一の結果
 
@@ -17,12 +17,12 @@ click/hover は可視 `core` 自体を raycast する。第VIII章 `[1.46,0.62,0
 
 1. 章別 shape と呼吸 scale から毎フレーム1つの raycast 用 proxy transform を更新する。
 2. click と hover は同じ proxy raycast 関数だけを使う。可視 core への別 fallback は残さない。
-3. proxy は描画せず renderOrder 網へ参加させない。hit area は可視 silhouette の検収座標から定義し、画面全体を覆う最小半径などの guessed default を置かない。
+3. proxy は描画せず renderOrder 網へ参加させない。hit area は `hit-targets-v1.json` の固定 viewport/timestamp/座標だけで検収し、座標の再選定、画面全体を覆う最小半径、guessed default を置かない。
 
 ## 受け入れ基準
 
-- section 0..8 の登録座標で click/hover が一致し、特に section 7/8 の現行失敗座標が通る。
-- silhouette 外の負例では反応しない。
+- `hit-targets-v1.json` の section 0..8 全 positive で click/hover が一致し、section 7/8 の `beforeHit=false` 点が after で true になる。
+- 同 fixture の全 negative は false のままである。
 - archive toggle、cursor、pulse origin が同じ hit 結果を使う。
 - T-NT-05 11状態の見た目が不変、`qa:exhibits` / `qa:visual` が通る。
 

@@ -35,8 +35,8 @@ research-stylized-water.md §2.10 選択肢1(本命・ほぼ無料)を実施す�
 
 ## 影響範囲・注意
 
-- **テスト契約の書き換えが必須**: `shader-quality.test.ts:105-145` は現行の意図(plane.renderOrder < columns.renderOrder、全5オブジェクト transparent:true)をピン留めしている。新しい意図(柱 opaque・depth 書き込み、プレーンは柱の後、spray/rain/grid は透明のまま)に合わせて**契約テストを書き換える**こと。挙動ベーステスト(T-QA-01)の趣旨どおり「新しい正しさ」を検証する形にする。
+- **テスト契約の書き換えが必須**: `shader-quality.test.ts:105-145` は現行の意図(plane.renderOrder < columns.renderOrder、全5オブジェクト transparent:true)をピン留めしている。新しい意図(柱 opaque・depth 書き込み、プレーンは柱の後、spray/rainとT-VW-03後に実在するgridだけが透明)に合わせて契約テストを書き換える。T-VW-03でgridが削除済みなら `voxel-water-grid` が存在しないことをassertし、存在する場合だけtransparent/depthWrite/renderOrderをassertする。削除済みobjectを必須取得するテストは残さない。
 - **WEATHER_LOOKS 構造テスト**: columnOpacity 削除は `shader-quality.test.ts:67-85` のキー完全性テスト(77-78行が columnOpacity を直接参照)の同期更新を要する。
-- **renderOrder 網の再監査**: review-framework.md 横断注意5のとおり、透明要素の順序変更は連鎖全体(sky 0 / spray / rain / grid)の再監査が必要。特に gridOverlay(depthTest:false、renderOrder 5)は柱の depth に関係なく最前面のまま — T-VW-10 の見直しと独立であることを確認。
+- **renderOrder 網の再監査**: review-framework.md 横断注意5のとおり、透明要素の順序変更は T-VW-03 完了後の scene graph に実在する連鎖全体(sky / spray / rain / 残存 grid)を再監査する。削除済み要素を前提にした契約や順位は残さない。
 - **T-VW-05 との境界**: T-VW-05 の波モデル変更を先に独立検収し、本票は透明合成と `transparent:false` の視覚差分だけを所有する。
 - 柱が不透明化すると柱の描画は early-z が効く順序依存になる — 描画順そのものに視覚依存はなくなるため、将来の柱追加(T-VW-01 のランドマーク)にも安全側。

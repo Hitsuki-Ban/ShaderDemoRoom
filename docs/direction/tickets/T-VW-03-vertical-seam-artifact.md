@@ -31,18 +31,18 @@
 ### 段階2: 修正
 
 - 切り分けで確定した根本原因を直接修正する。
-- **gridOverlay を本票で廃止**: X 軸平行 63 本だけ、`depthTest:false`、renderOrder 5 の LineSegments はスクリーンスペースアーティファクトを作る描画なので、シーム原因か否かにかかわらず削除する。ボクセル格子の表現は water shader の world-space grid 1経路に統一し、その 0.62 scale 整合は T-VW-05 が所有する。旧 overlay の depthTest 切替や二軸化という代替経路は残さない。
+- **確定した原因だけを修正**: 切り分けでシームを消し、再有効化で再発することを確認した最小の描画経路だけを直接修正する。`gridOverlay` が原因なら geometry/material/dispose/renderOrder ごと削除するが、原因でなければ本票では残す。調査用 toggle や複数経路の保険はコミットしない。
 - **回帰ゲート**: 縦方向に連続する色相外れ値ピクセル列を `scripts/water-qa-metrics.mjs` の列スキャンとして追加し、3状態のキャプチャで閾値以下を確認する。
 
 ## 受け入れ基準
 
 - clear / rain / storm の `pnpm qa:water` キャプチャ(既定ビュー)に縦シームが存在しないこと(目視+縦線ディテクタ)。
-- `voxel-water-grid` LineSegments、対応 geometry/material/dispose、renderOrder 契約がソースとシーングラフから消え、draw calls が1減ること。
+- 根本原因の無効化でシームが消え、再有効化で同じ座標に再発する証拠があること。原因でない scene graph 要素は変更しない。draw calls は原因が独立 draw object の場合だけその正確な数だけ減らし、それ以外は不変として記録する。
 - 修正が他の描画に副作用を出していないこと: waterLuma / toonBandSeparation / hueMean が現行レポート(clear: 162.55 / 7.841 / 177.30)と同水準。
 - 原因・再現条件・切り分けログがチケット追記として文書化されていること(将来の描画順変更時の回帰知識)。
 
 ## 影響範囲・注意
 
 - 修正が water.frag.glsl / gridOverlay に及ぶ場合、`shader-quality.test.ts:87-103` の uniform 束縛テスト(宣言 uniform とランタイム uniform の集合一致)と 105-145 の renderOrder/transparent 契約に接触し得る。挙動を変えた場合はテストの意図ごと更新する。
-- T-VW-05 は残る world-space shader grid の尺度だけを扱い、LineSegments を再導入しない。
+- T-VW-05 へ確定後の scene graph と残存する全 grid 表現を申し送り、その時点で存在する表現だけを単一尺度へ統合する。
 - 調査段階のトグルはコミットに残さない(キャプチャのみ成果物)。

@@ -27,7 +27,7 @@ research-glass-optics.md §2.2 の閉形式計算(すべて CPU/JS、設定更�
 4. **反射**: 入射点法線 `n₁ = (P₁−C)/r` に対し `Vector3.reflect()` を使用。反射ビームの不透明度は Schlick 近似 `F = F₀ + (1−F₀)(1−cosθ)⁵`、`F₀ = ((1−ior)/(1+ior))²` で変調する。
 5. **屈折(入射→内部→出射)**: GLSL `refract()` 相当を自前実装(`k = 1 − η²(1−(n·i)²)`)し、k<0 は明示的な total-internal-reflection 結果にする。内部レイの 2 回目交差が出射点 P₂、出射側は η を逆数にして再屈折する。入力 Vector3 は変異させない。
 6. **床着地と no-hit**: 出射レイ×床平面 y=0 の交差 `t = −P₂.y / d.y` を着地点とする。`d.y >= 0` または `t <= 0` は floor no-hit とし、床ビーム、床マーカー、コースティクスを非表示にする。自動照準や仮の床点を生成しない。
-7. **固定トポロジー・更新時ゼロアロケーション**: 4 区間の core/glow を起動時に必要数だけ `CylinderGeometry` で生成し、設定更新は既存 mesh の position/quaternion/scale と visibility のみ変更する。`updateLightPath()` 内で Geometry / BufferAttribute / Vector3 / 配列を new せず、dispose+再生成を廃止する。
+7. **固定トポロジー・更新時ゼロアロケーション**: ビームは `InstancedMesh` **2 draw** に固定する(core batch 1 + glow batch 1)。各 batch は incoming / reflected / internal / outgoing の4 instanceを起動時に確保し、設定更新は instance matrix / instance color の既存 buffer だけを書き換える。invalid/no-hit 区間は scale 0 とし、mesh の追加・削除や visibility 分岐で draw topology を変えない。`updateLightPath()` 内で Geometry / BufferAttribute / Vector3 / 配列を new せず、dispose+再生成を廃止する。現行の beam 6 draws を2 drawsへ置換するため、シーン総 draw calls は **19 → 15** とする。
 8. **dirty-check**: lightX/Y/Z・ior・beamSpread が変わった場合だけ物理経路とビーム transform を更新する。roughness / thickness / showCaustics だけの patch では経路計算も transform 書き込みも行わない。
 
 ## 受け入れ基準
@@ -37,7 +37,7 @@ research-glass-optics.md §2.2 の閉形式計算(すべて CPU/JS、設定更�
 - **視覚基準**: デフォルト・Focus beam・Crystal preset・合法な極端配置(lightX=−6 / lightY=2.61 / lightZ=−6)の各キャプチャで、入射ビームが球表面で終端し、マーカーが表面/床上にあり、屈折が入射時に法線側へ曲がること。
 - **応答性**: IOR スライダー操作で屈折ビームの角度・着地点・コースティクス位置が目視で明確に変化すること(現行の「セグメント長の微妙な変化のみ」からの脱却をビフォー/アフター動画またはキャプチャ列で記録)。
 - **ゼロアロケーション**: lightX を 3 秒連続変化させても telemetry の geometries が一定で、heap allocation sampling に Geometry / BufferAttribute / Vector3 の update tick 生成がないこと。roughness-only patch で経路 API 呼び出しと transform 書き込みが 0 回であること。
-- **回帰なし**: 採用した固定メッシュ数に合わせ draw-call gate を意図的に更新・記録し、FPS が T-GO-01 hardware 基線から ±5% 以内、`pnpm qa:visual` 通過。
+- **回帰なし**: core/glow の2つの `InstancedMesh` とシーン総 draw calls **15** を gate に固定し、FPS が T-GO-01 hardware 基線から ±5% 以内、`pnpm qa:visual` 通過。
 - **プリセット再検分**: `glassOpticsFocusPreset` / `glassOpticsCrystalPreset`(`state.ts:33-45`)の構図が新経路で成立するよう値を再調整し、キャプチャで承認を得ること。
 
 ## 影響範囲・注意

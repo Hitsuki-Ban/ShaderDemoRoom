@@ -23,18 +23,18 @@ ART_DIRECTION の凍結ルール(「結晶は色替えではなくルール切�
 
 ## 改善方向
 
-liquid と同じ意味論に揃える。工数は uniform 宣言1本+3箇所の置換の見込み:
+volume を liquid と同じ**空間的な凍結フロント**へ揃える。全体 progress lock や簡易近似は実装しない。
 
-1. **最小案(推奨)**: `volumeFragmentShader` に `uniform float uFreezeTime;` を追加し、
-   `float fluidTime = mix(uTime, uFreezeTime, smoothstep(0.05, 0.9, uFreezeProgress));`
-   を main() 冒頭で計算、main.js:783 / 787 / 788 の `uTime` を `fluidTime` に置換する。背面シェルは輪郭のみの淡い要素なので、liquid の空間的核形成マスク(`freezeMask(vLocalDir)`)まで再現せず、進行度による全体ロックで十分 — という仮説をまず視覚検証する。
-2. **忠実案(最小案で凍結フロントとの不一致が目立った場合のみ)**: liquid の `freezeMask` 相当(`uFreezeOrigin` からの角距離 smoothstep)を volume 側にも移植し、核形成フロントの通過に同期して局所的に時間ロックする。
-3. melt 側の確認: melt 中(progress 減少)は同じ式で自然に `uTime` へ戻るが、`uTime` は進み続けているため復帰時に模様が不連続ジャンプする。liquid 側も同じ特性(mix の frozen 係数が下がると detailTime へ戻る)なので、**liquid と同時に melt させて差が出ないこと**を確認基準にする。
+1. `volumeFragmentShader` に `uFreezeTime` と `uFreezeOrigin` を宣言し、liquid と同じ angular distance、front threshold、smoothstep を単一の共有 GLSL 定義から参照して `freezeMask(vLocalDir)` を計算する。
+2. `float fluidTime = mix(uTime, uFreezeTime, freezeMask(vLocalDir));` を使い、volume の surface flow、fbm、innerCaustic の全時間項を `fluidTime` へ置換する。別の mask 定数や progress-only 分岐を作らない。
+3. melt 時も同じ mask が後退して `uTime` へ戻る。liquid と volume の再開領域/時刻が一致することを検収し、ジャンプを隠す別時間軸は追加しない。
+4. T-AO-03 の `?qa=1` 初期化上に QA-only `window.__MIZU_KOKORO_CAPTURE_VOLUME__({ mode, freezeProgress, freezeOrigin, timestamp })` を実装する。本票が JS harness、offscreen render target、volume-only scene/camera wiring、uniformの保存/復元を所有する。`uSceneTexture` は seedや外部frameに依存させず、固定64×64 RGBA8 linear DataTexture(座標から生成する仕様固定の2軸グラデーション+8px checker)へ差し替え、capture完了時に元のtextureを復元する。hookはvolume `uTime` だけを指定timestampへ設定して1 frame描画し、通常composerやrAFを起動しない。
 
 ## 受け入れ基準
 
-- freeze 完了状態(freezeProgress ≈ 1)で、グレージング角の背面シェルのフロー模様・innerCaustic が静止する(数秒間隔の2枚のスクリーンショット比較で volume 領域に差分がない。liquid の静止と同判定)。
-- freeze 進行中(0.2〜0.7)にも、背面のフローが liquid 表面の停止と明らかに矛盾して流れ続ける状態が解消されている(before/after 動画または連続キャプチャ)。
+- 固定 viewport 1440×900 / DPR 1、SURGE、freezeOrigin=`normalize(vec3(0,0,1))`、progress=0.5、時刻 t と t+2s で、**volume meshだけ**を黒背景の同一 offscreen targetへ描く QA captureを使う。camera/transform/freeze stateを固定し、FinalGrade(scanline/grain)、bloom、outline、liquid、crystalは通さず、比較間では volume の `uTime` だけを2秒進める。凍結済み hemisphere ROI は mean absolute RGB diff ≤0.5/255 かつ p99 ≤2/255、未凍結 hemisphere ROI は mean diff ≥2/255 であること。
+- freeze 完了(progress=1)では同じ隔離 volume pass の ROI 全体が静止閾値を満たし、progress=0 では変更前の隔離 pass の運動量/見た目が維持されること。最終合成は別途 before/after 目視回帰だけを行い、動く postprocess のピクセル一致を要求しない。
+- QA harness の挙動テストで、同一入力3回のhash一致、固定DataTextureのbyte一致、capture後の `uSceneTexture` / render target / camera / scene state復元、通常起動でhook非公開を固定する。
 - melt 後は背面フローが再開し、liquid 表面との時間的整合(同時に動き出す)が保たれる。
 - 非 freeze 時の見た目は 4相すべてで無回帰(volume シェルの通常時アルファ・色は変更しない)。
 - reduced-motion 環境でも破綻しない(sceneTime スケールの変更はしていないので原理上影響なし — 確認のみ)。
@@ -42,7 +42,7 @@ liquid と同じ意味論に揃える。工数は uniform 宣言1本+3箇所の�
 ## 影響範囲・注意
 
 - **改修は必ず `ref/mizu-kokoro-2-source/` 側で行い、`pnpm exhibits:build` で `public/exhibits/` を再生成する。public 配下の手編集は禁止(`pnpm exhibits:check` と CI が同期を強制)**。
-- GLSL のみの変更で JS 側の uniform 配線は不要(sharedUniforms 共有のため)。誤って volume 用に別 uniform オブジェクトを作らないこと(共有が本作の設計)。
+- 製品側のfreeze実装は GLSL 変更だけで、sharedUniforms の本番配線は増やさない。JS差分は上記 `?qa=1` の isolated-volume harness とテストに限定し、volume 用の別本番uniformオブジェクトを作らないこと。
 - crystal シェル(main.js:831-)は独自に freeze 演出を持つため本票では触れない。outline は時間項を持たない(main.js:736-746)ので対象外。
 - 検収は 4相 × freeze/melt のスクリーンショット比較(review-framework 横断注意3の精神で全状態を再検収)。
 - shader-quality.test.ts / runtime.test.ts は shell 側ルームのソースをピン留めしており ref/ の GLSL には届かないはずだが、`pnpm test` 全走で確認する。
