@@ -84,6 +84,7 @@ jobs:
             fi
             sleep 1
           done
+          pnpm qa:exhibits
           pnpm qa:visual
           pnpm qa:water
 

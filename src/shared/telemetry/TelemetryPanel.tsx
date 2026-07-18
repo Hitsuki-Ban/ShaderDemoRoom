@@ -1,11 +1,20 @@
 import { useMemo } from 'react';
 import type { RoomStats } from '../../rooms/types';
 import type { Locale, Translator } from '../i18n';
+import type {
+  EmbeddedBridgeState,
+  EmbeddedRoomStats,
+} from '../embedded/bridge';
 import { TelemetrySparkline } from './TelemetrySparkline';
 
 interface TelemetryPanelProps {
-  embedded: boolean;
-  stats: RoomStats | null;
+  source:
+    | { kind: 'shader'; stats: RoomStats | null }
+    | {
+        kind: 'embedded';
+        bridgeState: EmbeddedBridgeState;
+        stats: EmbeddedRoomStats | null;
+      };
   locale: Locale;
   t: Translator;
 }
@@ -14,7 +23,7 @@ function environmentKey(stats: RoomStats): string {
   return `app.telemetry.environment.${stats.environment.classification}`;
 }
 
-export function TelemetryPanel({ embedded, stats, locale, t }: TelemetryPanelProps) {
+export function TelemetryPanel({ source, locale, t }: TelemetryPanelProps) {
   const numberFormatters = useMemo(
     () => ({
       integer: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
@@ -26,16 +35,67 @@ export function TelemetryPanel({ embedded, stats, locale, t }: TelemetryPanelPro
     [locale],
   );
 
-  if (embedded) {
+  if (source.kind === 'embedded') {
+    if (source.bridgeState === 'error') {
+      return (
+        <div className="scene-hud telemetry-rail telemetry-rail-external" aria-label={t('app.sceneStats')}>
+          <div className="telemetry-external" data-telemetry-state="error">
+            <span className="telemetry-kicker">{t('app.embeddedRuntime')}</span>
+            <strong>{t('app.telemetry.bridgeUnavailable')}</strong>
+          </div>
+        </div>
+      );
+    }
+
+    if (!source.stats) {
+      return (
+        <div className="scene-hud telemetry-rail telemetry-rail-external" aria-label={t('app.sceneStats')}>
+          <div className="telemetry-external" data-telemetry-state={source.bridgeState}>
+            <span className="telemetry-kicker">{t('app.embeddedRuntime')}</span>
+            <strong>{source.bridgeState === 'waiting'
+              ? t('app.telemetry.bridgeConnecting')
+              : t('app.telemetry.measuring')}</strong>
+          </div>
+        </div>
+      );
+    }
+
+    const embeddedStatus = source.stats.paused ? 'paused' : 'live';
     return (
-      <div className="scene-hud telemetry-rail telemetry-rail-external" aria-label={t('app.sceneStats')}>
-        <div className="telemetry-external" data-telemetry-state="external">
-          <span className="telemetry-kicker">{t('app.telemetry.externalRuntime')}</span>
-          <strong>{t('app.telemetry.unavailable')}</strong>
+      <div
+        className="scene-hud telemetry-rail"
+        aria-label={t('app.sceneStats')}
+        data-telemetry-source="embedded"
+        data-telemetry-json={JSON.stringify(source.stats)}
+      >
+        <div className="telemetry-rail-header">
+          <span className="telemetry-kicker">{t('app.telemetry.liveTelemetry')}</span>
+          <span className="telemetry-environment telemetry-environment-unknown">
+            {t('app.embeddedRuntime')}
+          </span>
+          <span className="telemetry-status">{t(`app.telemetry.${embeddedStatus}`)}</span>
+        </div>
+        <div className="telemetry-grid" data-telemetry-state={embeddedStatus}>
+          <section className="telemetry-cell" data-metric="fps">
+            <span className="telemetry-label">{t('app.telemetry.cadence')}</span>
+            <span className="telemetry-value">
+              <strong>{numberFormatters.oneDecimal.format(source.stats.fps)}</strong>
+              <small>{t('app.telemetry.units.fps')}</small>
+            </span>
+          </section>
+          <section className="telemetry-cell" data-metric="frame-time">
+            <span className="telemetry-label">{t('app.telemetry.frameTime')}</span>
+            <span className="telemetry-value">
+              <strong>{numberFormatters.oneDecimal.format(source.stats.frameTimeMs)}</strong>
+              <small>{t('app.telemetry.units.milliseconds')}</small>
+            </span>
+          </section>
         </div>
       </div>
     );
   }
+
+  const { stats } = source;
 
   const isLive = stats?.sampleState === 'live';
   const statusKey = stats ? `app.telemetry.${stats.sampleState}` : 'app.telemetry.measuring';

@@ -2,6 +2,7 @@ import type { ComponentType, LazyExoticComponent, ReactNode } from 'react';
 import type { Camera, Object3D, PMREMGenerator } from 'three';
 import type { RendererEnvironment } from '../shared/three/rendererEnvironment';
 import type { Locale, Translator } from '../shared/i18n';
+import type { EmbeddedBridgeCapability } from '../shared/embedded/bridge';
 import type { RoomAccentToken } from '../styles/designTokens';
 
 export type RoomId =
@@ -151,6 +152,7 @@ export interface EmbeddedRoomDefinition extends BaseRoomDefinition<EmbeddedExhib
   kind: 'embedded';
   readonly embedPath: string;
   readonly permissions: readonly EmbeddedPermission[];
+  readonly bridgeCapabilities: readonly EmbeddedBridgeCapability[];
 }
 
 export type RoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings> =

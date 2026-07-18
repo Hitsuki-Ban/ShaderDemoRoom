@@ -2,59 +2,79 @@
 
 - 分類: Platform / TA
 - 優先度: P2
-- 評価軸: リソースライフサイクル / コントラクト遵守 / 対応環境(TA軸)— 非表示中も全力レンダ+音声が走り続け、シェル telemetry・QA から埋め込み展示が不可視
-- 依存: T-EMB-01(ref/ の版管理+再ビルドパイプライン。両展示の ref 側改修を含むため必須)。関連: T-SH-03(シェル表現層リデザイン — 本チケットが供給する FPS/stats の受け手。D-2 承認済みの前提で、telemetry 表示側の設計は T-SH-03 が持つ)
+- 評価軸: リソースライフサイクル / 埋め込み契約 / telemetry / 決定論 QA
+- 依存: T-EMB-01、T-SH-03（いずれも完了済み）
 
-## 現状(証拠)
+## 現状（2026-07-18 再調査）
 
-- **シェル→iframe の制御チャネルは `?reload=N` による完全再マウントのみ**:
-  - `src/shared/embedded/EmbeddedExhibitFrame.tsx:21-28` — `<iframe key={room.id}-{reloadToken} src={...} allow=... allowFullScreen>`。postMessage 送信コードは存在しない。
-  - `src/shared/embedded/url.ts:5` — `reloadToken > 0 ? '?reload=N' : ''`。このクエリは両展示の main.js のどこからも読まれない(grep 確認 — キャッシュバスト+key 変更による remount 専用)。
-  - `src/rooms/embedded/EmbeddedControls.tsx:36-47` — Reload / Open standalone / Reset の3ボタンのみ。
-- **orb(`ref/mizu-kokoro-2-source/src/main.js`)**: rAF ループは `animate()`(2438-2439 行、起動 2523 行)。`visibilitychange` / `message` リスナーは存在しない(grep 確認)。音声は `SoundField`(1785 行)+マイク経路(1797-1798 行)。品質ティアは `applyQuality(level)`(2188 行、high/medium/low)、相切替は `setMode(index)`(1867 行)。FPS は HUD 内で計測されるが外部へ出す経路がない(dossier-anime-liquid-orb.md リスク1「シェル⇔iframe 通信チャネルが皆無」、showroom 統合節「postMessage ブリッジなし。設定転送なし。pause/visibility シグナルなし」)。
-- **tide(`ref/archive_of_the_ninth_tide_shoreless_web/src/main.js`)**: rAF ループ 2701-2703 行。`visibilitychange` / `message` リスナーなし(grep 確認)。QA 用の決定論プレビューは URL パラメータ `?preview=main|opening|ending` + `&section=0..8` およびロード前グローバル `window.__NINTH_TIDE_PREVIEW__`(2720-2729 行。previewSection の既定は 2725 行で 4)で注入するが、**親フレームは load 前の contentWindow へ安全に注入する手段を持たない**(dossier-ninth-tide-archive.md リスク11)。音声は `<audio preload="auto">`(index.html:358)。
-- **シェル側 telemetry**: embedded ルームでは HUD が "Embedded runtime" / "Standalone exhibit" の固定ラベルのみで FPS/stats を持たない(dossier-shell.md「状態フロー (ShowroomPage)」節)。orb の展示内 FPS 欄は「—」表示(dossier-anime-liquid-orb.md ビジュアル現状評価・デスクトップ弱点2)。
-- 関連資料: research-npr-liquid.md §2.9(player.js 型 postMessage プロトコルの実装要点 — 本チケットの設計原典)、同 §1 表 #9、research-webgl-platform.md §2.8(allow 最小化と postMessage 制御シーム、`{type, payload, v:1}` 形式・フォールバック設計)、research-audio-reactive.md の注意(217 行 — ref 改修はビルド+静的プレビュー QA をセットで回す)、review-framework.md ロングリスト AO-2(P2)。
+- Showroom は room 切替時に active iframe をアンマウントする。旧票の「別 room 閲覧中も iframe が走り続ける」は現 HEAD には該当しない。残る実問題は、active iframe がタブ非表示中も自律ループを継続すること、shell が embedded runtime の状態を観測できないこと、親から決定論的に制御できないことである。
+- T-EMB-01 により `ref/` が唯一の編集元となり、`pnpm exhibits:build` が `public/exhibits` を決定論的に再生成する。旧成果物へ降格する runtime fallback は不要で、現在の契約不履行を隠す。
+- T-SH-03 の telemetry は native room の renderer stats を表示できるが、embedded 2室は固定ラベルだけだった。embedded runtime は renderer 内部 counter を共有しないため、native `RoomStats` へ optional field を足して擬似的に合流させるべきではない。
+- Tide の `?preview=main|opening|ending&section=0..8` とロード前 `window.__NINTH_TIDE_PREVIEW__` / `__NINTH_TIDE_PREVIEW_SECTION__` は文書化済み standalone QA 契約であり、bridge 導入後も維持する。入力は暗黙 clamp せず厳密に拒否する。
+- Reload / Open standalone / Reset は現在の製品操作として維持する。bridge 不在時の代替経路として扱わない。
 
-## 問題
+## 確定スコープ
 
-シェル状態にかかわらず両展示は自前の rAF と(有効時)音声を走らせ続け、別ルーム閲覧中・タブ非表示・kiosk 放置でバッテリーと GPU 予算を浪費する(orb はアイドル 30s 後の自動相サイクルで音声 ping まで発する — dossier-anime-liquid-orb.md リスク10)。また FPS がシェルへ届かないため、telemetry リデザイン(T-SH-03)は埋め込み2室に対して表示する数値を持たず、QA は tide の章指定を URL 再マウントでしか制御できず orb に至っては決定論フックが皆無。「1つのショールーム」としての統合品質と QA 可能性の両方を制約している。
+### 1. 厳密な same-origin protocol v1
 
-## 改善方向
+- envelope は `{ context: 'shader-demo-room', v: 1, instanceId, type, payload }` の exact shape とする。`instanceId` は子 runtime が生成する UUID で、再ロード前の stale message を明示的に破棄する。
+- 送信 `targetOrigin` は `location.origin`。受信は `event.origin === location.origin` と exact `event.source` を検査する。異なる origin/source は無視し、正しい source から来た未知 type・余剰 field・不正値は bridge error とする。
+- 子→親は `ready { capabilities }` と `stats { fps, frameTimeMs, frameCount, paused }`。capabilities は canonical order の exact list とし、room registry の required 宣言と一致しなければ失敗する。
+- 親→子は `set-paused`、Orb の `set-orb-mode` / `set-orb-quality`、Tide の `set-tide-preview`。素材パラメータ、freeze、作品内 UI 状態は v1 に含めない。
+- 親は ready 前 command queue や replay を持たず、ready 後に現在の desired visibility state だけを送る。15秒以内に ready が来なければ telemetry に bridge unavailable を明示し、旧 bundle / reload-only fallback は行わない。
 
-research-npr-liquid.md §2.9 の player.js 型プロトコルをそのまま採用する(D-1 fork 運用承認済み — ref 側改修を正面から行う):
+### 2. 子 runtime の pause ownership
 
-1. **プロトコル v1**(research-webgl-platform.md §2.8 の形式と統合):
-   - メッセージ形: `{context: 'shader-demo-room', v: 1, type, payload}`。送信 targetOrigin と受信 `event.origin` はともに `location.origin` で検証(same-origin 配信のため)。
-   - **ハンドシェイク**: 子は初期化完了時に `ready`(payload: `{capabilities: string[]}`)を親へ送る。親は ready 受信までコマンドをキューし、タイムアウト(例 3s)で ready が来なければ従来の reload-only UI に降格(旧成果物・スタンドアロン互換)。
-   - **コマンド(親→子)**: `pause` / `resume`、`setQuality('high'|'medium'|'low')`、QA フック `setPreview({mode, section})`(tide)/ `setMode(0-3)`(orb)。
-   - **イベント(子→親)**: `ready`、`stats`(`{fps, frameMs}` を 0.5-1s 間隔 — シェル telemetry / T-SH-03 へ供給)、必要に応じ `state`(orb: mode/freeze、tide: section)。
-   - 素材パラメータ(orb の deform/speed 等)は**ブリッジに載せない**。「マテリアル制御は作品内部に残す」という展示思想(i18n runtimeNote、dossier-anime-liquid-orb.md コンセプト節)と両立させる設計判断を v1 の仕様コメントに明記する。
-2. **子側(ref 改修、両展示共通の薄いブリッジモジュール)**:
-   - `window.parent === window` なら一切のリスナー登録以外を行わず不活性(スタンドアロン非破壊)。親がいても ready 後にコマンドが来なければ完全自律動作。
-   - コマンドは既存内部関数への薄い写像に限定: orb は `applyQuality`(2188 行)/ `setMode`(1867 行)/ 新設 `setPaused(bool)`(rAF ループの early-return + SoundField の gain 0 化)。tide は preview 状態注入(2720-2729 行の処理を関数化して再利用)+ `setPaused`(rAF 停止 + audio.pause())。
-   - **visibilitychange 連動は子が自律で持つ**(親の助けなしにスタンドアロンでも省電力): `document.visibilitychange` でタブ非表示時に rAF 停止+音声停止、復帰で再開。復帰時のΔt スパイクは両展示既存の `delta clamp 0.05` が吸収する(dossier 両カルテで確認済み)。ビューポート外 iframe 対策の IntersectionObserver は §2.9 記載の二段構えとして任意(シェルは現状ルームを完全に切り替えるため優先度低 — 実装するなら別チケットに切り出し可)。
-3. **親側(シェル)**:
-   - `EmbeddedExhibitFrame.tsx` にブリッジフック(ready 待ち+コマンドキュー+stats 購読)を追加。stats は ShowroomPage の既存 `onStats` 経路(`{fps, drawCalls}`)へ合流させ、embedded ルームの HUD 固定ラベルを実測 FPS 表示に置換できる状態にする(表示デザイン自体は T-SH-03)。
-   - ルーム切替・アンマウント時に `pause` を送る(iframe を DOM に残す設計へ変える場合)。現行はルーム切替で iframe 自体が破棄されるため v1 では「タブ非表示」対応が主戦場であることを README に明記。
-   - QA: `scripts/visual-smoke.mjs` / `docs/direction/captures/capture.mjs` が `setPreview` / `setMode` を使って入場後・章別・相別の決定論キャプチャを撮れるようにする(tide の既存 `?preview=` URL 経路は互換維持 — capture.mjs が依存)。
+- pause は `documentHidden || hostPaused` の合成状態とする。一方の resume が他方の pause reason を上書きしてはならない。
+- pause 時は scheduled rAF を cancel し、Orb は実際に running だった AudioContext、Tide は再生中 media element と AudioContext を停止する。resume は pause 前に running だった対象だけを再開し、timer / delta sample を reset して時間ジャンプを防ぐ。
+- standalone でも `visibilitychange` を自律処理する。`window.parent === window` では message listener / ready event を作らず、従来の直接操作と URL/global preview 契約を維持する。
+
+### 3. shell telemetry と QA
+
+- `EmbeddedRoomStats` を native `RoomStats` と分離する。embedded telemetry は実測 FPS / frame time の2指標、live / paused、raw QA JSON を表示し、存在しない draw calls / triangles / textures を捏造しない。
+- telemetry identity は `roomId + location.key + reloadToken` とし、iframe 再ロード後に旧 instance stats を再利用しない。
+- `qa:exhibits` は実 production iframe を通して capability、Orb 4 mode / 3 quality、Tide 9 section、通常 pause、快速 pause/resume 競合、Page Visibility event seam、instance preservation、standalone URL / keyboard / freeze、console error 0 を hard assert する。
+- `qa:visual` は embedded 2室で bridge ready と live telemetry を待ち、desktop/mobile とも2個の実測 metric を要求する。Pages CI は visual QA の前に `qa:exhibits` を実行する。
 
 ## 受け入れ基準
 
-- **省電力(数値基準)**: シェルで埋め込みルームを表示中にタブを非表示化 → 1s 以内に子の rAF が停止(子に露出させたフレームカウンタ、または DevTools Performance で検証)し、orb の SoundField / tide の audio が無音になる。復帰後 1s 以内に再開し、映像に Δt スパイク由来のジャンプがない(目視+連続スクリーンショット)。
-- **stats 供給**: 埋め込み2ルームでシェルが実測 FPS を 0.5-1s 間隔で受信できる(console/dev 検証で可 — HUD 表示の最終形は T-SH-03 検収)。値は展示内 HUD の FPS と ±2 以内で一致。
-- **QA フック**: 親(またはテストスクリプト)から postMessage で tide の任意章(0..8)+ preview モード、orb の任意相(0..3)を再マウントなしで指定でき、visual-smoke / capture.mjs 系の決定論キャプチャが取得できる。
-- **スタンドアロン非破壊(回帰)**: 「Open standalone」で開いた単独ページが従来通り全機能動作(orb: 4相・sculpt・freeze・CAPTURE・MIC、tide: 入場・下潜/静默下潜・`?preview=` URL 直指定)。`window.parent === window` でブリッジが不活性であることをコード上も確認。
-- **後方互換**: ready タイムアウト時に現行の reload-only UI へ降格する(意図的に古い成果物を配置して確認)。Reload / Open standalone / Reset の3ボタンは従来通り動作。
-- **セキュリティ**: 受信側で `event.origin === location.origin` を検証し、異オリジンメッセージが無視されることをユニットまたは手動テストで確認。プロトコルに `v: 1` が入っている。
-- **回帰一式**: `pnpm test / lint / typecheck / build / qa:visual` 全パス(コンソールエラー0)。orb 4相+freeze、tide 開幕+代表章(I/V/VIII/IX)+終幕のスクリーンショットが改修前と目視同等。
+- 両展示が exact capability 付き ready を送り、0.5秒程度の cadence で finite/non-negative stats を shell に供給する。embedded telemetry は live / paused / unavailable を明示する。
+- `set-paused(true)` 後は frameCount が停止し、`false` 後に再増加する。タブ visibility と host pause は独立 reason として合成される。active audio/media は pause/resume lifecycle に従う。
+- Orb 4 mode / 3 quality と Tide section 0..8 を再マウントなしに指定できる。stale instance、異 origin、異 source は現在の runtime を変更しない。
+- standalone Orb の4相・freeze、Tide の `?preview=` 9章と load-time globals は維持される。不正 preview mode / section は fail fast する。
+- bridge timeout / schema / capability mismatch は明示的 error となる。compatibility alias、silent fallback、旧 bundle 降格、ready command queue は存在しない。
+- `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` / exhibit sync / production `qa:exhibits` / `qa:visual` / `qa:water` / `git diff --check` が通る。
 
-## 影響範囲・注意
+## 参照
 
-- **ref 側改修 → 再ビルド必須(横断注意4)**: 実装は必ず ref/ ソースで行い `pnpm exhibits:build`(T-EMB-01)で public/exhibits を再生成する。minified バンドルへの直接パッチは禁止。research-audio-reactive.md 217 行の注意どおり、tide の main.js 改修はビルド+ `?preview=` 静的プレビュー QA をセットで回す。
-- **renderOrder 連鎖(横断注意5)**: 本チケットは描画順・マテリアルに触れないこと。rAF ループの入口(pause ゲート)とイベント配線のみの追加に留め、orb の5層シェル renderOrder 1-4 / tide の renderOrder 1/4/8 連鎖に変更が入らないことをレビュー観点に含める。
-- **文字列ピン留めテスト**: shader-quality.test.ts / runtime.test.ts / water-qa.mjs セレクタはネイティブ2室対象のため非該当。ただし **visual-smoke.mjs のハードフェイル条件(console error / pageerror)**にブリッジ実装のエラーが直撃するため、qa:visual を回帰ゲートとして必ず実行する。シェル側に新規 UI 文言を足す場合は `t(key)` 経由(Locked Decision #5。'Loading renderer' 型の i18n バイパスを増やさない)。
-- **T-EMB-03 との編集競合**: 同じ `EmbeddedExhibitFrame.tsx` を触る。T-EMB-03(allow レジストリ化)が小粒のため先行実施を推奨し、本チケットはその上にリベースする。
-- **orb のアイドル自動サイクル音(dossier-anime-liquid-orb.md リスク10)**: pause 実装時に自動相サイクルのタイマーも止めること(rAF だけ止めて setTimeout 系が生きていると再開時に状態が飛ぶ)。両展示とも「時計」を止める場所を rAF 起点に一元化できているか確認する。
-- **tide の `?preview=` URL 互換**: capture.mjs / 既存 QA 手順が URL パラメータに依存している。postMessage 版 QA フックは追加であり、URL 経路の削除・変更は不可。
-- **プロトコルの将来互換**: `v` フィールドと capabilities 宣言を最初から入れる(research-webgl-platform.md §2.8 の注意)。将来の Voxel Water 等ネイティブルームの iframe 化や外部埋め込みを許す場合は origin allowlist へ拡張する前提でコメントを残す。
+- [HTML cross-document messaging](https://html.spec.whatwg.org/dev/web-messaging.html)
+- [HTML MessageEvent](https://html.spec.whatwg.org/multipage/comms.html#the-messageevent-interface)
+- [MDN Window.postMessage security concerns](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage#security_concerns)
+- [HTML Page Visibility](https://html.spec.whatwg.org/multipage/interaction.html#page-visibility)
+- [Web Audio `AudioContext.suspend()`](https://www.w3.org/TR/webaudio-1.0/#dom-audiocontext-suspend)
+- [HTML media `pause()`](https://html.spec.whatwg.org/multipage/media.html#dom-media-pause-dev)
+
+## 完了レポート（2026-07-18）
+
+### 判断と境界
+
+- 現 HEAD の mount lifecycle を追跡し、room 切替は既に iframe 破棄で安全と確認した。本票は active iframe の visibility、省電力、shell observability、QA control seam に集中した。
+- T-EMB-01 の source ownership を前提に、古い成果物への降格を削除した。bridge 契約が満たせない場合は telemetry error を表示する単一経路とした。
+- native / embedded telemetry は意味の異なるデータ型として分離し、embedded 側は実在する2指標だけを表示する。作品内素材 control は bridge に漏らしていない。
+- Tide の文書化済み standalone URL/global preview は現在の外部 QA 契約として保持し、従来の clamp / unknown mode 受容は strict validation へ改めた。
+
+### 実装
+
+- shell に strict parser / command creator / capability contract と instance-aware `EmbeddedExhibitFrame` を追加し、registry で2展示の required capabilities を宣言した。
+- Orb / Tide の ref source に ready/stats、command mapping、合成 pause reason、rAF cancellation、desired-state + persistent ownership による audio/media suspend/resume、standalone visibility lifecycle を実装し、生成物を `public/exhibits` へ再ビルドした。快速 pause/resume と paused 中の media start でも intent を失わない。
+- Showroom と TelemetryPanel に embedded 専用 state / raw JSON / live-paused-error 表示を追加し、locale catalog と responsive 2-column metric layout を更新した。
+- unit/component tests、production `qa:exhibits`、`qa:visual`、Pages workflow を恒常 gate として更新した。
+
+### 検証
+
+- `pnpm lint` / token lint、`pnpm typecheck`、23 files / 100 tests、`pnpm build`: pass。
+- production `qa:exhibits`: exact capability handshake、Orb 4 mode / 3 quality、Tide I–IX、両 runtime の通常/快速交錯 pause-resume と synthetic hidden-visible event frameCount、iframe instance preservation、standalone 9章 / Orb freeze、console error 0。Orb は意図的な約80ms cadence で `5.29 FPS / 188.9ms` を報告し、simulation delta clamp ではなく wall-clock 実測であることを確認。Orb SoundField intent=`true`、Tide は paused 中に開始した media が resume 後 `PLAYING` へ復帰した。
+- production `qa:visual`: 14 screenshots、embedded desktop/mobile metric count=2、console error 0、mobile overflow 0、HUD overlap 0。既存 i18n persistence と Ninth paired luma 3 region も gate 内。
+- production `qa:water`: frameCount 8、meanDelta 3.182、waterCoverage 1、既存 color / motion / structure gate を通過。
+- 独立审查は protocol / React lifecycle / stale instance、wall-clock stats、快速 pause race、AudioContext/media ownership と non-Abort rollback、ref→public / QA gate を delta review し APPROVE（P0–P2 なし）。headless CI の visibility は synthetic event seam の検証であり、OS の実タブ伝播そのものは非阻塞 residual とした。
+- Linux CI と Windows worktree の CRLF 差で source map の `sourcesContent` だけが変動することを検出し、runtime bundle/hash を変えず LF canonical source map を commit した。CI の ref→public check は同一 canonical artifact を検証する。

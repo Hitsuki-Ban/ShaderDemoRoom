@@ -13,6 +13,10 @@ import type {
   RoomStats,
 } from '../rooms/types';
 import { EmbeddedExhibitFrame } from '../shared/embedded/EmbeddedExhibitFrame';
+import type {
+  EmbeddedBridgeState,
+  EmbeddedRoomStats,
+} from '../shared/embedded/bridge';
 import { localeManifest, parseLocale } from '../shared/i18n';
 import { useI18n } from '../shared/i18n/useI18n';
 import { TelemetryPanel } from '../shared/telemetry/TelemetryPanel';
@@ -25,10 +29,17 @@ export function ShowroomPage() {
   const location = useLocation();
   const { locale, setLocale, t } = useI18n();
   const [settingsByRoom, setSettingsByRoom] = useState(createInitialSettings);
-  const [telemetry, setTelemetry] = useState<{
+  const [shaderTelemetry, setShaderTelemetry] = useState<{
     locationKey: string;
     roomId: RoomId;
     stats: RoomStats;
+  } | null>(null);
+  const [embeddedTelemetry, setEmbeddedTelemetry] = useState<{
+    locationKey: string;
+    roomId: RoomId;
+    reloadToken: number;
+    bridgeState: EmbeddedBridgeState;
+    stats: EmbeddedRoomStats | null;
   } | null>(null);
 
   const activeRoom = getRoomById(roomId);
@@ -41,8 +52,16 @@ export function ShowroomPage() {
   const Controls = activeRoom.ControlsComponent;
   const shaderRoom = activeRoom.kind === 'shader' ? activeRoom : null;
   const activeStats =
-    telemetry?.roomId === activeRoom.id && telemetry.locationKey === location.key
-      ? telemetry.stats
+    shaderTelemetry?.roomId === activeRoom.id
+      && shaderTelemetry.locationKey === location.key
+      ? shaderTelemetry.stats
+      : null;
+  const activeEmbeddedTelemetry =
+    embeddedTelemetry?.roomId === activeRoom.id
+      && embeddedTelemetry.locationKey === location.key
+      && embeddedTelemetry.reloadToken
+        === (settings as EmbeddedExhibitSettings).reloadToken
+      ? embeddedTelemetry
       : null;
   const roomLabel = t(activeRoom.titleKey);
 
@@ -130,20 +149,44 @@ export function ShowroomPage() {
               ariaLabel={roomLabel}
               loadingLabel={t('app.loadingRoom', { room: roomLabel })}
               onStats={(stats) =>
-                setTelemetry({ locationKey: location.key, roomId: activeRoom.id, stats })
+                setShaderTelemetry({ locationKey: location.key, roomId: activeRoom.id, stats })
               }
             />
             {activeRoom.kind === 'embedded' ? (
               <EmbeddedExhibitFrame
+                key={`${activeRoom.id}-${(settings as EmbeddedExhibitSettings).reloadToken}`}
                 room={activeRoom}
                 settings={settings as EmbeddedExhibitSettings}
                 title={roomLabel}
+                onBridgeState={(bridgeState) =>
+                  setEmbeddedTelemetry({
+                    locationKey: location.key,
+                    roomId: activeRoom.id,
+                    reloadToken: (settings as EmbeddedExhibitSettings).reloadToken,
+                    bridgeState,
+                    stats: null,
+                  })
+                }
+                onStats={(stats) =>
+                  setEmbeddedTelemetry({
+                    locationKey: location.key,
+                    roomId: activeRoom.id,
+                    reloadToken: (settings as EmbeddedExhibitSettings).reloadToken,
+                    bridgeState: 'ready',
+                    stats,
+                  })
+                }
               />
             ) : null}
           </div>
           <TelemetryPanel
-            embedded={activeRoom.kind === 'embedded'}
-            stats={activeStats}
+            source={activeRoom.kind === 'embedded'
+              ? {
+                  kind: 'embedded',
+                  bridgeState: activeEmbeddedTelemetry?.bridgeState ?? 'waiting',
+                  stats: activeEmbeddedTelemetry?.stats ?? null,
+                }
+              : { kind: 'shader', stats: activeStats }}
             locale={locale}
             t={t}
           />

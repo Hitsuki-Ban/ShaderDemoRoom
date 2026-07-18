@@ -41,7 +41,7 @@ describe('TelemetryPanel', () => {
 
   it('renders measured native-room metrics with stable selectors', () => {
     const { container } = render(
-      <TelemetryPanel embedded={false} stats={stats} locale="zh-CN" t={t} />,
+      <TelemetryPanel source={{ kind: 'shader', stats }} locale="zh-CN" t={t} />,
     );
 
     expect(container.querySelector('[data-metric="fps"]')).toHaveTextContent('15.1');
@@ -54,14 +54,45 @@ describe('TelemetryPanel', () => {
     expect(container.querySelectorAll('canvas[aria-hidden="true"]')).toHaveLength(2);
   });
 
-  it('renders an intentional external state without fake metrics', () => {
+  it('renders measured embedded cadence without fake renderer counters', () => {
     const { container } = render(
-      <TelemetryPanel embedded stats={null} locale="zh-CN" t={t} />,
+      <TelemetryPanel
+        source={{
+          kind: 'embedded',
+          bridgeState: 'ready',
+          stats: {
+            fps: 29.8,
+            frameTimeMs: 33.6,
+            frameCount: 420,
+            paused: false,
+          },
+        }}
+        locale="zh-CN"
+        t={t}
+      />,
     );
 
-    expect(screen.getByText('外部运行时')).toBeInTheDocument();
-    expect(screen.getByText('遥测暂不可用')).toBeInTheDocument();
-    expect(container.querySelector('[data-metric]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-telemetry-source="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-metric="fps"]')).toHaveTextContent('29.8');
+    expect(container.querySelector('[data-metric="fps"]')).toHaveTextContent('FPS');
+    expect(container.querySelector('[data-metric="frame-time"]')).toHaveTextContent('33.6');
+    expect(container.querySelector('[data-metric="frame-time"]')).toHaveTextContent('毫秒');
+    expect(container.querySelectorAll('[data-metric]')).toHaveLength(2);
+    expect(container).not.toHaveTextContent('绘制调用');
     expect(container).not.toHaveTextContent('—');
+  });
+
+  it('makes bridge connection failures explicit', () => {
+    const { container } = render(
+      <TelemetryPanel
+        source={{ kind: 'embedded', bridgeState: 'error', stats: null }}
+        locale="zh-CN"
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText('展品通信桥不可用')).toBeInTheDocument();
+    expect(container.querySelector('[data-telemetry-state="error"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-metric]')).not.toBeInTheDocument();
   });
 });

@@ -76,6 +76,7 @@ export const roomRegistry = [
     techTags: ['NPR Fluid', 'Post FX', 'Interactive Phase'],
     defaultPreset: animeLiquidOrbDefaults,
     embedPath: 'exhibits/anime-liquid-orb/index.html',
+    bridgeCapabilities: ['pause', 'stats', 'set-mode', 'set-quality'],
     // WebAudio playback plus the exhibit's getUserMedia-driven MIC mode.
     permissions: ['autoplay', 'microphone'],
     loadControls: loadAnimeLiquidOrbControls,
@@ -94,6 +95,7 @@ export const roomRegistry = [
     techTags: ['Audio Reactive', 'Archive Core', 'Post FX'],
     defaultPreset: ninthTideArchiveDefaults,
     embedPath: 'exhibits/ninth-tide-archive/index.html',
+    bridgeCapabilities: ['pause', 'stats', 'set-preview'],
     // Preserve user-initiated archive audio playback inside the iframe.
     permissions: ['autoplay'],
     loadControls: loadNinthTideArchiveControls,
