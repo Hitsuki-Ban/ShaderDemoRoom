@@ -4,6 +4,7 @@
 - 優先度: P2
 - 評価軸: TA「QA担保」(依存の無検査ジャンプがビジュアルリグレッションとして QA をすり抜ける構図。review-framework.md SH-7「"latest" 依存ピン戦略(three メジャー跳ねのシェーダー破壊リスク)」が本件)
 - 依存: なし(CI への qa:visual 追加チケット(SH-6 系)と連携すると更新プロトコルのゲートが自動化されるが、本チケット単体で完結する)
+- 状態: **完了 (2026-07-18)**
 
 ## 現状(証拠)
 
@@ -77,3 +78,32 @@ research-webgl-platform.md §2.10(three のリビジョン制、0.x キャレッ
 - **water-qa.mjs セレクタ / renderOrder 連鎖**: 本チケットでは不変更。ただし three 更新時のリグレッションが最も出やすいのは両ルームの手動 renderOrder 連鎖・透明ソートであるため、プロトコル (d) の重点確認項目として明記済み
 - **pnpm ラッパー環境**: この環境では `npm` コマンドが pnpm にリダイレクトされる(グローバル設定)。検証コマンドは pnpm 表記で統一する
 - `engines.node >= 22` / `packageManager: pnpm@11.5.2` は本チケットのスコープ外(現状維持)
+
+## 完了レポート (2026-07-18)
+
+### 実装
+
+- `package.json` の direct dependencies 23 件を、着手時の lockfile / install 実体と同じ exact version に固定した。`latest`、caret、tilde は残していない。
+- `docs/dependency-policy.md` を追加し、direct dependency の exact pin、manifest と lockfile の同時更新、明示バージョンによる 1 package / family 単位の PR、bulk `pnpm up --latest` 禁止、四半期レビューを運用契約にした。
+- `three` と `@types/three` は patch 番号ではなく Three.js revision (`0.184`) を必ず一致させ、1 revision ずつ同時更新する。Migration Guide、unit/lint/type/build、4 室 visual QA、water 4 mode、全 4 室の実操作 smoke、before/after 記録を checklist 化した。
+- `scripts/dependency-policy.test.mjs` を通常の `pnpm test` に組み込み、全 direct dependency の exact semver と Three.js runtime/types revision の一致を継続検証する。
+
+### lockfile 受け入れ基準の訂正
+
+元の「pin 置換後も `pnpm-lock.yaml` に差分が出ない」という記述は、pnpm lockfile が importer の manifest specifier も記録するため成立しない。`latest` / `^` を exact version に変えれば、解決済み package が同じでも対応する `specifier:` は必ず更新される。
+
+本件では意図を「実行環境の解決バージョンが 1 つも動かない」と解釈し、次の厳密な基準で検証した。
+
+- lockfile の 46 増減行 (23 組) はすべて importer の `specifier:`。package snapshot、integrity、peer resolution などの差分は 0。
+- `version:` 23 行を着手前の `HEAD:pnpm-lock.yaml` と比較し、全行一致。
+- `pnpm list --depth 0 --json` の 23 direct package version が exact declaration と全件一致。
+- `pnpm install --frozen-lockfile` は pnpm 11.5.2 で `Already up to date`。download / package move / resolution change はなかった。
+
+### 検証
+
+- `pnpm test`: 10 files / 31 tests pass (dependency policy 2 contracts を含む)
+- `pnpm lint` / `pnpm typecheck` / `pnpm build`: pass
+- `git diff --check`: pass
+- `pnpm qa:visual`: desktop/mobile 合計 7 capture、console error 0、mobile horizontal overflow 0、scene/HUD viewport overlap 0
+- production preview の `/ShaderDemoRoom/` は HTTP 200、title 一致。QA 後に preview listener を停止し、port 4173 が閉じたことを確認した。
+- 独立 reviewer と test verifier はともに P0–P3 findings なし。後者は双方の lockfile から `specifier:` 行だけを除いた全文が同一であることも確認し、resolved graph 無変更を独立に再検証した。
