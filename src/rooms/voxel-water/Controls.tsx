@@ -6,7 +6,11 @@ import {
   SegmentedControl,
   SliderControl,
 } from '../../shared/ui/ControlPrimitives';
-import { voxelWaterCalmPreset, voxelWaterStormPreset } from './state';
+import {
+  voxelWaterCalmPreset,
+  voxelWaterDomains,
+  voxelWaterStormPreset,
+} from './state';
 
 export default function VoxelWaterControls({
   settings,
@@ -43,27 +47,21 @@ export default function VoxelWaterControls({
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.rain')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.rain}
           value={settings.rain}
           onChange={(rain) => onPatch({ rain })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.cloudCover')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.cloudCover}
           value={settings.cloudCover}
           onChange={(cloudCover) => onPatch({ cloudCover })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.clarity')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.clarity}
           value={settings.clarity}
           onChange={(clarity) => onPatch({ clarity })}
         />
@@ -73,45 +71,35 @@ export default function VoxelWaterControls({
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.wind')}
-          min={0.2}
-          max={3}
-          step={0.01}
+          {...voxelWaterDomains.wind}
           value={settings.wind}
           onChange={(wind) => onPatch({ wind })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.waveHeight')}
-          min={0.1}
-          max={1.6}
-          step={0.01}
+          {...voxelWaterDomains.waveHeight}
           value={settings.waveHeight}
           onChange={(waveHeight) => onPatch({ waveHeight })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.swell')}
-          min={0}
-          max={1.2}
-          step={0.01}
+          {...voxelWaterDomains.swell}
           value={settings.swell}
           onChange={(swell) => onPatch({ swell })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.chop')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.chop}
           value={settings.chop}
           onChange={(chop) => onPatch({ chop })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.toonSteps')}
-          min={2}
-          max={9}
-          step={1}
+          {...voxelWaterDomains.toonSteps}
           value={settings.toonSteps}
           onChange={(toonSteps) => onPatch({ toonSteps })}
         />
@@ -121,18 +109,14 @@ export default function VoxelWaterControls({
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.foam')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.foam}
           value={settings.foam}
           onChange={(foam) => onPatch({ foam })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.surfaceDetail')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.surfaceDetail}
           value={settings.surfaceDetail}
           onChange={(surfaceDetail) => onPatch({ surfaceDetail })}
         />
@@ -142,9 +126,7 @@ export default function VoxelWaterControls({
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.currentDirection')}
-          min={0}
-          max={360}
-          step={1}
+          {...voxelWaterDomains.currentDirection}
           unit={t('app.units.degrees')}
           value={settings.currentDirection}
           onChange={(currentDirection) => onPatch({ currentDirection })}
@@ -152,9 +134,7 @@ export default function VoxelWaterControls({
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.currentStrength')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.currentStrength}
           value={settings.currentStrength}
           onChange={(currentStrength) => onPatch({ currentStrength })}
         />
@@ -164,27 +144,21 @@ export default function VoxelWaterControls({
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.skyTime')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.skyTime}
           value={settings.skyTime}
           onChange={(skyTime) => onPatch({ skyTime })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.colorTemperature')}
-          min={-1}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.colorTemperature}
           value={settings.colorTemperature}
           onChange={(colorTemperature) => onPatch({ colorTemperature })}
         />
         <SliderControl
           locale={locale}
           label={t('rooms.voxelWater.controls.voxelColorVariance')}
-          min={0}
-          max={1}
-          step={0.01}
+          {...voxelWaterDomains.voxelColorVariance}
           value={settings.voxelColorVariance}
           onChange={(voxelColorVariance) => onPatch({ voxelColorVariance })}
         />

@@ -1,5 +1,28 @@
 import type { DeepReadonly, VoxelWaterSettings } from '../types';
 
+type VoxelWaterNumericSetting = Exclude<keyof VoxelWaterSettings, 'weather'>;
+
+export const voxelWaterDomains = {
+  wind: { min: 0.2, max: 3, step: 0.01 },
+  rain: { min: 0, max: 1, step: 0.01 },
+  waveHeight: { min: 0.1, max: 1.6, step: 0.01 },
+  toonSteps: { min: 2, max: 9, step: 1 },
+  cloudCover: { min: 0, max: 1, step: 0.01 },
+  swell: { min: 0, max: 1.2, step: 0.01 },
+  chop: { min: 0, max: 1, step: 0.01 },
+  foam: { min: 0, max: 1, step: 0.01 },
+  clarity: { min: 0, max: 1, step: 0.01 },
+  surfaceDetail: { min: 0, max: 1, step: 0.01 },
+  currentDirection: { min: 0, max: 360, step: 1 },
+  currentStrength: { min: 0, max: 1, step: 0.01 },
+  skyTime: { min: 0, max: 1, step: 0.01 },
+  colorTemperature: { min: -1, max: 1, step: 0.01 },
+  voxelColorVariance: { min: 0, max: 1, step: 0.01 },
+} as const satisfies Record<
+  VoxelWaterNumericSetting,
+  { readonly min: number; readonly max: number; readonly step: number }
+>;
+
 export const voxelWaterDefaults: DeepReadonly<VoxelWaterSettings> = {
   weather: 'clear',
   wind: 0.82,

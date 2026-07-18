@@ -196,6 +196,7 @@ let stageProfileMetrics = [];
 let hasHorizontalOverflow = false;
 let hasStageHudOverlap = false;
 let i18nIntegrity = null;
+let urlStateIntegrity = null;
 
 async function updateStageHudOverlap() {
   const overlapsViewport = await page.evaluate(() => {
@@ -213,6 +214,131 @@ async function updateStageHudOverlap() {
   });
 
   hasStageHudOverlap = hasStageHudOverlap || overlapsViewport;
+}
+
+async function assertUrlStateContract(urlPage) {
+  const setRangeValue = async (locator, value) => {
+    await locator.waitFor({ state: 'attached' });
+    await locator.evaluate((element, nextValue) => {
+      if (!(element instanceof HTMLInputElement) || element.type !== 'range') {
+        throw new Error('URL state QA target is not a range input.');
+      }
+      const valueSetter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value',
+      )?.set;
+      if (!valueSetter) throw new Error('Range input has no native value setter.');
+      valueSetter.call(element, nextValue);
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    }, value);
+  };
+
+  await urlPage.goto(`${baseUrl}/#/room/glass-optics`, { waitUntil: 'domcontentloaded' });
+  await urlPage.locator('.room-link[href$="#/room/voxel-water"]').click();
+  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water');
+
+  const defaultUrl = urlPage.url();
+  const historyLengthBeforeDrag = await urlPage.evaluate(() => history.length);
+  const waveHeight = urlPage.locator(
+    'input[type="range"][min="0.1"][max="1.6"][step="0.01"]',
+  );
+  await setRangeValue(waveHeight, '1.2');
+  await setRangeValue(waveHeight, '1.3');
+  await setRangeValue(waveHeight, '1.4');
+  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water?v=1&waveHeight=1.4');
+
+  const sharedUrl = urlPage.url();
+  const historyLengthAfterDrag = await urlPage.evaluate(() => history.length);
+  if (historyLengthAfterDrag !== historyLengthBeforeDrag) {
+    throw new Error(
+      `URL state drag added history entries: ${historyLengthBeforeDrag} -> ${historyLengthAfterDrag}.`,
+    );
+  }
+
+  const sharedPage = await browser.newPage({
+    viewport: { width: 1280, height: 800 },
+    deviceScaleFactor: 1,
+  });
+  sharedPage.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  sharedPage.on('pageerror', (error) => consoleErrors.push(error.message));
+  await sharedPage.goto(sharedUrl, { waitUntil: 'domcontentloaded' });
+  const sharedWaveHeight = sharedPage.locator(
+    'input[type="range"][min="0.1"][max="1.6"][step="0.01"]',
+  );
+  await sharedWaveHeight.waitFor({ state: 'attached' });
+  if (await sharedWaveHeight.inputValue() !== '1.4') {
+    throw new Error('Shared URL did not hydrate waveHeight=1.4 in a separate tab.');
+  }
+  await sharedPage.close();
+
+  await urlPage.goBack({ waitUntil: 'domcontentloaded' });
+  await urlPage.waitForURL((url) => url.hash === '#/room/glass-optics');
+  await urlPage.goForward({ waitUntil: 'domcontentloaded' });
+  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water?v=1&waveHeight=1.4');
+  await waveHeight.waitFor({ state: 'attached' });
+  if (await waveHeight.inputValue() !== '1.4') {
+    throw new Error('Forward navigation did not restore URL-backed waveHeight state.');
+  }
+
+  await setRangeValue(waveHeight, '0.48');
+  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water');
+  if (urlPage.url() !== defaultUrl) {
+    throw new Error(`Default settings did not restore the query-free URL: ${urlPage.url()}.`);
+  }
+
+  await urlPage.goto(
+    `${baseUrl}/#/room/voxel-water?v=1&unknown=ignored&waveHeight=999&weather=storm`,
+    { waitUntil: 'domcontentloaded' },
+  );
+  await waveHeight.waitFor({ state: 'attached' });
+  await urlPage.getByTestId('voxel-water-weather-storm').waitFor();
+  if (await waveHeight.inputValue() !== '0.48') {
+    throw new Error('Out-of-range URL state did not fall back to the field default.');
+  }
+  if (!(await urlPage.getByTestId('voxel-water-weather-storm').evaluate(
+    (element) => element.classList.contains('active'),
+  ))) {
+    throw new Error('A valid URL field was not retained beside an invalid field.');
+  }
+
+  const embeddedBridgeTimeout = Math.round(30000 * settleScale);
+  await urlPage.goto(
+    `${baseUrl}/#/room/ninth-tide-archive?unknown=preserved`,
+    { waitUntil: 'domcontentloaded' },
+  );
+  const embeddedFrame = urlPage.locator(
+    'iframe.embedded-exhibit-frame[data-bridge-state="ready"]',
+  );
+  await embeddedFrame.waitFor({ timeout: embeddedBridgeTimeout });
+  const firstInstanceId = await embeddedFrame.getAttribute('data-bridge-instance-id');
+  if (!firstInstanceId) throw new Error('Embedded URL state QA has no bridge instance id.');
+  await urlPage.getByRole('button', { name: 'Reload exhibit' }).click();
+  await urlPage.waitForFunction((previousInstanceId) => {
+    const frame = document.querySelector('iframe.embedded-exhibit-frame');
+    return frame?.dataset.bridgeState === 'ready'
+      && frame.dataset.bridgeInstanceId !== previousInstanceId;
+  }, firstInstanceId, { timeout: embeddedBridgeTimeout });
+  const reloadedInstanceId = await embeddedFrame.getAttribute('data-bridge-instance-id');
+  await urlPage.waitForTimeout(400);
+  if (urlPage.url() !== `${baseUrl}/#/room/ninth-tide-archive?unknown=preserved`) {
+    throw new Error(`Embedded reload rewrote transient URL state: ${urlPage.url()}.`);
+  }
+  if (await embeddedFrame.getAttribute('data-bridge-instance-id') !== reloadedInstanceId) {
+    throw new Error('Embedded reload remounted twice after transient URL hydration.');
+  }
+
+  return {
+    defaultUrl,
+    sharedUrl,
+    sharedTabHydrated: true,
+    replacePreservedHistoryLength: historyLengthAfterDrag,
+    backForwardHydrated: true,
+    invalidFieldUsedDefault: true,
+    unknownFieldIgnored: true,
+    embeddedTransientQueryPreserved: true,
+  };
 }
 
 for (const room of desktopRooms) {
@@ -253,6 +379,19 @@ for (const room of mobileRooms) {
 }
 
 await page.setViewportSize({ width: 1440, height: 900 });
+const urlStatePage = await browser.newPage({
+  viewport: { width: 1440, height: 900 },
+  deviceScaleFactor: 1,
+});
+urlStatePage.on('console', (message) => {
+  if (message.type() === 'error') consoleErrors.push(message.text());
+});
+urlStatePage.on('pageerror', (error) => consoleErrors.push(error.message));
+try {
+  urlStateIntegrity = await assertUrlStateContract(urlStatePage);
+} finally {
+  await urlStatePage.close();
+}
 await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'domcontentloaded' });
 await page.locator('.language-select select').selectOption('zh-CN');
 await page.getByTestId('voxel-water-preset-storm').waitFor();
@@ -347,6 +486,7 @@ console.log(
       stageProfileMetricsPath,
       stageProfileMetrics,
       i18nIntegrity,
+      urlStateIntegrity,
       consoleErrors: 0,
       mobileHorizontalOverflow: false,
       sceneHudViewportOverlap: false,

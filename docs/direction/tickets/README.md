@@ -24,7 +24,7 @@
 | [T-DS-01](T-DS-01-token-governance.md) | デザイントークン統治 | P2 | なし(T-SH-04と共有定数の調整) |
 | [T-I18N-01](T-I18N-01-i18n-integrity.md) | i18nシーム完全化 | P2 | T-QA-01(セレクタdata-testid化) |
 | [T-DEP-01](T-DEP-01-dependency-pinning.md) | 依存ピン戦略("latest"廃止) | P2 | なし |
-| [T-SH-05](T-SH-05-url-state-serialization.md) | 設定のURLシリアライズ | P3 | T-SH-02(e)と併走可 |
+| [T-SH-05](T-SH-05-url-state-serialization.md) | 設定のURLシリアライズ | P3 | T-SH-02(完了済み) |
 
 ## 推奨着手順
 
