@@ -1,5 +1,5 @@
-import type { EmbeddedExhibitSettings } from '../types';
+import type { DeepReadonly, EmbeddedExhibitSettings } from '../types';
 
-export const animeLiquidOrbDefaults: EmbeddedExhibitSettings = {
+export const animeLiquidOrbDefaults: DeepReadonly<EmbeddedExhibitSettings> = {
   reloadToken: 0,
 };

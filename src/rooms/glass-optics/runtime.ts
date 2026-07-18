@@ -16,7 +16,6 @@ import {
   MeshStandardMaterial,
   PerspectiveCamera,
   PlaneGeometry,
-  PMREMGenerator,
   PointLight,
   Scene,
   ShaderMaterial,
@@ -27,6 +26,7 @@ import {
   type Object3D,
 } from 'three';
 import type {
+  DeepReadonly,
   GlassOpticsSettings,
   RoomFrame,
   RoomRuntime,
@@ -64,7 +64,7 @@ export function createTubeGeometry(points: Vector3[], radius: number) {
   return new TubeGeometry(curve, Math.max(16, points.length * 12), radius, 8, false);
 }
 
-export function createGlassMaterial(settings: GlassOpticsSettings) {
+export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>) {
   const material = new MeshPhysicalMaterial({
     color: 0xe8fdff,
     roughness: settings.roughness,
@@ -88,7 +88,9 @@ export function createGlassMaterial(settings: GlassOpticsSettings) {
   return material;
 }
 
-export function calculateGlassLightPath(settings: GlassOpticsSettings) {
+export function calculateGlassLightPath(
+  settings: DeepReadonly<GlassOpticsSettings>,
+) {
   const lightPosition = new Vector3(settings.lightX, settings.lightY, settings.lightZ);
   const incomingEnd = new Vector3(0, 1.18, 0);
   const direction = incomingEnd.clone().sub(lightPosition).normalize();
@@ -125,10 +127,16 @@ function updateBeamGeometry(beam: BeamTube, points: Vector3[], coreRadius: numbe
 }
 
 export function createRoomRuntime(
-  { renderer }: RoomRuntimeContext,
-  initialSettings: GlassOpticsSettings,
+  {
+    renderer,
+    createPmremGenerator,
+    motionScale: initialMotionScale,
+  }: RoomRuntimeContext,
+  initialSettings: DeepReadonly<GlassOpticsSettings>,
 ): RoomRuntime<GlassOpticsSettings> {
-  let settings = initialSettings;
+  let settings: DeepReadonly<GlassOpticsSettings> = initialSettings;
+  let motionScale = initialMotionScale;
+  let motionElapsed = 0;
   const scene = new Scene();
   const camera = new PerspectiveCamera(42, 1, 0.1, 100);
   const root = new Group();
@@ -143,7 +151,7 @@ export function createRoomRuntime(
   camera.lookAt(0, 1.05, 0);
   scene.add(root);
 
-  const pmrem = new PMREMGenerator(renderer);
+  const pmrem = createPmremGenerator();
   const environment = pmrem.fromScene(new RoomEnvironment(), 0.04);
   scene.environment = environment.texture;
 
@@ -383,20 +391,24 @@ export function createRoomRuntime(
       settings = nextSettings;
       updateMaterial();
     },
+    setMotionScale(scale) {
+      motionScale = scale;
+    },
     resize({ width, height }: RoomSize) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     },
-    render({ elapsed, delta }: RoomFrame) {
-      causticsMaterial.uniforms.uTime.value = elapsed;
-      referenceMaterial.uniforms.uTime.value = elapsed;
-      sourceMaterial.color.setHSL(0.1, 0.95, 0.64 + Math.sin(elapsed * 2.4) * 0.08);
+    render({ delta }: RoomFrame) {
+      motionElapsed += delta * motionScale;
+      causticsMaterial.uniforms.uTime.value = motionElapsed;
+      referenceMaterial.uniforms.uTime.value = motionElapsed;
+      sourceMaterial.color.setHSL(0.1, 0.95, 0.64 + Math.sin(motionElapsed * 2.4) * 0.08);
       sourceHaloMaterial.color.copy(sourceMaterial.color);
       if (settings.autoRotate) {
-        glassGroup.rotation.y += delta * 0.34;
-        glassGroup.rotation.x = Math.sin(elapsed * 0.42) * 0.08;
+        glassGroup.rotation.y += delta * motionScale * 0.34;
+        glassGroup.rotation.x = Math.sin(motionElapsed * 0.42) * 0.08;
       }
-      root.rotation.y = Math.sin(elapsed * 0.05) * 0.04;
+      root.rotation.y = Math.sin(motionElapsed * 0.05) * 0.04;
       renderer.render(scene, camera);
     },
     dispose() {
@@ -420,7 +432,6 @@ export function createRoomRuntime(
       ].forEach((material: Material) => material.dispose());
       environment.texture.dispose();
       pmrem.dispose();
-      renderer.info.reset();
     },
   };
 }

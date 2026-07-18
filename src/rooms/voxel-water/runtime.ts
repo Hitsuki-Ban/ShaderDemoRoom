@@ -30,6 +30,7 @@ import {
   type Object3D,
 } from 'three';
 import type {
+  DeepReadonly,
   RoomFrame,
   RoomRuntime,
   RoomRuntimeContext,
@@ -194,10 +195,12 @@ function disposeObject(object: Object3D) {
 }
 
 export function createRoomRuntime(
-  { renderer }: RoomRuntimeContext,
-  initialSettings: VoxelWaterSettings,
+  { renderer, motionScale: initialMotionScale }: RoomRuntimeContext,
+  initialSettings: DeepReadonly<VoxelWaterSettings>,
 ): RoomRuntime<VoxelWaterSettings> {
-  let settings = initialSettings;
+  let settings: DeepReadonly<VoxelWaterSettings> = initialSettings;
+  let motionScale = initialMotionScale;
+  let motionElapsed = 0;
   const scene = new Scene();
   const camera = new PerspectiveCamera(45, 1, 0.3, 72);
   const root = new Group();
@@ -572,24 +575,28 @@ export function createRoomRuntime(
       colorRefreshRequested = true;
       updateUniforms();
     },
+    setMotionScale(scale) {
+      motionScale = scale;
+    },
     resize({ width, height }: RoomSize) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     },
     render({ elapsed, delta }: RoomFrame) {
-      const animatedSkyTime = Math.min(1, Math.max(0, settings.skyTime + Math.sin(elapsed * 0.035) * 0.025));
+      motionElapsed += delta * motionScale;
+      const animatedSkyTime = Math.min(1, Math.max(0, settings.skyTime + Math.sin(motionElapsed * 0.035) * 0.025));
       const weatherLook = WEATHER_LOOKS[settings.weather];
-      const fogBreath = Math.sin(elapsed * 0.18 + weatherLook.rainCurtain * 2.0) * weatherLook.rainCurtain * 0.035;
+      const fogBreath = Math.sin(motionElapsed * 0.18 + weatherLook.rainCurtain * 2.0) * weatherLook.rainCurtain * 0.035;
       const lightningPulse = weatherLook.lightningIntensity * Math.pow(
-        Math.max(0, Math.sin(elapsed * 0.72 + Math.sin(elapsed * 0.19) * 3.2)),
+        Math.max(0, Math.sin(motionElapsed * 0.72 + Math.sin(motionElapsed * 0.19) * 3.2)),
         10,
       );
-      waterMaterial.uniforms.uTime.value = elapsed;
+      waterMaterial.uniforms.uTime.value = motionElapsed;
       waterMaterial.uniforms.uSkyTime.value = animatedSkyTime;
       waterMaterial.uniforms.uWeatherFogDensity.value = Math.max(0.12, weatherLook.fogDensity + fogBreath);
       waterMaterial.uniforms.uRainCurtain.value = Math.max(settings.rain * 0.42, weatherLook.rainCurtain);
       waterMaterial.uniforms.uLightningPulse.value = lightningPulse;
-      skyMaterial.uniforms.uTime.value = elapsed;
+      skyMaterial.uniforms.uTime.value = motionElapsed;
       skyMaterial.uniforms.uSkyTime.value = animatedSkyTime;
       skyMaterial.uniforms.uLightningPulse.value = lightningPulse;
       cameraRelativeOceanOffset.set(
@@ -612,20 +619,20 @@ export function createRoomRuntime(
         colorRefreshRequested || columnFrame === 0 || elapsed - lastColumnUpdateElapsed >= 1 / COLUMN_GEOMETRY_FPS;
       if (shouldUpdateColumns) {
         const updateColumnColors = colorRefreshRequested || columnFrame % COLUMN_COLOR_REFRESH_INTERVAL === 0;
-        updateColumns(elapsed, updateColumnColors);
+        updateColumns(motionElapsed, updateColumnColors);
         lastColumnUpdateElapsed = elapsed;
         colorRefreshRequested = false;
         columnFrame += 1;
       }
-      rain.position.y -= delta * (5 + settings.wind * 1.8);
+      rain.position.y -= delta * motionScale * (5 + settings.wind * 1.8);
       if (rain.position.y < -4) {
         rain.position.y = 1.5;
       }
-      spray.rotation.y += delta * (0.18 + settings.wind * 0.04);
-      spray.position.y = Math.sin(elapsed * 0.45) * 0.05;
-      cloudDeck.position.x = Math.sin(elapsed * 0.08) * 0.6;
-      gridOverlay.position.y = Math.sin(elapsed * 0.28) * 0.012;
-      root.rotation.y = Math.sin(elapsed * PRESENTATION_DRIFT_SPEED) * PRESENTATION_DRIFT_AMPLITUDE;
+      spray.rotation.y += delta * motionScale * (0.18 + settings.wind * 0.04);
+      spray.position.y = Math.sin(motionElapsed * 0.45) * 0.05;
+      cloudDeck.position.x = Math.sin(motionElapsed * 0.08) * 0.6;
+      gridOverlay.position.y = Math.sin(motionElapsed * 0.28) * 0.012;
+      root.rotation.y = Math.sin(motionElapsed * PRESENTATION_DRIFT_SPEED) * PRESENTATION_DRIFT_AMPLITUDE;
       renderer.render(scene, camera);
     },
     dispose() {
@@ -637,7 +644,6 @@ export function createRoomRuntime(
       rainGeometry.dispose();
       sprayGeometry.dispose();
       gridLineGeometry.dispose();
-      renderer.info.reset();
     },
   };
 }

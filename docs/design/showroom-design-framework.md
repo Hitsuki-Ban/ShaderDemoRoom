@@ -31,14 +31,16 @@ Each room owns:
 - `Controls.tsx`: controller UI for the right inspector.
 - optional shader files and room-local assets.
 
-Each runtime must implement:
+Each runtime must implement RoomRuntime v2:
 
-- `updateSettings(settings)`.
+- `updateSettings(readonlySettings)`.
+- `setMotionScale(scale)`.
 - `resize(size)`.
 - `render(frame)`.
+- optional `pause()` / `resume()` hooks.
 - `dispose()`.
 
-This keeps future rooms composable without turning the app shell into a shader-specific monolith.
+The shell owns renderer state restoration, animation scheduling, reduced-motion propagation, and telemetry. Rooms receive a restricted rendering facade and must not access `renderer.info`. See [Adding a room](./adding-a-room.md) for the complete contract and QA checklist.
 
 ## Visual System
 

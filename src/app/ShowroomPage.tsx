@@ -2,10 +2,13 @@ import { Suspense, useState } from 'react';
 import { Code, Languages, RadioTower } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { getRoomById, roomRegistry } from '../rooms/registry';
+import {
+  cloneRoomSettings,
+  createInitialSettings,
+} from '../rooms/settings';
 import type {
   AnyRoomSettings,
   EmbeddedExhibitSettings,
-  RoomId,
 } from '../rooms/types';
 import { EmbeddedExhibitFrame } from '../shared/embedded/EmbeddedExhibitFrame';
 import { useI18n } from '../shared/i18n/useI18n';
@@ -13,20 +16,17 @@ import { ShaderCanvas } from '../shared/three/ShaderCanvas';
 import { Button } from '../shared/ui/Button';
 import { RoomRail } from './RoomRail';
 
-type SettingsByRoom = Record<RoomId, AnyRoomSettings>;
-
-function createInitialSettings(): SettingsByRoom {
-  return roomRegistry.reduce((settings, room) => {
-    settings[room.id] = room.defaultPreset;
-    return settings;
-  }, {} as SettingsByRoom);
-}
-
 export function ShowroomPage() {
   const { roomId } = useParams();
   const { locale, setLocale, t } = useI18n();
   const [settingsByRoom, setSettingsByRoom] = useState(createInitialSettings);
-  const [stats, setStats] = useState({ fps: 0, drawCalls: 0 });
+  const [stats, setStats] = useState({
+    fps: 0,
+    frameTimeMs: 0,
+    drawCalls: 0,
+    drawCallsMax: 0,
+    trianglesAvg: 0,
+  });
 
   const activeRoom = getRoomById(roomId);
 
@@ -58,7 +58,7 @@ export function ShowroomPage() {
   const resetSettings = () => {
     setSettingsByRoom((current) => ({
       ...current,
-      [activeRoom.id]: activeRoom.defaultPreset,
+      [activeRoom.id]: cloneRoomSettings(activeRoom.defaultPreset),
     }));
   };
 

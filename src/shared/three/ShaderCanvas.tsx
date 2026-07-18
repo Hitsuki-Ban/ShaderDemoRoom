@@ -1,12 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Timer, type WebGLRenderer } from 'three';
+import type { WebGLRenderer } from 'three';
 import type {
   AnyRoomSettings,
   RoomRuntime,
   RoomStats,
   ShaderRoomDefinition,
 } from '../../rooms/types';
-import { getFrameTiming, getRenderPixelRatio } from './renderPolicy';
+import { useMotionScale } from './motionPreference';
+import { getRenderPixelRatio } from './renderPolicy';
+import { RoomAnimationLoop } from './roomAnimationLoop';
+import {
+  createRuntimeSession,
+  disposeRuntimeSession,
+  type RuntimeSession,
+} from './runtimeSession';
 import { useRendererHost } from './useRendererHost';
 
 interface ShaderCanvasProps {
@@ -16,6 +23,7 @@ interface ShaderCanvasProps {
 }
 
 interface RuntimeLoadState {
+  error: Error | null;
   ready: boolean;
   room: ShaderRoomDefinition<AnyRoomSettings> | null;
 }
@@ -43,19 +51,25 @@ function resizeStage(
 
 export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
   const { canvas, renderer } = useRendererHost();
+  const motionScale = useMotionScale();
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
-  const runtimeRef = useRef<RoomRuntime | null>(null);
+  const sessionRef = useRef<RuntimeSession | null>(null);
   const settingsRef = useRef(settings);
+  const motionScaleRef = useRef(motionScale);
   const onStatsRef = useRef(onStats);
   const [loadState, setLoadState] = useState<RuntimeLoadState>({
+    error: null,
     ready: false,
     room,
   });
 
   if (loadState.room !== room) {
-    setLoadState({ ready: false, room });
+    setLoadState({ error: null, ready: false, room });
   }
-  const loading = room !== null && !loadState.ready;
+  if (loadState.room === room && loadState.error) {
+    throw loadState.error;
+  }
+  const loading = room !== null && !(loadState.room === room && loadState.ready);
 
   useLayoutEffect(() => {
     const canvasHost = canvasHostRef.current;
@@ -84,35 +98,33 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
   useEffect(() => {
     settingsRef.current = settings;
     if (settings) {
-      runtimeRef.current?.updateSettings(settings);
+      sessionRef.current?.runtime.updateSettings(settings);
     }
   }, [settings]);
+
+  useEffect(() => {
+    motionScaleRef.current = motionScale;
+    sessionRef.current?.runtime.setMotionScale(motionScale);
+  }, [motionScale]);
 
   useEffect(() => {
     onStatsRef.current = onStats;
   }, [onStats]);
 
   useEffect(() => {
-    if (!room) {
-      return undefined;
-    }
-
-    const resize = () => resizeStage(canvas, renderer, runtimeRef.current, room.id);
-    resize();
-
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas.parentElement ?? canvas);
-    return () => observer.disconnect();
-  }, [canvas, renderer, room]);
-
-  useEffect(() => {
     let cancelled = false;
+    let activeSession: RuntimeSession | null = null;
 
-    runtimeRef.current?.dispose();
-    runtimeRef.current = null;
+    const loop = new RoomAnimationLoop({
+      renderer,
+      getRuntime: () => sessionRef.current?.runtime ?? null,
+      onStats: (stats) => onStatsRef.current(stats),
+    });
 
     if (!room) {
-      return undefined;
+      renderer.setAnimationLoop(null);
+      renderer.info.reset();
+      return () => loop.dispose();
     }
 
     const initialSettings = settingsRef.current;
@@ -120,65 +132,83 @@ export function ShaderCanvas({ room, settings, onStats }: ShaderCanvasProps) {
       throw new Error(`Settings are required for shader room ${room.id}.`);
     }
 
-    void room.loadScene().then((module) => {
-      if (cancelled) {
-        return;
-      }
+    const resize = () =>
+      resizeStage(canvas, renderer, sessionRef.current?.runtime ?? null, room.id);
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas.parentElement ?? canvas);
 
-      const runtime = module.createRoomRuntime(
-        { canvas, renderer, onStats: (stats) => onStatsRef.current(stats) },
-        settingsRef.current ?? initialSettings,
-      );
-      runtimeRef.current = runtime;
-      resizeStage(canvas, renderer, runtime, room.id);
-      setLoadState((current) =>
-        current.room === room ? { ready: true, room } : current,
-      );
-    });
+    const updateVisibility = () => loop.setDocumentHidden(document.hidden);
+    document.addEventListener('visibilitychange', updateVisibility);
+    updateVisibility();
+
+    void room
+      .loadScene()
+      .then((module) => {
+        if (cancelled) {
+          return;
+        }
+
+        const session = createRuntimeSession(
+          renderer,
+          canvas,
+          module,
+          settingsRef.current ?? initialSettings,
+          motionScaleRef.current,
+        );
+        if (cancelled) {
+          disposeRuntimeSession(renderer, session);
+          return;
+        }
+
+        activeSession = session;
+        sessionRef.current = session;
+        try {
+          resizeStage(canvas, renderer, session.runtime, room.id);
+          loop.prepareRuntime(session.runtime);
+          loop.activate();
+          setLoadState((current) =>
+            current.room === room
+              ? { error: null, ready: true, room }
+              : current,
+          );
+        } catch (error) {
+          activeSession = null;
+          sessionRef.current = null;
+          disposeRuntimeSession(renderer, session);
+          throw error;
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setLoadState((current) =>
+            current.room === room
+              ? {
+                  error: error instanceof Error ? error : new Error(String(error)),
+                  ready: false,
+                  room,
+                }
+              : current,
+          );
+        }
+      });
 
     return () => {
       cancelled = true;
-      runtimeRef.current?.dispose();
-      runtimeRef.current = null;
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', updateVisibility);
+      try {
+        loop.dispose();
+      } finally {
+        if (activeSession) {
+          if (sessionRef.current === activeSession) {
+            sessionRef.current = null;
+          }
+          disposeRuntimeSession(renderer, activeSession);
+        }
+      }
     };
   }, [canvas, renderer, room]);
-
-  useEffect(() => {
-    if (!room) {
-      return undefined;
-    }
-
-    const timer = new Timer();
-    timer.connect(document);
-    let frames = 0;
-    let fpsElapsed = 0;
-
-    const tick = (timestamp?: number) => {
-      timer.update(timestamp);
-      const rawDelta = timer.getDelta();
-      const { simulationDelta: delta, statsDelta } = getFrameTiming(rawDelta);
-      const elapsed = timer.getElapsed();
-      runtimeRef.current?.render({ elapsed, delta });
-
-      frames += 1;
-      fpsElapsed += statsDelta;
-      if (fpsElapsed >= 0.5) {
-        onStatsRef.current({
-          fps: frames / fpsElapsed,
-          drawCalls: renderer.info.render.calls,
-        });
-        frames = 0;
-        fpsElapsed = 0;
-      }
-
-    };
-
-    renderer.setAnimationLoop(tick);
-    return () => {
-      renderer.setAnimationLoop(null);
-      timer.dispose();
-    };
-  }, [renderer, room]);
 
   return (
     <div

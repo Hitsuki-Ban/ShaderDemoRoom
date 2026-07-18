@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   Color,
+  Camera,
   InstancedMesh,
   LineSegments,
   Mesh,
@@ -9,7 +10,6 @@ import {
   Scene,
   ShaderMaterial,
   type Object3D,
-  type WebGLRenderer,
 } from 'three';
 import type { RoomRuntimeContext, VoxelWaterSettings } from '../types';
 import fragmentShader from './water.frag.glsl?raw';
@@ -21,16 +21,19 @@ function createRuntimeHarness(settings: VoxelWaterSettings = voxelWaterDefaults)
   let scene: Scene | undefined;
   let camera: PerspectiveCamera | undefined;
   const renderer = {
-    render(nextScene: Scene, nextCamera: PerspectiveCamera) {
+    render(nextScene: Object3D, nextCamera: Camera) {
+      if (!(nextScene instanceof Scene) || !(nextCamera instanceof PerspectiveCamera)) {
+        throw new Error('Voxel water runtime rendered an unexpected scene or camera type.');
+      }
       scene = nextScene;
       camera = nextCamera;
     },
-    info: { reset: vi.fn() },
-  } as unknown as WebGLRenderer;
+  };
   const context: RoomRuntimeContext = {
     canvas: document.createElement('canvas'),
     renderer,
-    onStats: vi.fn(),
+    createPmremGenerator: vi.fn(() => null as never),
+    motionScale: 1,
   };
   const runtime = createRoomRuntime(context, { ...settings });
   runtime.render({ elapsed: 0, delta: 0 });

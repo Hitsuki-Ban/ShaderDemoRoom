@@ -17,9 +17,15 @@ const viewportWidth = Number(process.env.QA_VIEWPORT_WIDTH ?? 1440);
 const viewportHeight = Number(process.env.QA_VIEWPORT_HEIGHT ?? 900);
 const preset = process.env.QA_PRESET ?? 'default';
 const locale = process.env.QA_LOCALE ?? 'en';
+const reducedMotion = process.env.QA_REDUCED_MOTION ?? 'no-preference';
 
 if (!['en', 'zh-CN'].includes(locale)) {
   throw new Error(`QA_LOCALE must be "en" or "zh-CN"; received "${locale}".`);
+}
+if (!['no-preference', 'reduce'].includes(reducedMotion)) {
+  throw new Error(
+    `QA_REDUCED_MOTION must be "no-preference" or "reduce"; received "${reducedMotion}".`,
+  );
 }
 
 await mkdir(outputDir, { recursive: true });
@@ -28,6 +34,7 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({
   viewport: { width: viewportWidth, height: viewportHeight },
   deviceScaleFactor: 1,
+  reducedMotion,
 });
 
 const consoleErrors = [];
@@ -81,6 +88,7 @@ const result = {
   baseUrl,
   label,
   preset,
+  reducedMotion,
   screenshots: {
     page: fullPagePath,
     canvas: `${outputDir}/${label}-canvas.png`,

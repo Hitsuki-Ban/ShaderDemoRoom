@@ -1,5 +1,5 @@
-import type { EmbeddedExhibitSettings } from '../types';
+import type { DeepReadonly, EmbeddedExhibitSettings } from '../types';
 
-export const ninthTideArchiveDefaults: EmbeddedExhibitSettings = {
+export const ninthTideArchiveDefaults: DeepReadonly<EmbeddedExhibitSettings> = {
   reloadToken: 0,
 };
