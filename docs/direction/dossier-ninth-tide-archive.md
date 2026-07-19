@@ -48,7 +48,7 @@ RAF + `THREE.Timer`、dt clamp 0.05:
 
 単一の `state` オブジェクト + `globals` uniform 辞書を `shaderUniforms()` スプレッドで**全 ShaderMaterial が文字通り同一の uniform 値オブジェクトを共有**(time、low/mid/high/rms/energy/transient、ritual、ignite、shutdown、pulseAge/Strength/Origin/Screen、open、tide、section、sectionLocal、phaseTransition、sonarMode、pixelRatio、resolution、spectrum、パレット5色)。
 
-**オーディオ経路**: `<audio src=./archive.mp3 preload=auto>` → MediaElementSource → `AnalyserNode(fftSize 2048, smoothingTimeConstant 0.82, minDecibels -94, maxDecibels -16)` → GainNode(目標 0.92 × イントロ `smoothstep(0.12,1.75,ceremonyTime)` × エンディング `(1-smoothstep(0.53,0.98,shutdown))`、ミュート時 0)→ destination。
+**オーディオ経路**: 初期 `<audio preload=none>` は `src` を持たない。明示的な音声入場だけが `preload=auto` への切替、`src=./archive.mp3`、`load()` を1回所有し、その後 MediaElementSource → `AnalyserNode(fftSize 2048, smoothingTimeConstant 0.82, minDecibels -94, maxDecibels -16)` → GainNode(目標 0.92 × イントロ `smoothstep(0.12,1.75,ceremonyTime)` × エンディング `(1-smoothstep(0.53,0.98,shutdown))`、ミュート時 0)→ destination。silent と全 preview は source-free のままで、autoplay 拒否後の retry は同じ source に `play()` だけを再実行する。
 
 - バンド: low = `pow(avg 24–190 Hz, 1.14)` / mid = `pow(avg 190–2100, 1.22)` / high = `pow(avg 2100–9200, 1.08)`、rms は時間領域4サンプル毎。ダンピング λ 8.0/7.2/9.0/9.0
 - energy = `clamp(low*0.48 + mid*0.34 + high*0.22 + rms*0.3)`
@@ -65,7 +65,7 @@ RAF + `THREE.Timer`、dt clamp 0.05:
 
 **ショールーム側ラッパー**: `state.ts` は `{ reloadToken: 0 }` のみ export。`Controls.tsx` = `createEmbeddedControls({ namespace 'rooms.ninthTideArchive', standalonePath 'exhibits/ninth-tide-archive/index.html' })` でボタン3つ(Reload → `onPatch({reloadToken+1})` / Open standalone → `window.open` / Reset)。`EmbeddedExhibitFrame` は `<iframe key={room.id}-{reloadToken} src={BASE_URL}exhibits/ninth-tide-archive/index.html?reload=N allow="autoplay; microphone; clipboard-write" allowFullScreen>` を描画。**postMessage 等の親↔iframe プロトコルは一切なし**。リロードは key/query 変更による remount のみ。
 
-**QA/プレビュー経路**: (a) 展示内「静默下潜」→ `enterExperience(false)`: 合成スペクトラム、signal SYNTHETIC、musicTime は `((elapsed/118)*354.504)%354.504` でフリーラン(**118秒で九章一巡 ≈ 3倍速**)。(b) 決定論プレビュー: `?preview=main|opening|ending`(`&section=0..8`)または `window.__NINTH_TIDE_PREVIEW__` / `__NINTH_TIDE_PREVIEW_SECTION__`(main: ritual/ignite/lightLevel=1、archiveOpenTarget 0.76、diveTarget 0.28、section 既定 **4**。opening: ceremonyTime 5.75、ritual 0.73、ignite 0.44、lightLevel 0.72、blackout 0.28。ending: shutdown≥0.68、musicTime 346)。静止画キャプチャ用に `window.__NINTH_TIDE_STEP__ = animate` を公開。
+**QA/プレビュー経路**: (a) 展示内「静默下潜」→ `enterExperience(false)`: 合成スペクトラム、signal SYNTHETIC、musicTime は `((elapsed/118)*354.504)%354.504` でフリーラン(**118秒で九章一巡 ≈ 3倍速**)。(b) 決定論プレビュー: `?preview=main|opening|ending`(`&section=0..8`)または `window.__NINTH_TIDE_PREVIEW__` / `__NINTH_TIDE_PREVIEW_SECTION__`(main: ritual/ignite/lightLevel=1、archiveOpenTarget 0.76、diveTarget 0.28、section 既定 **7 / VIII**。opening: ceremonyTime 5.75、ritual 0.73、ignite 0.44、lightLevel 0.72、blackout 0.28。ending: shutdown≥0.68、musicTime 346)。静止画キャプチャ用に `window.__NINTH_TIDE_STEP__ = animate` を公開。T-NT-10 以後、決定論 QA は opening + 九章 + ending の各ページで `archive.mp3` request が0件であることも逐一検証する。
 
 ---
 
@@ -228,7 +228,7 @@ UI クローム: `--cyan #83eadb` / `--pale #def9f1` / `--ink #010609`、theme-c
 | # | 課題 | 出典 |
 |---|---|---|
 | 1 | 一部ブラウザでストリームが報告 duration に達した後も数フレーム `audio.paused===false` のまま — music クロックから shutdown≥0.995 で決定論的にクローズして回避済み | main.js 〜2176 のコードコメント |
-| 2 | autoplay 遮断は想定済み失敗経路: 入場ボタンが「重试音频」化、「载入音频」ファイルピッカー表示、ヒント文言。audio 'error' で FILE REQUIRED 状態(未能读取 archive.mp3) | main.js(実装) |
+| 2 | autoplay 遮断は明示的失敗経路: gate を再表示し、入場ボタンを「重试音频」化、PLAYBACK BLOCKED と説明文を表示。同じ source への `play()` retry のみを許し、silent へ自動降格しない。audio 'error' は FILE REQUIRED とローカルファイル選択を表示 | main.js / T-NT-10 QA |
 | 3 | 音楽の権利はトラックの生成/使用ライセンスに依存。プロジェクトは音声への追加許諾を与えない | README |
 | 4 | モバイルフォールバック: アーカイブセル 81→45、セルあたり点数 156→72、粒子数削減、ジオメトリ分割削減、pixelRatio 上限 1.15、antialias 無効、bloom 一律 0.42 | README / コード |
 | 5 | prefers-reduced-motion で開幕 4.2 s に短縮、静默モードで儀式クロック2倍速、ゲート/紋章の CSS アニメ無効 | コード |
@@ -247,7 +247,7 @@ UI クローム: `--cyan #83eadb` / `--pale #def9f1` / `--ink #010609`、theme-c
 6. **加算透明の重いオーバードロー**: 約32k シェーダポイント + 大型スプライト(coreHalo 最大約7ワールド単位、nearSnow ポイントサイズ clamp 3.8 × size 8.5)+ フル解像度 bloom + afterimage + 9タップ veil を pixelRatio 1.6 で — 中位 GPU でフィルレート危険。**FPS ベースの動的縮退が存在せず**、ロード時に一度だけ評価される静的 isMobile 分岐のみ(幅 <820px のデスクトップはリロードまで恒久的にモバイルアセット)。
 7. **isMobile 判定はロード時のみ**: 820px 閾値をまたぐリサイズや DPR 変化で品質ティアが再評価されない。
 8. **AfterimagePass damp が shutdown 中最大 0.982(第IX章 0.94)**: 超長寿命トレイル + 加算合成で、ほぼ黒の終幕は露出崩壊頼みで残渣を隠す — 最暗ランプ(deep `#000405`)でのバンディング/ゴーストリスク。ディザリングパスなし。
-9. **ソース管理リスク**: public/ には minify 済み 644 KB バンドルのみ。編集可能ソースは ref/(現在 git status で untracked '??')— **ref/ が commit されなければ public バンドルは修正不能になる**。`archive.mp3`(8.28 MB)が public/ と ref/ に重複しリポジトリ重量が倍増。さらに mp3 は静默 QA 経路でも `preload='auto'` でプリロードされる。
+9. **ソース管理リスク(履歴)**: public/ には minify 済みバンドルと `archive.mp3` があり、正本は ref/ から生成される。音源は public/ と ref/ に重複する。静默/preview の旧 `preload='auto'` 帯域浪費は T-NT-10 で解消済み。
 10. **iframe allow に 'microphone'** — 展示は一切使用しない。不要な権限サーフェス。
 11. **iframe フォーカス依存 + QA フックの不在**: F/R 等のキー操作は iframe フォーカス頼みでショールーム側に案内なし。postMessage チャンネルが皆無(reload 限定制御は設計だが、シェルからのプレビュー強制などの QA フックが不可能。親は load 前の same-origin contentWindow スクリプティングなしに `__NINTH_TIDE_PREVIEW__` を設定できない)。
 12. **静默モードの章周回**: musicTime = `((elapsed/118)*354.504)%354.504` — 音楽の約3倍速で章が循環し、IX→I へ突然ラップ(updateEnding は audioReady 必須のため第IX章の終幕振付は静默モードで一度も発火しない。IX 真珠状態から通常の 2.85 s 遷移で I 圧力球へ跳ぶ)。
@@ -308,7 +308,7 @@ UI クローム: `--cyan #83eadb` / `--pale #def9f1` / `--ink #010609`、theme-c
 - **[P3] iframe `allow` の 'microphone' 除去** → 未使用の権限サーフェス削減(`EmbeddedExhibitFrame.tsx`)。
 - **[P3] 床シェーダの `if (radius > 16.0) discard` デッドブランチ削除**、triggerPulse の冗長な `sonarShell.visible` 設定整理。
 - **[P3] 毎フレームの `new THREE.Vector3`(updateCamera)と CSS カスタムプロパティ2件書き込み(updateTide)** → 再利用ベクトル化、変化時のみ書き込み。
-- **[P3] 静默 QA 経路でも mp3(8.28 MB)が `preload='auto'` でロードされる** → 遅延ロード or preload 属性の見直し。
+- **[P3][2026-07-20 解消 / T-NT-10] 静默 QA 経路でも mp3(8.28 MB)が `preload='auto'` でロードされる** → 初期 source を削除し、音声入場だけが source/load を所有。silent と全 preview は0 request、拒否後 retry は同じ source を再利用する門禁を追加。
 - **[P3] sectionBoundaries(48.97/75.05/103.10/145.24/183.81/224.89/260.23/330.05 s)の妥当性検証** → ノベルティカーブによるビート同期セグメンテーション・ツールで手調整値を検証(researchTopics)。
 - **[P3] nearSnow の物理的説得力** → 海中マリンスノーの後方散乱位相関数・ROV 光減衰を参照にサイズ/alpha(基礎 0.018)をアートディレクト。**注: このトピックは research-audio-reactive.md に対応節がない未調査項目**(監査で確認済み)。チケット化する場合は調査タスクを含めるか、アートジャッジのみで進める判断を README の未調査項目リストに従って行うこと。
 - **[P3] 音楽ライセンスの確認** → README 記載の通りトラックの生成/使用ライセンス依存。公開前に権利状態を要確認。

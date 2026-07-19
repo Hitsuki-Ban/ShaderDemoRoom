@@ -154,24 +154,22 @@ async function verifyHits(page, fixtureSection) {
 
 async function captureState(context, config, fixture, policy, runIndex, stateRecord) {
   const page = await context.newPage();
-  const auditMetadataTransition = runIndex === 2 && policy.id === 'opening';
-  let releaseAudioMetadata;
-  if (auditMetadataTransition) {
-    const audioMetadataRelease = new Promise((resolve) => { releaseAudioMetadata = resolve; });
-    await page.route('**/archive.mp3', async (route) => {
-      await audioMetadataRelease;
-      await route.continue();
-    });
-  }
+  const archiveAudioRequests = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.endsWith('/archive.mp3')) {
+      archiveAudioRequests.push({
+        url: request.url(),
+        method: request.method(),
+        resourceType: request.resourceType(),
+      });
+    }
+  });
   page.on('console', (message) => {
     if (message.type() === 'error') stateRecord.consoleErrors.push(message.text());
   });
   page.on('pageerror', (error) => stateRecord.consoleErrors.push(error.message));
 
   try {
-    const audioRequest = auditMetadataTransition
-      ? page.waitForRequest('**/archive.mp3', { timeout: 30_000 })
-      : null;
     const response = await page.goto(stateUrl(config.buildUrl, policy), {
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
@@ -179,7 +177,6 @@ async function captureState(context, config, fixture, policy, runIndex, stateRec
     if (!response || !response.ok()) {
       throw new Error(`${policy.id} build navigation failed with HTTP ${response?.status() ?? 'none'}.`);
     }
-    if (audioRequest) await audioRequest;
     await page.waitForFunction(
       () => typeof window.__NINTH_TIDE_STEP__ === 'function'
         && typeof window.__NINTH_TIDE_HIT_TEST__ === 'function',
@@ -268,16 +265,6 @@ async function captureState(context, config, fixture, policy, runIndex, stateRec
       }
       samePageSignature = signature;
 
-      if (auditMetadataTransition && repeat === 1) {
-        releaseAudioMetadata();
-        await page.waitForFunction(
-          () => Number.isFinite(document.querySelector('#audio')?.duration),
-          undefined,
-          { timeout: 30_000 },
-        );
-        stateRecord.metadataTransitionAudited = true;
-      }
-
       if (runIndex === 1 && repeat === 1) {
         await writeFile(join(config.outputDir, policy.fileName), screenshot);
       }
@@ -287,9 +274,14 @@ async function captureState(context, config, fixture, policy, runIndex, stateRec
         `${policy.id} emitted console errors: ${stateRecord.consoleErrors.join(' | ')}`,
       );
     }
+    stateRecord.archiveAudioRequests = archiveAudioRequests;
+    if (archiveAudioRequests.length !== 0) {
+      throw new Error(
+        `${policy.id} preview requested archive.mp3: ${JSON.stringify(archiveAudioRequests)}.`,
+      );
+    }
     return stateRecord;
   } finally {
-    releaseAudioMetadata?.();
     await page.close();
   }
 }
