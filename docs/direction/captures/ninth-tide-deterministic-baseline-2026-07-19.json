@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "ticket": "T-NT-05",
   "capturedAt": "2026-07-19",
-  "implementationRevision": "c4830a8837f84b92c462f72a9409c50819c4137a",
+  "implementationRevision": "e65b913061ffd32771d87548d02465bbb533755c",
   "build": {
     "htmlSha256": "de0cd43deb4c6c3a2899fd80ebef4a8615fc0ae0f719cb1fc43f10762fac66a0",
-    "appSha256": "56ba8b44c71a2aa52b057469d82a9ecc54c9e05c9b293bb347f8f6de50f9f868"
+    "appSha256": "5181fa90248a84b0388898a0161af8b155842870f430d9c722cda3eb987856fb"
   },
   "environment": {
     "platform": "win32",

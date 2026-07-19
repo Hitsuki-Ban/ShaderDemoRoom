@@ -1,7 +1,7 @@
 # Ninth Tide deterministic capture QA
 
 - Ticket: `T-NT-05`
-- Implementation revision: `c4830a8837f84b92c462f72a9409c50819c4137a`
+- Implementation revision: `e65b913061ffd32771d87548d02465bbb533755c`
 - Baseline: `captures/ninth-tide-deterministic-baseline-2026-07-19.json`
 - Hit fixture: `hit-targets-v1.json`
 
@@ -55,7 +55,7 @@ cross-run gateはchapter、非黒、luma range、warm rule、fixtureを使い、
 - renderer: `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)`
 - viewport / screen: 1440×900, DPR 1, `en-US`, UTC, dark, reduced-motion no-preference
 - HTML SHA-256: `de0cd43deb4c6c3a2899fd80ebef4a8615fc0ae0f719cb1fc43f10762fac66a0`
-- app.js SHA-256: `56ba8b44c71a2aa52b057469d82a9ecc54c9e05c9b293bb347f8f6de50f9f868`
+- app.js SHA-256: `5181fa90248a84b0388898a0161af8b155842870f430d9c722cda3eb987856fb`
 
 ## Pixel policy and baseline
 

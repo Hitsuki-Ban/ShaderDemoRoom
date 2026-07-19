@@ -45,7 +45,7 @@
 
 ## 完了報告 (2026-07-19)
 
-- Implementation revision: `c4830a8837f84b92c462f72a9409c50819c4137a`。
+- Implementation revision: `e65b913061ffd32771d87548d02465bbb533755c`。
 - `docs/direction/captures/capture.mjs` を廃止し、公式 `pnpm qa:ninth-tide`、
   central policy、strict fixture validator、Pages gateへ置き換えた。
 - URL/forced capture modeは起動時から停止し、strict object hookが毎回scene/audio/synthetic/PRNG/camera/
