@@ -9,8 +9,12 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 800 
 const page = await context.newPage();
 const consoleErrors = [];
 const orbFreezeCaptureDir = path.resolve('output/playwright/orb-freeze');
+const orbHudCaptureDir = path.resolve('output/playwright/orb-hud');
 
-await mkdir(orbFreezeCaptureDir, { recursive: true });
+await Promise.all([
+  mkdir(orbFreezeCaptureDir, { recursive: true }),
+  mkdir(orbHudCaptureDir, { recursive: true }),
+]);
 
 page.on('console', (message) => {
   if (message.type() === 'error') consoleErrors.push(message.text());
@@ -78,27 +82,85 @@ async function waitForEmbeddedStats({ paused, minimumFrameCount = 0 }) {
   return readEmbeddedStats();
 }
 
-async function assertPauseLifecycle(iframe, label) {
+async function readHudText(hud) {
+  return (await hud.textContent())?.trim() ?? '';
+}
+
+async function pollHudText(hud, predicate, label) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const text = await readHudText(hud);
+    if (predicate(text)) return text;
+    await page.waitForTimeout(20);
+  }
+  throw new Error(`${label} HUD did not reach the expected state; last text: ${await readHudText(hud)}.`);
+}
+
+async function resetHudHistory(hud) {
+  await hud.evaluate((element) => {
+    const frameWindow = element.ownerDocument.defaultView;
+    frameWindow.__shaderDemoRoomHudQa?.observer.disconnect();
+    const history = [element.textContent.trim()];
+    const observer = new MutationObserver(() => history.push(element.textContent.trim()));
+    observer.observe(element, { characterData: true, childList: true, subtree: true });
+    frameWindow.__shaderDemoRoomHudQa = { history, observer };
+  });
+}
+
+async function readHudHistory(hud) {
+  return hud.evaluate((element) => [
+    ...element.ownerDocument.defaultView.__shaderDemoRoomHudQa.history,
+  ]);
+}
+
+function assertHudResumeHistory(history, label) {
+  const warmUpIndex = history.indexOf('-- FPS');
+  const numericIndex = history.findIndex(
+    (text, index) => index > warmUpIndex && /^\d+ FPS$/.test(text),
+  );
+  if (history[0] !== 'PAUSED' || warmUpIndex < 1 || numericIndex < 0) {
+    throw new Error(`${label} HUD resume sequence was invalid: ${JSON.stringify(history)}.`);
+  }
+}
+
+async function assertPauseLifecycle(iframe, label, { hud = null, pausedCapturePath = null } = {}) {
   const running = await waitForEmbeddedStats({ paused: false, minimumFrameCount: 1 });
+  const runningHud = hud
+    ? await pollHudText(hud, (text) => /^\d+ FPS$/.test(text), `${label} running`)
+    : null;
   await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
   const paused = await waitForEmbeddedStats({
     paused: true,
     minimumFrameCount: running.frameCount,
   });
+  const pausedHud = hud
+    ? await pollHudText(hud, (text) => text === 'PAUSED', `${label} paused`)
+    : null;
+  if (pausedCapturePath) await iframe.contentFrame().locator('body').screenshot({ path: pausedCapturePath });
   await page.waitForTimeout(750);
   const stillPaused = await readEmbeddedStats();
   if (stillPaused.frameCount !== paused.frameCount) {
     throw new Error(`${label} rendered while paused: ${paused.frameCount} -> ${stillPaused.frameCount}.`);
   }
+  if (hud && await readHudText(hud) !== 'PAUSED') {
+    throw new Error(`${label} HUD changed while paused.`);
+  }
+  if (hud) await resetHudHistory(hud);
   await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
   const resumed = await waitForEmbeddedStats({
     paused: false,
     minimumFrameCount: paused.frameCount + 1,
   });
+  const resumedHud = hud
+    ? await pollHudText(hud, (text) => /^\d+ FPS$/.test(text), `${label} resumed`)
+    : null;
+  const resumeHudHistory = hud ? await readHudHistory(hud) : null;
+  if (resumeHudHistory) assertHudResumeHistory(resumeHudHistory, label);
   return {
     beforePause: running.frameCount,
     pausedAt: paused.frameCount,
     resumedAt: resumed.frameCount,
+    ...(hud ? { runningHud, pausedHud, resumeHudHistory, resumedHud } : {}),
   };
 }
 
@@ -269,7 +331,7 @@ async function clearVisibilityOverride(iframe) {
   });
 }
 
-async function assertPageVisibilityLifecycle(iframe, label) {
+async function assertPageVisibilityLifecycle(iframe, label, hud = null) {
   const running = await waitForEmbeddedStats({ paused: false, minimumFrameCount: 1 });
   let hidden;
   let resumed;
@@ -280,6 +342,9 @@ async function assertPageVisibilityLifecycle(iframe, label) {
       paused: true,
       minimumFrameCount: running.frameCount,
     }, `${label} hidden tab`);
+    const hiddenHud = hud
+      ? await pollHudText(hud, (text) => text === 'PAUSED', `${label} hidden`)
+      : null;
     await page.waitForTimeout(750);
     const stillHidden = await readEmbeddedStats();
     if (stillHidden.frameCount !== hidden.frameCount) {
@@ -287,13 +352,32 @@ async function assertPageVisibilityLifecycle(iframe, label) {
         `${label} rendered in a hidden tab: ${hidden.frameCount} -> ${stillHidden.frameCount}.`,
       );
     }
+    if (hud && await readHudText(hud) !== 'PAUSED') {
+      throw new Error(`${label} HUD changed while the document was hidden.`);
+    }
 
+    if (hud) await resetHudHistory(hud);
     await setVisibilityOverride(iframe, false);
     await pollFrameVisibility(iframe, 'visible', label);
     resumed = await pollEmbeddedStats({
       paused: false,
       minimumFrameCount: hidden.frameCount + 1,
     }, `${label} visible tab`);
+    const resumedHud = hud
+      ? await pollHudText(hud, (text) => /^\d+ FPS$/.test(text), `${label} visible`)
+      : null;
+    const resumeHudHistory = hud ? await readHudHistory(hud) : null;
+    if (resumeHudHistory) assertHudResumeHistory(resumeHudHistory, `${label} visibility`);
+    if (hud) {
+      return {
+        beforeHidden: running.frameCount,
+        hiddenAt: hidden.frameCount,
+        resumedAt: resumed.frameCount,
+        hiddenHud,
+        resumeHudHistory,
+        resumedHud,
+      };
+    }
   } finally {
     await clearVisibilityOverride(iframe);
   }
@@ -310,6 +394,7 @@ const embeddedOrbFrame = await openEmbeddedRoom(
 );
 const embeddedOrb = embeddedOrbFrame.contentFrame();
 await embeddedOrb.locator('#loading.is-hidden').waitFor({ state: 'attached' });
+const orbFpsHud = embeddedOrb.locator('#fps');
 await embeddedOrbFrame.evaluate((element) => {
   element.contentWindow.document.documentElement.dataset.bridgeQa = 'orb-preserved';
 });
@@ -326,9 +411,24 @@ for (const quality of ['high', 'medium', 'low']) {
 const orbWallClockTelemetry = await assertWallClockTelemetry(embeddedOrbFrame, 'Orb');
 await embeddedOrb.locator('#audio-toggle').click({ force: true });
 await embeddedOrb.locator('#audio-toggle[aria-pressed="true"]').waitFor();
-const orbPauseLifecycle = await assertPauseLifecycle(embeddedOrbFrame, 'Orb');
+const orbRunningHud = await pollHudText(
+  orbFpsHud,
+  (text) => /^\d+ FPS$/.test(text),
+  'Orb running capture',
+);
+const orbRunningHudCapturePath = path.join(orbHudCaptureDir, 'running.png');
+const orbPausedHudCapturePath = path.join(orbHudCaptureDir, 'paused.png');
+await embeddedOrb.locator('body').screenshot({ path: orbRunningHudCapturePath });
+const orbPauseLifecycle = await assertPauseLifecycle(embeddedOrbFrame, 'Orb', {
+  hud: orbFpsHud,
+  pausedCapturePath: orbPausedHudCapturePath,
+});
 const orbPauseRace = await assertPauseRace(embeddedOrbFrame, 'Orb');
-const orbVisibilityLifecycle = await assertPageVisibilityLifecycle(embeddedOrbFrame, 'Orb');
+const orbVisibilityLifecycle = await assertPageVisibilityLifecycle(
+  embeddedOrbFrame,
+  'Orb',
+  orbFpsHud,
+);
 const orbFramePreserved = await embeddedOrb.locator('html').getAttribute('data-bridge-qa');
 if (orbFramePreserved !== 'orb-preserved') {
   throw new Error('Orb bridge commands unexpectedly reloaded the iframe.');
@@ -665,6 +765,13 @@ console.log(
       embeddedTideSections,
       orbModes,
       orbWallClockTelemetry,
+      orbHudFpsLifecycle: {
+        runningHud: orbRunningHud,
+        runningCapturePath: orbRunningHudCapturePath,
+        pausedCapturePath: orbPausedHudCapturePath,
+        hostPause: orbPauseLifecycle,
+        visibility: orbVisibilityLifecycle,
+      },
       orbAudioActive,
       tideMediaStartedWhilePaused,
       orbPauseLifecycle,

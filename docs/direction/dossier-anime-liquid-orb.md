@@ -2,8 +2,8 @@
 
 > 対象: showroom 内 iframe 埋め込み展示 `anime-liquid-orb`(kind: `embedded`)
 > 原典: `ref/mizu-kokoro-2-source/`(MIZU//KOKORO 2.0、Three.js 0.184.0 単一ファイルアプリ)
-> 情報源: understand-orb.json(コード全読)/ visual-current.json(現状スクリーンショット批評)/ visual-refs.json(原典リファレンス批評)
-> 検証事実: `public/exhibits/anime-liquid-orb/` の index.html / index-CR_YyWXx.js / index-DXkfpgO2.css は `ref/mizu-kokoro-2-source/dist` とバイト一致(.js.map も両方に同梱)
+> 情報源: understand-orb.json / visual-current.json / visual-refs.json に由来する初回調査記録と、追跡中の ref / showroom / QA。3 JSON 自体は repository に保存されていないため、以後の訂正はこのカルテと ticket に記録する。
+> 検証事実(2026-07-20 訂正): `public/exhibits/anime-liquid-orb/` は `pnpm exhibits:build` で ref の production build から生成し、`pnpm exhibits:check` が source map を含む同期を検証する。
 
 ---
 
@@ -15,7 +15,7 @@
 - **一行原則:「水らしさは光学・スケール・因果性から生まれ、生命感はヒステリシス・オーバーシュート・非再現性から生まれる」。** 物理インスパイアのインスタレーションであり、CFD ソルバーではないことを明言。
 - **インタラクションは6幕構成の演劇**: attract → acknowledge(hover 予兆)→ intervene(drag スカルプト + 二次系スプリング回復)→ return(click 波紋)→ phase-change(double-click で結晶化/融解、ヒット点からの核形成)→ ensemble(Space パルス、プロシージャル音場、マイク駆動)。
 - **研究系譜の明示的引用**: Wave Particles / Water Wave Packets(スケール階層波)、Valve Portal 2 の dual-phase flow map(テクスチャ不要の球面接線フローとして書き直し)、screen-space liquid refraction、Guilty Gear Xrd / TF2 / Splatoon の NPR 可読性(「マテリアルは動詞である」)、teamLab のフローライン描画、Rain Room の空間的に正確な応答。
-- **showroom との関係**: showroom 側は原典を一切改変せず iframe として展示する方針。i18n の runtimeNote が明言する通り「マテリアル制御は作品内部に残す」— showroom の Controls は Reload / Open standalone / Reset のみで、素材操作は作品自身の UI(モードレール・実験パネル・ツールドック)が唯一の窓口。
+- **showroom との関係(2026-07-20 訂正)**: ref は追跡対象の fork であり、showroom は bridge v1 を通して pause / quality / 4相 mode を同期し、stats を読み出す。作品内部の UI は引き続き完全な操作面として残る。
 
 ### 埋め込みで守るべき魔法(visual-refs.json の結論)
 
@@ -32,7 +32,7 @@
 
 ### 基盤
 
-- 単一ファイルアプリ `ref/mizu-kokoro-2-source/src/main.js`(2523行)、Three.js 0.184.0。
+- 単一ファイルアプリ `ref/mizu-kokoro-2-source/src/main.js`、Three.js 0.184.0。行数は fork の継続改修で変動するため固定値にしない。
 - Renderer: `WebGLRenderer{ antialias:false, alpha:false, powerPreference:'high-performance', preserveDrawingBuffer:true(CAPTURE用) }`、sRGB output、ACESFilmicToneMapping exposure 0.86、PCFShadowMap、clearColor `0x03060d`、`FogExp2(0x03060d, 0.042)`。
 - Camera: `PerspectiveCamera(42°, near 0.05, far 80)` at `(0, 1.05, 8.1)`。OrbitControls target `(0, 0.42, 0)`、damping 0.055、pan 無効、distance 5.2–10.2、polar 0.72–1.72、azimuth ±1.0、autoRotateSpeed 0.35。
 
@@ -61,7 +61,7 @@
 
 - touchStrength: 明示的二次系スプリング。springStrength は sculpt 中 185、それ以外 `42*mode.recovery*max(0.25, liveliness)`。dampingRatio は sculpt 中 0.92、それ以外 `clamp((0.24 + viscosity*1.02)/sqrt(max(0.22, elasticity*liveliness)), 0.18, 1.42)`。値は [-0.52, 1.46] にクランプ。
 - ポインタ: hover で touchStrengthTarget 0.15(凍結時 0.06)、sculpt 1.36。プロキシ上 pointerdown で OrbitControls 無効化 + ripple 発生。drag デルタは球接平面へ射影(`localDelta -= p·dot(localDelta,p)`)、`dragAmount = min(1.6, |Δ|*26 + pointerVelocity*0.32)`、sculptEnergy は 1.65 まで蓄積。release で `uReleasePoint/Vector/Time` と `uReleaseEnergy = min(1.7, 0.35 + sculptEnergy + pointerVelocity*0.45)` を書き込み。
-- double-click(coarse pointer では <285ms の double-tap)で freeze トグル: 核形成方向 → uFreezeOrigin / uFreezeTime、CPU 亀裂再構築。freezeProgress は damp rate 2.45(freeze)/ 3.6(melt)。melt は energy 1.15 のリリースを注入。
+- `pointerup` が mouse / touch / pen 共通の double-tap state machine を所有し、freeze を1回だけトグルする。核形成方向 → uFreezeOrigin / uFreezeTime、CPU 亀裂再構築。freezeProgress は damp rate 2.45(freeze)/ 3.6(melt)。melt は energy 1.15 のリリースを注入。
 - アイドルアトラクト: >15s で autoRotate + 徘徊するプロシージャルタッチ点、>30s で 17s ごとの自動相サイクル。
 - モード変更: float `uMode` を rate 3.2 で damp しシェーダ重みをクロスフェード。`updateColors()` が約20色(共有 uniform 5 + floor/halo/beam/particles/droplet/knot/ring/tick/emissive/caustic/crystal/arcs/shockwaves/keyLight 0.35x/rimLight 0.45x)を `alpha = 1-exp(-3.4Δ)` で lerp。
 - グローバル時間: `sceneTime += delta * mode.speed * settings.userSpeed * (prefers-reduced-motion なら 0.34)`、delta は 0.05 にクランプ(タブ復帰スパイク対策)。
@@ -71,8 +71,8 @@
 ### showroom 統合
 
 - registry: kind `'embedded'`、accent `#ff56d8`、techTags `['NPR Fluid','Post FX','Interactive Phase']`、embedPath `exhibits/anime-liquid-orb/index.html`。
-- `EmbeddedExhibitFrame` は `<iframe key={roomId-reloadToken} allow="autoplay; microphone; clipboard-write" allowFullScreen>` を描画。唯一の「コントロール」は `reloadToken`(state.ts、default 0)で、`?reload=N` 付きで iframe を再マウントする。
-- **postMessage ブリッジなし。設定転送なし。pause/visibility シグナルなし。** シェル UI の状態にかかわらず、展示は自身の rAF ループと(有効なら)音声を走らせ続ける。
+- `EmbeddedExhibitFrame` は iframe lifecycle と bridge v1 を所有する。reloadToken による明示的再マウントに加え、exact envelope で `set-paused` / `set-orb-mode` / `set-orb-quality` を送る。
+- **2026-07-20 訂正**: capabilities は `pause / stats / set-mode / set-quality`。host pause と `document.hidden` は単一の runtime pause 状態へ集約され、rAF と音声を停止する。stats は `{ fps, frameTimeMs, frameCount, paused }` の exact shape で 500ms ごとに shell telemetry へ流れる。
 
 ---
 
@@ -107,7 +107,7 @@
 
 ### Volume シェル(BackSide)
 
-逆オフセット屈折 `(−N.xy*0.021 + flow.xy*0.006*uFlowStrength)`、内部 caustics、吸収 `mix(uMidColor, uDeepColor, edge*0.72)`、alpha `(0.08 + edge*0.25 + innerCaustic*0.08)*(0.62 + uClarity*0.38)*(1 − uFreezeProgress*0.78)`。**注意: freeze ロックされた fluidTime ではなく生の uTime を使用**(後述リスク)。
+逆オフセット屈折 `(−N.xy*0.021 + flow.xy*0.006*uFlowStrength)`、内部 caustics、吸収 `mix(uMidColor, uDeepColor, edge*0.72)`、alpha `(0.08 + edge*0.25 + innerCaustic*0.08)*(0.62 + uClarity*0.38)*(1 − uFreezeProgress*0.78)`。**2026-07-20 訂正**: liquid と共有する freeze mask から `fluidTime` を算出し、凍結前面の背面フローも同じ時間軸で停止する。
 
 ### Crystal シェル
 
@@ -224,21 +224,21 @@ RESET MATERIAL は `{deform 1, speed 1, outline 1, bloom 1, chroma 0.45, flow 1,
 
 understand-orb.json の risks を重要度順に整理(順位はカルテ執筆者による仮判断)。
 
-1. **シェル⇔iframe 通信チャネルが皆無**: showroom Controls から品質設定・レンダ一時停止・相同期・FPS 読み出しが一切できず、`?reload=N` の再マウントのみ。展示は自前の rAF ループと(有効時)音声をシェル状態に関係なく走らせ続ける。main.js に visibilitychange/pause 処理なし。
+1. **解消済み(2026-07-20): シェル⇔iframe 通信チャネル**。bridge v1 が品質設定・4相 mode・pause・stats を exact envelope で扱い、`visibilitychange` も同じ pause state machine に合流する。`qa:exhibits` が pause/visibility 中の frameCount 停止、復帰、audio intent と iframe identity 維持を検証する。
 2. **頂点コストのホットスポット(規模訂正済み)**: 法線再構築のため deformPosition が頂点ごとに 3 回評価され、それが liquid と outline 両方の頂点シェーダで走る — 頂点あたり毎フレーム **6 回**の変位場フル評価(各回に 5-ripple ループ、4-octave FBM、ridged FBM、curl ノイズを含む)。ただし `IcosahedronGeometry(1.65, 5)` の実サイズは **720 tris(非インデックスで約 2,160 頂点)/シェル**であり、当初調査の「≒20k tris」は約28倍の過大見積り(three.js PolyhedronGeometry 実装 20面×(detail+1)² で検証済み)。頂点コストが sculpt 時 22 FPS の主犯である可能性は低下しており、**本命はフレーム毎2回のフルシーン描画+bloom/SMAA+preserveDrawingBuffer のフィルレート(リスク3)の可能性が高い。最適化チケットの起票前に Spector.js 等でのプロファイル実測を前提条件とすること**。outline の再構築廃止自体は依然として安価で無リスクな改善。
 3. **フレームごとにシーン全体を2回描画**(屈折バッファ + メイン)+ bloom/SMAA + preserveDrawingBuffer:true。ローエンド GPU ではタッチデバイスの MEDIUM デフォルトでも重い可能性。
-4. **タッチの double-tap freeze が二重発火**: endPointer(<285ms)と canvas の 'dblclick' リスナーの両方が多くのモバイルブラウザで発火 — タッチのダブルタップで freeze→即 melt にトグルが2回転しうる。
-5. **Volume シェルが freeze ロック済みの fluidTime ではなく生の uTime を使用** — 凍結中も背面シェルのフローが動き続ける(`alpha *= 1-uFreezeProgress*0.78` で部分的に隠蔽)。グレージング角で「表面フローはロックされる」という freeze ルールに違反。
+4. **解消済み: double-tap freeze 所有権**。`pointerup` の単一 state machine が mouse / touch / pen を扱い、旧 `dblclick` owner を撤去。恒常 QA は有効/無効 gesture と厳密な状態遷移回数を検証する。
+5. **解消済み: Volume freeze 時間軸**。liquid / volume が同じ freeze mask を共有し、凍結 ROI の t と t+2s byte diff、未凍結 ROI の motion を `qa:orb` で検証する。
 6. **NPR ライト方向のハードコード**(liquid `L=(-0.42,0.73,0.54)`、crystal `(-0.48,0.76,0.43)`)が実際の SpotLight/PointLight と非連動 — ステージライトを動かしても cel バンドは動かない。アートディレクション上のリライトはシェーダ定数の変更が必須。
 7. **VOID モードのバンディングリスク**: posterize 0.72 + chroma 1.08 + ほぼモノクロパレット(`#9eabb5`/`#ffffff`)の組合せ。ACES パイプラインの bloom threshold 0.94 の後で、ディザなしの量子化バンディングが可視化する危険が高い。
 8. **手動透明度順序の脆さ**: 全シェル depthWrite:false + renderOrder 管理。液滴(MeshToonMaterial、transparent、デフォルト depthWrite:true)や additive ステージ要素が、許可された orbit 範囲内のグレージング角でオーブに対して不正ソートしうる。
 9. **マジックナンバーの集中**: freeze front 定数 1.24、facet 0.72、屈折ゲイン 0.014/0.005、分散比 1.08/0.90(liquid)vs 1.22/0.78(crystal)、foam 閾値 0.025/0.145 — 中央チューニングテーブルがなく、modes 配列だけが構造化された設定。
 10. **アイドル自動展示モードの音**: 30s アイドル後 17s ごとに `setMode()` + `soundField.ping()` — 音声有効のまま放置された kiosk が周期的にピングを発する。また lastInteraction を `now - 20000` に巻き戻してサイクルを維持する小細工あり。
-11. **デッドコード/uniform**: liquid フラグメントの uResolution / uAudio は宣言のみで未使用。keyLight は intensity 52 で生成されるが animate() が毎フレーム base 48 で上書き。fpsLastUpdate は書くだけで読まれない。FinalGradeShader の uChroma 初期値 0.002 は即座に 0.00075 スケールの damp 値に置換。
+11. **デッドコード/uniform**: liquid フラグメントの uResolution / uAudio は宣言のみで未使用。keyLight は intensity 52 で生成されるが animate() が毎フレーム base 48 で上書き。FinalGradeShader の uChroma 初期値 0.002 は即座に 0.00075 スケールの damp 値に置換。旧調査の `fpsLastUpdate` は現行に存在せず、500ms の wall-clock sampler に置換済み。
 12. **iframe allow に `clipboard-write`** が含まれるが展示は使用しない(CAPTURE は `<a download>`)。microphone 許可は正当に必要。
 13. **`liquidMaterial.extensions.derivatives = true` は three 0.184 で非推奨 API**(無害だが将来のアップグレードでノイズに)。
-14. **公開 embed がフルソースマップを同梱**(`index-CR_YyWXx.js.map`、ref の dist と public の両方)— 意図的な透明性か見落としか、明示的な判断が必要。
-15. **`ref/` ディレクトリが git 未追跡**(`?? ref/`)— この展示の権威あるソースがバージョン管理下にない。
+14. **公開 embed はフルソースマップを同梱**。公開 fork の透明性とオンライン QA を優先して保持する方針を README に明記済み。
+15. **解消済み**: `ref/` は権威ソースとして git 追跡され、public は生成物として同期 gate の対象になった。
 
 ---
 
@@ -249,7 +249,7 @@ understand-orb.json の risks を重要度順に整理(順位はカルテ執筆�
 - **デスクトップ: Wow 8/10 — ラインナップ中、唯一「完成されたビジュアルアイデンティティ」を持ち、ローンチに最も近い展示**。バイリンガルな sci-fi ラボタイポグラフィ、明確なヒーローオブジェクト、一貫した線の太さ、コンセプトアートのオーバーレイ言語に呼応する多層 HUD フレーミング。焦点階層も機能(オーブ → タイトル → 相カード)。
 - デスクトップの弱点(4件):
   1. オーブ内部の白が**アモルファスでやや内臓的** — シャープなアニメ液体の読みになっていない(原典リファレンスの gouache スペキュラ + 米粒スペックルと比較して)。
-  2. **FPS 欄が「—」表示**で壊れて見える(原典 preview.png も同様に '-- FPS' であり、原典由来の問題)。
+  2. **歴史記録(2026-07-20 訂正済み)**: 当時の capture と原典 `preview.png` では FPS 欄が `-- FPS` だった。現行は初回/復帰の 500ms warm-up のみ `-- FPS`、実行中は `NN FPS`、pause/hidden 中は `PAUSED`。再取得証拠は `captures/t-ao-04-orb-hud-running.png` と `captures/t-ao-04-orb-hud-paused.png`。原典 preview は比較記録として保持する。
   3. HUD タイトルブロックがオーブの左上リムに**近接しすぎ**。
   4. 構図の下 1/3 が上より密で、オーブが**やや高く浮いて**見える。
 - **モバイル: Wow 6/10 — 固定 HUD がリフローしない**。タイトルプレートがオーブ上に直接重なり、4相カードは英語サブラベルが途中でクロップ、端のマイクロテキストはノイズ化。ヒーローのオーブは UI プレートの間から約 1/4 しか見えない。「デスクトップのスクリーンショットを電話に押し込んだ」読み味。canvas 内ブレークポイント対応(タイトル縮小、相カード 2×2、端テキスト非表示)が必要。
@@ -271,30 +271,30 @@ understand-orb.json の risks を重要度順に整理(順位はカルテ執筆�
 
 ### P1
 
-- **[P1] FPS 表示が「—」のまま → HUD の FRAME 欄が実測値を表示するよう修正(または計測が動くまで欄を隠す)**。showroom キャプチャでもヒーローショット(原典 preview.png)でも dash 表示で「未完成/壊れている」印象を与えている。原典コードには fpsLastUpdate が書き込まれるが読まれないデッドコードがあり、計測系の未配線が疑われる(要コード確認)。
+- **[P1 解消済み 2026-07-20] FRAME HUD**。500ms 実測、pause/hidden の `PAUSED`、初回/復帰 warm-up の `-- FPS` を単一 state machine と恒常 QA で固定した。software renderer の数字は性能 golden として扱わない。
 - **[P1] モバイルで HUD がヒーローを覆う → canvas 内ブレークポイント対応**。タイトルプレート縮小、相カードの 2×2 グリッド化、端のマイクロテキスト非表示。オーブの可視面積を最優先。原典改変を避ける方針との整合(fork するか、原典側に upstream するか)の判断が前提。
-- **[P1] タッチの double-tap freeze 二重発火 → endPointer 判定と 'dblclick' リスナーの排他制御**。モバイルでダブルタップすると freeze→即 melt になりうる。展示の最大の見せ場(結晶化)がタッチデバイスで壊れる。
-- **[P1] シェル⇔iframe ブリッジ不在 → 最低限 visibilitychange での rAF/音声の一時停止、可能なら postMessage で quality/pause/FPS 読み出し**。非表示タブ・別部屋閲覧中も全力レンダ + 音声継続はバッテリー/性能/kiosk 音問題に直結。standalone ビルドを壊さない opt-in 設計で。
+- **[P1 解消済み] double-tap freeze**。`pointerup` の単一 state machine と mouse / touch / pen の厳密な遷移 QA へ統合済み。
+- **[P1 解消済み] シェル⇔iframe bridge v1**。pause / stats / set-mode / set-quality と visibility lifecycle を実装・QA 化済み。
 - **[P1] 頂点コスト(変位場 6 回/頂点/フレーム)→ outline シェルの変形簡素化または結果共有、法線の解析的導出やテクスチャ/FBO 化の検討**。sculpt 時 22 FPS(スタンドアロン 1440x900)の主犯格。showroom 同居では予算がさらに厳しい。
 
 ### P2
 
 - **[P2] オーブ内部の白がアモルファス → gouache スペキュラの形状制御と米粒スペックルの解像感を強化**。現状批評の「内臓的」読みを、原典ヒーローの「手描きの魅力」に引き戻す。スペキュラのハードカット閾値(smoothstep 0.20/0.54 等)と foam 閾値(0.025/0.145)の再チューニングが起点。
 - **[P2] HUD タイトルブロックとオーブ上部リムの近接 + 下 1/3 過密 → HUD レイアウト微調整で構図バランス回復**。§8 の「オーブ 55–62% フレーム高」規定はコードで計測されていないため、まず現状の実測から。
-- **[P2] Volume シェルが生 uTime 使用 → fluidTime に統一し freeze 中の背面フローを停止**。「凍結時に表面フローはロック」ルール違反の修正。1 uniform の差し替えで済む見込み。
+- **[P2 解消済み] Volume freeze 時間軸**。共有 freeze mask と `fluidTime` に統一し、isolated volume の ROI byte gate を追加済み。
 - **[P2] VOID の posterize バンディング → ordered/blue-noise ディザの導入検討**。posterize 0.72 + ほぼモノクロパレット + ACES + bloom threshold 0.94 の組合せはバンディング高リスク。
 - **[P2] SURGE の値分離が弱い(リファレンス批評で最も濁る)→ 実機で SURGE の見えを確認し、必要なら deep/mid の値差またはリムを補強**。あわせて**要確認**: コードの mid `#ec3b9b`(ピンク)とリファレンス記述「lavender-gray」の食い違いの原因特定。
 - **[P2] 透明度ソートの脆さ → 液滴(depthWrite:true)と additive ステージ要素の許容 orbit 範囲内での目視 QA、必要なら renderOrder/depthWrite 調整**。
 - **[P2] アイドル自動展示の音 → 音声有効時の自動サイクル ping を抑制するか、attract モード中は音を減衰**。kiosk 運用時の周期ピング問題。
-- **[P2] `ref/` が git 未追跡 → 権威あるソースのバージョン管理方針を決定しコミット**(または別リポジトリ + サブモジュール/参照記録)。
+- **[P2 解消済み] ref 追跡方針**。権威ソースを repository 内で追跡し、public は ref からの生成物として同期 gate を持つ。
 - **[P2] ART_DIRECTION.md §12 受け入れチェックリストが未実施 → showroom 埋め込み状態でチェックリストを実走し記録**。調整フェーズの完了条件としてそのまま使える。
 
 ### P3
 
-- **[P3] デッドコード清掃**: liquid フラグメントの未使用 uResolution/uAudio、keyLight 52→48 の毎フレーム上書き、fpsLastUpdate、FinalGradeShader uChroma 初期値 0.002。
+- **[P3] デッドコード清掃**: liquid フラグメントの未使用 uResolution/uAudio、keyLight 52→48 の毎フレーム上書き、FinalGradeShader uChroma 初期値 0.002。
 - **[P3] `extensions.derivatives` 非推奨 API の置換**(three 0.184、将来アップグレード時のノイズ削減)。
 - **[P3] iframe allow から未使用の `clipboard-write` を削除**(microphone は必要なので維持)。
-- **[P3] 公開ソースマップ(index-CR_YyWXx.js.map)同梱の意図を明文化**(透明性として残すか、削除するか)。
+- **[P3 解消済み] 公開ソースマップ同梱**: 公開 fork の透明性とオンライン QA のため保持する方針を README に明文化済み。
 - **[P3] マジックナンバーの中央チューニングテーブル化**(freeze front 1.24、facet 0.72、屈折ゲイン 0.014/0.005、分散比、foam 閾値等)— 今後の調整チケットの作業効率に直結。
 - **[P3] NPR ライト方向とシーンライトの非連動をドキュメント化**(またはシーンライトから uniform 供給へ)— リライト系チケットの前提知識。
 - **[P3] 研究トピックの深掘り**(understand-orb.json researchTopics より): depth-aware screen-space refraction マスキング、Jacobian ベース foam、flowLineAt の極の pinch 対策、OIT/depth-peeling 代替、Wave Particles 的な波紋の群速度/分散、Xrd 流ノーマル編集による 3 バンドの安定化。
@@ -303,9 +303,9 @@ understand-orb.json の risks を重要度順に整理(順位はカルテ執筆�
 
 ## 重要ファイル
 
-### 原典(ref/ — git 未追跡、権威ソース)
+### 原典(ref/ — git 追跡中の権威ソース)
 
-- `F:\WorkSpace\ShaderDemoRoom\ref\mizu-kokoro-2-source\src\main.js`(2523行、実装本体)
+- `F:\WorkSpace\ShaderDemoRoom\ref\mizu-kokoro-2-source\src\main.js`(実装本体)
 - `F:\WorkSpace\ShaderDemoRoom\ref\mizu-kokoro-2-source\ART_DIRECTION.md`(アートディレクション規範)
 - `F:\WorkSpace\ShaderDemoRoom\ref\mizu-kokoro-2-source\src\style.css`
 - `F:\WorkSpace\ShaderDemoRoom\ref\mizu-kokoro-2-source\index.html`
@@ -315,7 +315,7 @@ understand-orb.json の risks を重要度順に整理(順位はカルテ執筆�
 ### 展示デプロイ(public/ — ref の dist とバイト一致)
 
 - `F:\WorkSpace\ShaderDemoRoom\public\exhibits\anime-liquid-orb\index.html`
-- `F:\WorkSpace\ShaderDemoRoom\public\exhibits\anime-liquid-orb\assets\index-CR_YyWXx.js`(+ 同梱 .js.map)
+- `F:\WorkSpace\ShaderDemoRoom\public\exhibits\anime-liquid-orb\assets\index-*.js`(+ 同梱 .js.map、content hash は build ごとに変化)
 
 ### showroom 統合(src/)
 
