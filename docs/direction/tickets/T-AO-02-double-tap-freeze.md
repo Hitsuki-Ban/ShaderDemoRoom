@@ -35,3 +35,11 @@
 - 改修は `ref/mizu-kokoro-2-source/` で行い、`pnpm exhibits:build` で `public/exhibits/` を再生成する。public の手編集は禁止。
 - ブリッジ契約には触れない。
 - 時間窓と距離閾値は単一 PointerEvent 状態機械の入力条件であり、二重発火を隠す後段デバウンスとして実装しない。
+
+## 実施報告 (2026-07-19)
+
+- freeze の所有者を `pointerup` の1経路へ統合した。各接触は down 起点からの最大移動量を追跡し、`10px` 以下だけを tap として扱う。直前の有効 tap とは `pointerType`、up-to-up `285ms`、up 座標 `24px` の3条件で照合し、成功時は候補を先に破棄してから `toggleFreeze()` を1回だけ呼ぶ。跨る2 tap の `pointerId` は照合条件にしていない。
+- `pointercancel`、drag、異なる `pointerType`、距離超過、球外操作、別 pointer の割り込みは候補を明示的に破棄する。凍結中も同じ状態機械を使うため、mouse / touch / pen のいずれでも crystal / liquid を往復できる。旧 `lastTapTime` 分岐と canvas `dblclick` listener は削除し、debounce・互換イベント・silent fallback は追加していない。`isCoarsePointer` は品質 tier の既存用途だけに残した。
+- `pnpm qa:exhibits` は4相で mouse / touch / pen の synthetic PointerEvent を検証し、各 double-tap が `CRYSTAL` または `LIQUID` を厳密に1回だけ書くこと、全体で8回の toggle、4件の合成 `dblclick` が追加発火しないことを確認した。単発+時間切れ、sculpt drag、cancel 後の3回目、距離超過、異種 pointer は全て0遷移だった。4相の凍結 capture では指定 tap 座標に核形成中心が一致し、console error は0件だった。
+- 回帰門は `pnpm test` (31 files / 180 tests)、`pnpm lint`、`pnpm typecheck`、`pnpm build`、`pnpm qa:orb`、`pnpm qa:visual` を通過した。決定論 hash は standalone `7441cd852325cb714023e496bd2e3dcf4b06307ee5c8f9f3b26df30513bbc8f6`、showroom `009cdf3b18b976a44b6297accbc44e98ae7de0c575fc433cefd2a5c376eb81b7` のまま。visual QA は14 capture、overflow / HUD overlap / console error なし。
+- ref / public の生成 JS は SHA-256 `7df792bc271041aa6137314df5d0f9db7e169b38aef213c86f4bbf9ea29735ca` で一致し、bridge 契約には差分がない。独立 reviewer は material finding なしで APPROVE とした。

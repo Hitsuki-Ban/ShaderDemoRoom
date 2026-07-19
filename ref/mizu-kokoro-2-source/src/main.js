@@ -2035,7 +2035,39 @@ let activePointerId = null;
 let pointerVelocity = 0;
 let lastPointer = { x: 0, y: 0, time: performance.now() };
 let lastDragBurst = 0;
-let lastTapTime = 0;
+const TAP_MAX_TRAVEL_PX = 10;
+const DOUBLE_TAP_MAX_INTERVAL_MS = 285;
+const DOUBLE_TAP_MAX_DISTANCE_PX = 24;
+let activePointerGesture = null;
+let lastValidTap = null;
+
+function pointerDistanceSq(fromX, fromY, toX, toY) {
+  const deltaX = toX - fromX;
+  const deltaY = toY - fromY;
+  return deltaX * deltaX + deltaY * deltaY;
+}
+
+function updatePointerGestureTravel(event) {
+  if (!activePointerGesture) return;
+  if (event.pointerType !== activePointerGesture.pointerType) {
+    activePointerGesture.invalid = true;
+    lastValidTap = null;
+    return;
+  }
+  activePointerGesture.maxTravelSq = Math.max(
+    activePointerGesture.maxTravelSq,
+    pointerDistanceSq(
+      activePointerGesture.startX,
+      activePointerGesture.startY,
+      event.clientX,
+      event.clientY,
+    ),
+  );
+  if (activePointerGesture.maxTravelSq > TAP_MAX_TRAVEL_PX * TAP_MAX_TRAVEL_PX) {
+    activePointerGesture.dragged = true;
+    lastValidTap = null;
+  }
+}
 
 function mapPointer(event) {
   const rect = canvas.getBoundingClientRect();
@@ -2079,6 +2111,7 @@ function updateInteractionPoint(hit) {
 
 canvas.addEventListener('pointermove', (event) => {
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
+  updatePointerGestureTravel(event);
   const hit = intersectOrb(event);
   if (hit) {
     updateInteractionPoint(hit);
@@ -2095,14 +2128,28 @@ canvas.addEventListener('pointermove', (event) => {
 }, { passive: true });
 
 canvas.addEventListener('pointerdown', (event) => {
+  if (activePointerId !== null) {
+    if (activePointerGesture) activePointerGesture.invalid = true;
+    lastValidTap = null;
+    return;
+  }
   const hit = intersectOrb(event);
   if (!hit) {
+    lastValidTap = null;
     controls.enabled = true;
     markInteraction();
     return;
   }
   event.preventDefault();
   activePointerId = event.pointerId;
+  activePointerGesture = {
+    pointerType: event.pointerType,
+    startX: event.clientX,
+    startY: event.clientY,
+    maxTravelSq: 0,
+    dragged: false,
+    invalid: false,
+  };
   canvas.setPointerCapture?.(event.pointerId);
   if (frozen) {
     controls.enabled = true;
@@ -2127,8 +2174,17 @@ canvas.addEventListener('pointerdown', (event) => {
   markInteraction();
 }, { passive: false });
 
-function endPointer(event) {
-  if (activePointerId !== null && event.pointerId !== activePointerId) return;
+function finishPointer(event, cancelled) {
+  if (cancelled) lastValidTap = null;
+  if (activePointerId === null || event.pointerId !== activePointerId) return;
+  const completedGesture = activePointerGesture;
+  if (!cancelled) updatePointerGestureTravel(event);
+  const releaseHit = !cancelled
+    && completedGesture
+    && !completedGesture.invalid
+    && !completedGesture.dragged
+    ? intersectOrb(event)
+    : null;
   const wasSculpting = isSculpting;
   isSculpting = false;
   canvas.classList.remove('is-sculpting');
@@ -2136,6 +2192,7 @@ function endPointer(event) {
   touchStrengthTarget = 0;
   if (activePointerId !== null) canvas.releasePointerCapture?.(activePointerId);
   activePointerId = null;
+  activePointerGesture = null;
 
   if (wasSculpting) {
     const releaseEnergy = Math.min(1.7, 0.35 + sculptEnergy + pointerVelocity * 0.45);
@@ -2148,14 +2205,41 @@ function endPointer(event) {
     pulse = Math.max(pulse, 0.34 + releaseEnergy * 0.18);
   }
 
-  if (wasSculpting && isCoarsePointer) {
-    const now = performance.now();
-    if (now - lastTapTime < 285) toggleFreeze(currentTouchPoint);
-    lastTapTime = now;
+  if (cancelled || !completedGesture || completedGesture.invalid || completedGesture.dragged || !releaseHit) {
+    lastValidTap = null;
+    return;
+  }
+
+  const completedTap = {
+    pointerType: event.pointerType,
+    time: event.timeStamp,
+    x: event.clientX,
+    y: event.clientY,
+    origin: releaseHit.localPoint.clone(),
+  };
+  if (!lastValidTap) {
+    lastValidTap = completedTap;
+    return;
+  }
+
+  const previousTap = lastValidTap;
+  lastValidTap = null;
+  const interval = completedTap.time - previousTap.time;
+  if (interval > DOUBLE_TAP_MAX_INTERVAL_MS) {
+    lastValidTap = completedTap;
+    return;
+  }
+  if (
+    interval >= 0
+    && completedTap.pointerType === previousTap.pointerType
+    && pointerDistanceSq(previousTap.x, previousTap.y, completedTap.x, completedTap.y)
+      <= DOUBLE_TAP_MAX_DISTANCE_PX * DOUBLE_TAP_MAX_DISTANCE_PX
+  ) {
+    toggleFreeze(completedTap.origin);
   }
 }
-canvas.addEventListener('pointerup', endPointer, { passive: true });
-canvas.addEventListener('pointercancel', endPointer, { passive: true });
+canvas.addEventListener('pointerup', (event) => finishPointer(event, false), { passive: true });
+canvas.addEventListener('pointercancel', (event) => finishPointer(event, true), { passive: true });
 canvas.addEventListener('pointerleave', () => {
   if (!isSculpting) touchStrengthTarget = 0;
 }, { passive: true });
@@ -2188,12 +2272,6 @@ function toggleFreeze(origin = currentTouchPoint) {
   showToast(frozen ? 'PHASE TRANSITION // 晶核扩散' : 'PHASE TRANSITION // 晶格熔解');
   markInteraction();
 }
-canvas.addEventListener('dblclick', (event) => {
-  event.preventDefault();
-  const hit = intersectOrb(event);
-  toggleFreeze(hit?.localPoint || currentTouchPoint);
-});
-
 window.addEventListener('keydown', (event) => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return;
   if (event.code === 'Space') {
@@ -2799,10 +2877,11 @@ function applyQaModeState(modeIndex, requestedFreezeProgress, timestamp) {
   sculptEnergy = 0;
   isSculpting = false;
   activePointerId = null;
+  activePointerGesture = null;
   pointerVelocity = 0;
   lastPointer = { x: 0, y: 0, time: timestamp };
   lastDragBurst = 0;
-  lastTapTime = 0;
+  lastValidTap = null;
   canvas.classList.remove('is-sculpting');
 
   sharedUniforms.uTime.value = sceneTime;
