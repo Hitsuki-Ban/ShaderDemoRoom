@@ -85,6 +85,7 @@ jobs:
             sleep 1
           done
           pnpm qa:exhibits
+          pnpm qa:orb
           pnpm qa:visual
           pnpm qa:water
           pnpm qa:ninth-tide

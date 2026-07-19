@@ -1,12 +1,15 @@
-export function getEmbeddedSrc(path: string, reloadToken: number) {
+export function getEmbeddedSrc(path: string, reloadToken: number, qaCapture: boolean) {
   const base = import.meta.env.BASE_URL.endsWith('/')
     ? import.meta.env.BASE_URL
     : `${import.meta.env.BASE_URL}/`;
-  const query = reloadToken > 0 ? `?reload=${reloadToken}` : '';
+  const searchParams = new URLSearchParams();
+  if (reloadToken > 0) searchParams.set('reload', String(reloadToken));
+  if (qaCapture) searchParams.set('qa', '1');
+  const query = searchParams.size > 0 ? `?${searchParams.toString()}` : '';
 
   return `${base}${path}${query}`;
 }
 
 export function getStandaloneExhibitUrl(path: string) {
-  return getEmbeddedSrc(path, 0);
+  return getEmbeddedSrc(path, 0, false);
 }

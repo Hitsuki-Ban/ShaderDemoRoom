@@ -23,6 +23,7 @@ interface EmbeddedExhibitFrameProps {
   room: EmbeddedRoomDefinition;
   settings: EmbeddedExhibitSettings;
   title: string;
+  qaCapture: boolean;
   onBridgeState: (state: EmbeddedBridgeState) => void;
   onStats: (stats: EmbeddedRoomStats) => void;
 }
@@ -31,12 +32,13 @@ export function EmbeddedExhibitFrame({
   room,
   settings,
   title,
+  qaCapture,
   onBridgeState,
   onStats,
 }: EmbeddedExhibitFrameProps) {
   const src = useMemo(
-    () => getEmbeddedSrc(room.embedPath, settings.reloadToken),
-    [room.embedPath, settings.reloadToken],
+    () => getEmbeddedSrc(room.embedPath, settings.reloadToken, qaCapture),
+    [qaCapture, room.embedPath, settings.reloadToken],
   );
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const instanceIdRef = useRef<string | null>(null);

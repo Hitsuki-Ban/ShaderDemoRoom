@@ -25,10 +25,25 @@ const panel = $('#lab-panel');
 
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+const qaQueryValues = new URLSearchParams(window.location.search).getAll('qa');
+const qaCaptureEnabled = qaQueryValues.length === 1 && qaQueryValues[0] === '1';
 
 const clamp01 = (value) => THREE.MathUtils.clamp(value, 0, 1);
 const damp = (current, target, lambda, delta) => THREE.MathUtils.damp(current, target, lambda, delta);
 const hexColor = (value) => new THREE.Color(value);
+
+function mulberry32(seed) {
+  let value = seed >>> 0;
+  return () => {
+    value += 0x6D2B79F5;
+    let mixed = value;
+    mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const visualInitializationRandom = qaCaptureEnabled ? mulberry32(0x4D495A55) : Math.random;
 
 const bridgeContext = 'shader-demo-room';
 const bridgeVersion = 1;
@@ -1011,18 +1026,18 @@ const crystalShardGeometry = new THREE.OctahedronGeometry(0.18, 0);
 for (let i = 0; i < 22; i += 1) {
   const shard = new THREE.Mesh(crystalShardGeometry, crystalInteriorMaterial);
   const direction = new THREE.Vector3(
-    Math.random() * 2 - 1,
-    Math.random() * 2 - 1,
-    Math.random() * 2 - 1
+    visualInitializationRandom() * 2 - 1,
+    visualInitializationRandom() * 2 - 1,
+    visualInitializationRandom() * 2 - 1
   ).normalize();
-  const radius = 0.18 + Math.pow(Math.random(), 0.72) * 1.25;
+  const radius = 0.18 + Math.pow(visualInitializationRandom(), 0.72) * 1.25;
   shard.position.copy(direction).multiplyScalar(radius);
-  shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-  const width = 0.22 + Math.random() * 0.48;
-  const length = 0.72 + Math.random() * 1.75;
-  shard.scale.set(width, length, width * (0.66 + Math.random() * 0.55));
+  shard.rotation.set(visualInitializationRandom() * Math.PI, visualInitializationRandom() * Math.PI, visualInitializationRandom() * Math.PI);
+  const width = 0.22 + visualInitializationRandom() * 0.48;
+  const length = 0.72 + visualInitializationRandom() * 1.75;
+  shard.scale.set(width, length, width * (0.66 + visualInitializationRandom() * 0.55));
   shard.userData.baseScale = shard.scale.clone();
-  shard.userData.phase = Math.random() * Math.PI * 2;
+  shard.userData.phase = visualInitializationRandom() * Math.PI * 2;
   crystalInteriorGroup.add(shard);
   crystalShards.push(shard);
 }
@@ -1044,15 +1059,6 @@ crystalCracks.renderOrder = 3;
 crystalCracks.visible = false;
 crystalCracks.userData.vertexCount = 0;
 orbGroup.add(crystalCracks);
-
-function mulberry32(seed) {
-  return function random() {
-    let t = seed += 0x6D2B79F5;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 function rebuildCrystalCracks(origin) {
   const o = origin.clone().normalize();
@@ -1490,13 +1496,13 @@ const particlePositions = new Float32Array(backgroundParticleCount * 3);
 const particleScale = new Float32Array(backgroundParticleCount);
 const particlePhase = new Float32Array(backgroundParticleCount);
 for (let i = 0; i < backgroundParticleCount; i += 1) {
-  const radius = 4.0 + Math.random() * 8.5;
-  const angle = Math.random() * Math.PI * 2;
+  const radius = 4.0 + visualInitializationRandom() * 8.5;
+  const angle = visualInitializationRandom() * Math.PI * 2;
   particlePositions[i * 3] = Math.cos(angle) * radius;
-  particlePositions[i * 3 + 1] = -3.6 + Math.random() * 10.2;
+  particlePositions[i * 3 + 1] = -3.6 + visualInitializationRandom() * 10.2;
   particlePositions[i * 3 + 2] = Math.sin(angle) * radius * 0.72 - 1.5;
-  particleScale[i] = Math.random();
-  particlePhase[i] = Math.random() * Math.PI * 2;
+  particleScale[i] = visualInitializationRandom();
+  particlePhase[i] = visualInitializationRandom() * Math.PI * 2;
 }
 const backgroundGeometry = new THREE.BufferGeometry();
 backgroundGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
@@ -1563,16 +1569,16 @@ scene.add(dropletGroup);
 const droplets = [];
 for (let i = 0; i < 16; i += 1) {
   const mesh = new THREE.Mesh(dropletGeometry, dropletMaterial);
-  const scale = 0.45 + Math.random() * 1.2;
+  const scale = 0.45 + visualInitializationRandom() * 1.2;
   mesh.scale.setScalar(scale);
   dropletGroup.add(mesh);
   droplets.push({
     mesh,
-    radius: 2.2 + Math.random() * 2.7,
-    phase: Math.random() * Math.PI * 2,
-    speed: (0.08 + Math.random() * 0.12) * (Math.random() > 0.5 ? 1 : -1),
-    yAmp: 0.35 + Math.random() * 1.5,
-    tilt: -0.35 + Math.random() * 0.7,
+    radius: 2.2 + visualInitializationRandom() * 2.7,
+    phase: visualInitializationRandom() * Math.PI * 2,
+    speed: (0.08 + visualInitializationRandom() * 0.12) * (visualInitializationRandom() > 0.5 ? 1 : -1),
+    yAmp: 0.35 + visualInitializationRandom() * 1.5,
+    tilt: -0.35 + visualInitializationRandom() * 0.7,
     scale
   });
 }
@@ -2353,6 +2359,7 @@ let frameCount = 0;
 let lastRuntimeFps = 0;
 let lastRuntimeFrameTimeMs = 0;
 let animationFrameId = null;
+let logicalFrameCount = 0;
 let documentHidden = document.hidden;
 let hostPaused = false;
 let runtimePaused = null;
@@ -2412,7 +2419,7 @@ function queueRuntimeAudioReconciliation() {
 }
 
 function scheduleAnimation() {
-  if (runtimePaused || animationFrameId !== null) return;
+  if (qaCaptureEnabled || runtimePaused || animationFrameId !== null) return;
   animationFrameId = requestAnimationFrame(animate);
 }
 
@@ -2610,6 +2617,12 @@ function renderRefractionBuffer() {
   orbGroup.visible = wasVisible;
 }
 
+function renderLogicalFrame(delta = 0) {
+  renderRefractionBuffer();
+  composer.render(delta);
+  logicalFrameCount += 1;
+}
+
 function updateHaloBillboard() {
   const direction = new THREE.Vector3();
   camera.getWorldDirection(direction);
@@ -2702,8 +2715,7 @@ function animate(timestamp = performance.now()) {
   updateSpatialArt(delta);
   controls.update(delta);
   updateHaloBillboard();
-  renderRefractionBuffer();
-  composer.render(delta);
+  renderLogicalFrame(delta);
 
   frameCount += 1;
   statsSampleFrames += 1;
@@ -2726,9 +2738,302 @@ function animate(timestamp = performance.now()) {
   scheduleAnimation();
 }
 
+function captureObjectTransform(object) {
+  return {
+    object,
+    position: object.position.clone(),
+    quaternion: object.quaternion.clone(),
+    scale: object.scale.clone(),
+    visible: object.visible
+  };
+}
+
+function restoreObjectTransform(entry) {
+  entry.object.position.copy(entry.position);
+  entry.object.quaternion.copy(entry.quaternion);
+  entry.object.scale.copy(entry.scale);
+  entry.object.visible = entry.visible;
+  entry.object.updateMatrix();
+  entry.object.matrixWorldNeedsUpdate = true;
+}
+
+function resetQaBurstParticles() {
+  burstParticles.cursor = 0;
+  burstParticles.positions.fill(0);
+  for (let index = 0; index < burstParticles.max; index += 1) {
+    burstParticles.positions[index * 3 + 1] = -999;
+  }
+  burstParticles.velocities.fill(0);
+  burstParticles.life.fill(0);
+  burstParticles.size.fill(0);
+  burstParticles.geometry.attributes.position.needsUpdate = true;
+  burstParticles.geometry.attributes.aLife.needsUpdate = true;
+  burstParticles.geometry.attributes.aSize.needsUpdate = true;
+}
+
+function applyQaModeState(modeIndex, requestedFreezeProgress, timestamp) {
+  const mode = modes[modeIndex];
+  const reduceFactor = prefersReducedMotion ? 0.34 : 1;
+  activeMode = modeIndex;
+  targetMode = modeIndex;
+  modeFloatTarget = modeIndex;
+  pulse = 0;
+  pulseTarget = 0;
+  facetTarget = requestedFreezeProgress > 0 ? 1 : 0;
+  frozen = requestedFreezeProgress > 0;
+  freezeProgress = requestedFreezeProgress;
+  freezeProgressTarget = requestedFreezeProgress;
+  sceneTime = timestamp / 1000 * mode.speed * settings.userSpeed * reduceFactor;
+  rippleCursor = 0;
+  lastInteraction = timestamp;
+  lastAutoModeChange = timestamp;
+  touchStrength = 0;
+  touchStrengthTarget = 0;
+  touchVelocity = 0;
+  currentTouchPoint.set(0, 0, 1);
+  targetTouchPoint.set(0, 0, 1);
+  dragVector.set(0, 0, 0);
+  targetDragVector.set(0, 0, 0);
+  lastSculptPoint.set(0, 0, 1);
+  hasLastSculptPoint = false;
+  sculptEnergy = 0;
+  isSculpting = false;
+  activePointerId = null;
+  pointerVelocity = 0;
+  lastPointer = { x: 0, y: 0, time: timestamp };
+  lastDragBurst = 0;
+  lastTapTime = 0;
+  canvas.classList.remove('is-sculpting');
+
+  sharedUniforms.uTime.value = sceneTime;
+  sharedUniforms.uDeform.value = mode.deform * settings.userDeform;
+  sharedUniforms.uTouchStrength.value = 0;
+  sharedUniforms.uPointerVelocity.value = 0;
+  sharedUniforms.uPulse.value = 0;
+  sharedUniforms.uAudio.value = 0;
+  sharedUniforms.uTension.value = mode.tension;
+  sharedUniforms.uMode.value = modeIndex;
+  sharedUniforms.uViscosity.value = mode.viscosity;
+  sharedUniforms.uSwell.value = mode.swell;
+  sharedUniforms.uFlowStrength.value = mode.flow * settings.flow;
+  sharedUniforms.uTurbulence.value = mode.turbulence;
+  sharedUniforms.uFoam.value = mode.foam;
+  sharedUniforms.uClarity.value = mode.clarity;
+  sharedUniforms.uElasticity.value = mode.elasticity * settings.liveliness;
+  sharedUniforms.uShear.value = mode.shear;
+  sharedUniforms.uTouchPoint.value.set(0, 0, 1);
+  sharedUniforms.uDragVector.value.set(0, 0, 0);
+  sharedUniforms.uReleasePoint.value.set(0, 0, 1);
+  sharedUniforms.uReleaseVector.value.set(0, 0, 0);
+  sharedUniforms.uReleaseTime.value = -100;
+  sharedUniforms.uReleaseEnergy.value = 0;
+  sharedUniforms.uFreezeProgress.value = requestedFreezeProgress;
+  sharedUniforms.uFreezeOrigin.value.set(0, 0, 1);
+  sharedUniforms.uFreezeTime.value = sceneTime;
+  sharedUniforms.uRipples.value.forEach((ripple) => ripple.set(0, 0, 1, -100));
+  sharedUniforms.uDeepColor.value.copy(mode.deepColor);
+  sharedUniforms.uMidColor.value.copy(mode.midColor);
+  sharedUniforms.uLightColor.value.copy(mode.lightColor);
+  sharedUniforms.uAccentColor.value.copy(mode.accentColor);
+  sharedUniforms.uInkColor.value.copy(mode.inkColor);
+  sharedUniforms.uRimStrength.value = mode.rim;
+  sharedUniforms.uFacet.value = requestedFreezeProgress;
+  sharedUniforms.uOpacity.value = 0.86 + (1.0 - mode.clarity) * 0.075 + (modeIndex === 3 ? 0.025 : 0);
+  sharedUniforms.uOutlineThickness.value = 0.046 * settings.outline;
+
+  floorUniforms.uColor.value.copy(mode.floorColor);
+  haloUniforms.uColor.value.copy(mode.backdropColor);
+  beamUniforms.uColor.value.copy(mode.backdropColor);
+  backgroundUniforms.uColor.value.copy(mode.floorColor);
+  burstParticles.uniforms.uColor.value.copy(mode.accentColor);
+  dropletMaterial.color.copy(mode.midColor);
+  knotMaterial.color.copy(mode.accentColor);
+  ringMaterial.color.copy(mode.floorColor);
+  tickMaterial.color.copy(mode.floorColor);
+  topDiscMaterial.emissive.copy(mode.floorColor);
+  causticUniforms.uColor.value.copy(mode.floorColor);
+  crystalInteriorMaterial.color.copy(mode.lightColor);
+  crystalCrackMaterial.color.copy(mode.lightColor);
+  arcMaterials.forEach((material) => material.color.copy(mode.floorColor));
+  shockwaves.forEach((wave) => {
+    wave.life = 0;
+    wave.mesh.visible = false;
+    wave.mesh.material.color.copy(mode.accentColor);
+  });
+  shockwaveCursor = 0;
+  keyLight.color.copy(mode.lightColor);
+  rimLight.color.copy(mode.accentColor);
+
+  const qualityBloom = settings.quality === 'low' ? 0.72 : 1;
+  bloomPass.strength = (mode.bloom + requestedFreezeProgress * 0.24) * settings.bloom * qualityBloom;
+  bloomPass.radius = modeIndex === 3 || requestedFreezeProgress > 0.5 ? 0.16 : 0.28;
+  gradePass.uniforms.uTime.value = sceneTime;
+  gradePass.uniforms.uChroma.value = 0.00075 * (mode.chroma + requestedFreezeProgress * 0.42) * settings.chroma;
+  gradePass.uniforms.uPosterize.value = Math.min(0.92, mode.posterize + requestedFreezeProgress * 0.08);
+  topDiscMaterial.emissiveIntensity = 0.07 + requestedFreezeProgress * 0.08;
+
+  rebuildCrystalCracks(sharedUniforms.uFreezeOrigin.value);
+  const visibleCrystal = requestedFreezeProgress > 0.002;
+  crystalOrb.visible = visibleCrystal;
+  crystalInteriorGroup.visible = visibleCrystal;
+  crystalCracks.visible = visibleCrystal && crystalCracks.userData.vertexCount > 0;
+  crystalInteriorMaterial.opacity = requestedFreezeProgress * 0.16;
+  crystalCrackMaterial.opacity = requestedFreezeProgress * 0.54;
+  crystalCrackGeometry.setDrawRange(0, Math.floor(crystalCracks.userData.vertexCount * requestedFreezeProgress));
+  knotMaterial.opacity = 0.28 * (1.0 - requestedFreezeProgress * 0.88);
+  soundField.visualEnergy = 0;
+  mic.energy = 0;
+  resetQaBurstParticles();
+  updateSpatialArt(0);
+  updateHaloBillboard();
+}
+
+function clearQaRenderTargets() {
+  const previousTarget = renderer.getRenderTarget();
+  const targets = [
+    composer.readBuffer,
+    composer.writeBuffer,
+    bloomPass.renderTargetBright,
+    ...bloomPass.renderTargetsHorizontal,
+    ...bloomPass.renderTargetsVertical
+  ];
+  for (const target of targets) {
+    renderer.setRenderTarget(target);
+    renderer.clear();
+  }
+  renderer.setRenderTarget(previousTarget);
+}
+
+async function sha256Hex(bytes) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('');
+}
+
+async function captureQaFramebuffer() {
+  const gl = renderer.getContext();
+  const width = gl.drawingBufferWidth;
+  const height = gl.drawingBufferHeight;
+  const pixels = new Uint8Array(width * height * 4);
+  gl.finish();
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  const header = new TextEncoder().encode('rgba8\0');
+  const canonical = new Uint8Array(header.length + 8 + pixels.length);
+  canonical.set(header, 0);
+  const dimensions = new DataView(canonical.buffer, header.length, 8);
+  dimensions.setUint32(0, width, false);
+  dimensions.setUint32(4, height, false);
+  const rowBytes = width * 4;
+  for (let sourceRow = 0; sourceRow < height; sourceRow += 1) {
+    const targetRow = height - 1 - sourceRow;
+    canonical.set(
+      pixels.subarray(sourceRow * rowBytes, (sourceRow + 1) * rowBytes),
+      header.length + 8 + targetRow * rowBytes
+    );
+  }
+  return { width, height, hash: await sha256Hex(canonical) };
+}
+
+function installQaCaptureHook() {
+  if (!qaCaptureEnabled) return;
+  const objectBaseline = [];
+  scene.traverse((object) => objectBaseline.push(captureObjectTransform(object)));
+  let cameraBaseline = null;
+  let controlsTargetBaseline = null;
+  let environmentBaseline = null;
+  let captureInProgress = false;
+
+  window.__MIZU_KOKORO_STEP__ = async (input) => {
+    if (!hasExactKeys(input, ['mode', 'freezeProgress', 'timestamp'])) {
+      throw new Error('MIZU_KOKORO_STEP input must contain exactly mode, freezeProgress, and timestamp');
+    }
+    if (!Number.isInteger(input.mode) || input.mode < 0 || input.mode >= modes.length) {
+      throw new Error('MIZU_KOKORO_STEP mode must be an integer from 0 through 3');
+    }
+    if (!Number.isFinite(input.freezeProgress) || input.freezeProgress < 0 || input.freezeProgress > 1) {
+      throw new Error('MIZU_KOKORO_STEP freezeProgress must be a finite number from 0 through 1');
+    }
+    if (!Number.isFinite(input.timestamp) || input.timestamp < 0) {
+      throw new Error('MIZU_KOKORO_STEP timestamp must be a finite non-negative number');
+    }
+    if (captureInProgress) throw new Error('MIZU_KOKORO_STEP does not allow concurrent calls');
+    captureInProgress = true;
+    try {
+      const currentDrawingBufferSize = renderer.getDrawingBufferSize(new THREE.Vector2());
+      if (environmentBaseline === null) {
+        cameraBaseline = captureObjectTransform(camera);
+        controlsTargetBaseline = controls.target.clone();
+        environmentBaseline = Object.freeze({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio,
+          rendererPixelRatio: renderer.getPixelRatio(),
+          drawingBufferWidth: currentDrawingBufferSize.x,
+          drawingBufferHeight: currentDrawingBufferSize.y,
+          refractionWidth: refractionTarget.width,
+          refractionHeight: refractionTarget.height,
+          quality: settings.quality
+        });
+      }
+      if (
+        window.innerWidth !== environmentBaseline.width
+        || window.innerHeight !== environmentBaseline.height
+        || window.devicePixelRatio !== environmentBaseline.devicePixelRatio
+        || renderer.getPixelRatio() !== environmentBaseline.rendererPixelRatio
+        || currentDrawingBufferSize.x !== environmentBaseline.drawingBufferWidth
+        || currentDrawingBufferSize.y !== environmentBaseline.drawingBufferHeight
+        || refractionTarget.width !== environmentBaseline.refractionWidth
+        || refractionTarget.height !== environmentBaseline.refractionHeight
+        || settings.quality !== environmentBaseline.quality
+      ) {
+        throw new Error('MIZU_KOKORO_STEP capture environment changed after initialization');
+      }
+      if (soundField.context !== null || mic.context !== null) {
+        throw new Error('MIZU_KOKORO_STEP requires untouched audio and microphone state');
+      }
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+
+      objectBaseline.forEach(restoreObjectTransform);
+      restoreObjectTransform(cameraBaseline);
+      controls.target.copy(controlsTargetBaseline);
+      controls.enabled = false;
+      controls.autoRotate = false;
+      previousFrameTime = input.timestamp;
+      statsSampleStartedAt = input.timestamp;
+      statsSampleFrames = 0;
+      frameCount = 0;
+      lastRuntimeFps = 0;
+      lastRuntimeFrameTimeMs = 0;
+      renderer.setRenderTarget(null);
+      applyQaModeState(input.mode, input.freezeProgress, input.timestamp);
+      clearQaRenderTargets();
+
+      const logicalFrameStartedAt = logicalFrameCount;
+      renderLogicalFrame(0);
+      const framebuffer = await captureQaFramebuffer();
+      const logicalFrameDelta = logicalFrameCount - logicalFrameStartedAt;
+      const queuedAnimationFrames = animationFrameId === null ? 0 : 1;
+      if (logicalFrameDelta !== 1 || queuedAnimationFrames !== 0) {
+        throw new Error('MIZU_KOKORO_STEP violated the single-frame scheduler contract');
+      }
+      return {
+        input: { ...input },
+        logicalFrameDelta,
+        queuedAnimationFrames,
+        framebuffer
+      };
+    } finally {
+      captureInProgress = false;
+    }
+  };
+}
+
 applyQuality(settings.quality);
 setMode(0, false);
 resize();
+installQaCaptureHook();
 document.addEventListener('visibilitychange', handleVisibilityChange);
 if (embeddedBridge) {
   window.addEventListener('message', handleBridgeMessage);

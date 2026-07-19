@@ -22,6 +22,7 @@ describe('EmbeddedExhibitFrame permissions', () => {
         room={getEmbeddedRoom(roomId)}
         settings={{ reloadToken: 0 }}
         title="本地化展品标题"
+        qaCapture={false}
         onBridgeState={vi.fn()}
         onStats={vi.fn()}
       />,
@@ -41,6 +42,7 @@ describe('EmbeddedExhibitFrame permissions', () => {
         room={getEmbeddedRoom('anime-liquid-orb')}
         settings={{ reloadToken: 0 }}
         title="MIZU//KOKORO"
+        qaCapture={false}
         onBridgeState={onBridgeState}
         onStats={onStats}
       />,
@@ -84,5 +86,35 @@ describe('EmbeddedExhibitFrame permissions', () => {
       data: { invalid: true },
     })));
     expect(frame).toHaveAttribute('data-bridge-state', 'ready');
+  });
+
+  it('passes QA capture state only when explicitly requested', () => {
+    const room = getEmbeddedRoom('anime-liquid-orb');
+    const callbacks = { onBridgeState: vi.fn(), onStats: vi.fn() };
+    const { rerender } = render(
+      <EmbeddedExhibitFrame
+        room={room}
+        settings={{ reloadToken: 3 }}
+        title="MIZU//KOKORO"
+        qaCapture={false}
+        {...callbacks}
+      />,
+    );
+
+    expect(screen.getByTitle('MIZU//KOKORO'))
+      .toHaveAttribute('src', '/exhibits/anime-liquid-orb/index.html?reload=3');
+
+    rerender(
+      <EmbeddedExhibitFrame
+        room={room}
+        settings={{ reloadToken: 3 }}
+        title="MIZU//KOKORO"
+        qaCapture
+        {...callbacks}
+      />,
+    );
+
+    expect(screen.getByTitle('MIZU//KOKORO'))
+      .toHaveAttribute('src', '/exhibits/anime-liquid-orb/index.html?reload=3&qa=1');
   });
 });
