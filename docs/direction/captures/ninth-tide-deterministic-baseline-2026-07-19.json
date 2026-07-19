@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "ticket": "T-NT-05",
   "capturedAt": "2026-07-19",
-  "implementationRevision": "e65b913061ffd32771d87548d02465bbb533755c",
+  "implementationRevision": "a846b3c13e89fa77601b0106b0421dee04e5d8c2",
   "build": {
     "htmlSha256": "de0cd43deb4c6c3a2899fd80ebef4a8615fc0ae0f719cb1fc43f10762fac66a0",
-    "appSha256": "5181fa90248a84b0388898a0161af8b155842870f430d9c722cda3eb987856fb"
+    "appSha256": "d89ac26484226a19769a3f68f664e18ba54c2623f545d5caefc98286db854889"
   },
   "environment": {
     "platform": "win32",
@@ -44,6 +44,12 @@
       "steps": 120,
       "deltaSeconds": 0.016666666666666666
     },
+    "audioMetadataTransition": {
+      "run": 2,
+      "state": "opening",
+      "firstRepeat": "archive.mp3 request held before metadata",
+      "laterRepeats": "request released and finite duration required"
+    },
     "canonicalBytes": "rgba8\\0 + u32be(width) + u32be(height) + top-left row-major RGBA8",
     "exactComparisonScope": "within one fixed-stack gate run; hashes are evidence, not cross-platform goldens",
     "roi": {
@@ -74,7 +80,7 @@
         "framebufferRgba8": "b4d1e4aa2c056b50187b59c915568c51b6f3e4c1aa1aa800210c213f91a8e7dd",
         "canvasRgba8": "b4d1e4aa2c056b50187b59c915568c51b6f3e4c1aa1aa800210c213f91a8e7dd"
       },
-      "stateDigest": "c74d0febc74a333bb6103da0ace99b9ff6c1dd798556ce50e05cebdb9aa3ffc2",
+      "stateDigest": "aca91a1600f4b922aa5cca2d4746fabdbed960d287660235510e686b07b8aeb5",
       "metrics": {
         "nonBlackPixels": 85319,
         "roiLuma": 0.2922,
