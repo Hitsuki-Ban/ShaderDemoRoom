@@ -468,7 +468,7 @@
     }
   ],
   "overhead": {
-    "comparison": "T-SH-02 baseline build vs T-SH-03 candidate build",
+    "comparison": "glass-optics baseline vs candidate",
     "baselineUrl": "https://hitsuki-ban.github.io/ShaderDemoRoom",
     "candidateUrl": "https://hitsuki-ban.github.io/ShaderDemoRoom",
     "method": {

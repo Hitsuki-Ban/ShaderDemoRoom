@@ -16,6 +16,7 @@
     "qa:motion": "node scripts/motion-qa.mjs",
     "qa:renderer": "node scripts/renderer-lifecycle.mjs",
     "qa:telemetry-reference": "node scripts/telemetry-reference.mjs",
+    "qa:software-pairs": "node scripts/software-paired-cadence.mjs",
     "exhibits:build": "node scripts/build-exhibits.mjs",
     "exhibits:check": "pnpm run exhibits:build && node scripts/check-exhibit-sync.mjs",
     "lint": "eslint . && pnpm lint:tokens",

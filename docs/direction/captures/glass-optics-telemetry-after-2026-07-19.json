@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "recordedAt": "2026-07-18T22:44:49.514Z",
   "buildId": "t-go-01-after",
-  "sourceRevision": "working-tree@6dfcb4f",
+  "sourceRevision": "dbddf777734f324b2082bc67334e58abb6484aff",
   "room": {
     "id": "glass-optics",
     "preset": "default"
@@ -468,7 +468,7 @@
     }
   ],
   "overhead": {
-    "comparison": "T-SH-02 baseline build vs T-SH-03 candidate build",
+    "comparison": "glass-optics baseline vs candidate",
     "baselineUrl": "https://hitsuki-ban.github.io/ShaderDemoRoom",
     "candidateUrl": "http://127.0.0.1:4173/ShaderDemoRoom",
     "method": {

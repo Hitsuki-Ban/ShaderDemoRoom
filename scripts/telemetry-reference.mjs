@@ -219,7 +219,7 @@ async function capturePairedOverhead() {
       `Telemetry cadence regression ${pairedMedianRegressionPercent.toFixed(2)}% exceeds 5%.`,
     );
     return {
-      comparison: 'T-SH-02 baseline build vs T-SH-03 candidate build',
+      comparison: `${roomId} baseline vs candidate`,
       baselineUrl,
       candidateUrl: baseUrl,
       method: {

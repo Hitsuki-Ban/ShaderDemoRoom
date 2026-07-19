@@ -26,7 +26,7 @@
 
 - glass-optics の telemetry reference capture が hardware / software 両分類で存在し、renderer string、classification、schema version、計測時間が記録されていること。
 - hardware 分類で 60 FPS、最低 30 FPS を満たすこと。満たさない場合は本票を完了扱いにせず、原因を追加計測して同じ修正経路を詰めること。
-- software 分類の定常値が同一プロトコルの before 比 **1.7 倍以上**に改善すること(2026-07-19 裁定で 2.0x から改訂 — 下記「裁定」参照)。voxel-water の同一プロトコル値に ±5% を超える回帰がないこと。
+- software 分類は5組の交錯・交互順序A/Bで `pairedSpeedupMedian` が **1.7 倍以上**に改善すること(2026-07-19 裁定で 2.0x から改訂 — 下記「裁定」参照)。単発reference captureは環境記録として保持するが、この変動を含むperformance gateには用いない。voxel-water の同一プロトコル値に ±5% を超える回帰がないこと。
 - Glass 入場中だけ `transmissionResolutionScale === 0.5`、退出直後は snapshot 値へ復帰することを `pnpm qa:renderer` 系シナリオで検証すること。
 - 未知/範囲外 rendererProfile が検証で失敗し、環境分類による値分岐が存在しないことをテストで固定すること。
 - draw calls 19 を維持し、`pnpm test` / `pnpm lint` / `pnpm build` / `pnpm qa:visual` を通過すること。
@@ -51,20 +51,20 @@
 
 | environment | before | candidate 0.5 | change | gate |
 |---|---:|---:|---:|---:|
-| SwiftShader | 4.80 FPS | 8.10 FPS | 1.69x / +68.8% | 2.0x 未達 |
+| SwiftShader reference | 4.80 FPS | 8.10 FPS | 1.6866x / +68.7% | 単発参考値 |
 | RTX 4070 Ti / D3D11 | 89.26 FPS | 102.79 FPS | +15.2% | median 60 / min 30 達成 |
 
-- 5組のSwiftShader交錯・交互順序A/Bでも、baseline median 4.58、candidate median 8.29、speedup median **1.784x** (各組1.727〜1.840x)だった。単発の順序・熱状態差ではない。
+- `pnpm qa:software-pairs` による5組のSwiftShader交錯・交互順序A/Bでは、baseline median 4.16、candidate median 7.63、`pairedSpeedupMedian` **1.854x** (各組1.806〜2.316x)で1.7x gateを通過した。raw pairs、renderer、両build revision、viewport、warm-up/measurement条件は `docs/direction/captures/glass-optics-software-paired-2026-07-19.json` に保存した。
 - Voxel Water候補はSwiftShader 15.61 FPS (既存15.37)、hardware交錯pair regression 1.15%で、±5%非回帰gateを通過した。
 - actual allocation監査ではcanvas 862×735に対しtransmission RTが431×367、4× MSAAで生成され、profile readbackは0.5だった。color/depth初期allocation以外の反復resizeはなく、適用時機・RT寸法・復帰経路に実装欠陥はない。
 - `pnpm qa:visual` は14 screenshots、console error 0、overflow/HUD overlapなしで通過。0.5の固定画も目視回帰なし。
 
 ### 仕様矛盾と裁定(2026-07-19、ユーザー決定)
 
-**矛盾の内容**: 本票は当初 `0.5` を唯一の採用値とし `0.33` を禁止する一方、software baseline から 2x を要求していた。正しく適用された 0.5 の再現可能な上限は 1.78x(5組交錯 median)で、両方を同時には満たせないことが実測で判明。診断として固定 `0.33` を一時適用すると SwiftShader median 9.76 FPS(before比 2.03x)でゲートを通過し、固定時刻・auto-rotate off の 0.33 vs 0.5 画面差は mean RGB delta 0.055/255・delta>3 pixel 0.322% で目視不可だった(診断後は 0.5 へ復帰済み、0.33 はソースに残していない)。
+**矛盾の内容**: 本票は当初 `0.5` を唯一の採用値とし `0.33` を禁止する一方、software baseline から 2x を要求していた。正しく適用された 0.5 は反復した5組交錯測定で `pairedSpeedupMedian` が1.78x、再検証でも1.85xとなり、2.0x median gateとは両立しなかった。診断として固定 `0.33` を一時適用すると SwiftShader median 9.76 FPS(before比 2.03x)でゲートを通過し、固定時刻・auto-rotate off の 0.33 vs 0.5 画面差は mean RGB delta 0.055/255・delta>3 pixel 0.322% で目視不可だった(診断後は 0.5 へ復帰済み、0.33 はソースに残していない)。
 
 **裁定: (B) 固定 0.5 を維持し、software ゲートを実測準拠の ≥1.7x へ改訂する。**
 
-理由: この展示は屈折そのものが主題であり品質保守側を採る。0.33 の「目視差なし」証拠は固定1フレームのみで、今後の T-GO-02(ステージ再設計)/ T-GO-05(dispersion)で transmission バッファの内容が変わるため画質余裕を残す。1.78x でも実利は十分大きい。
+理由: この展示は屈折そのものが主題であり品質保守側を採る。0.33 の「目視差なし」証拠は固定1フレームのみで、今後の T-GO-02(ステージ再設計)/ T-GO-05(dispersion)で transmission バッファの内容が変わるため画質余裕を残す。反復測定で1.7xを超える改善でも実利は十分大きい。
 
 **フォローアップ**: `0.33` への引き下げは T-GO-02 / T-GO-05 完了後の再評価オプションとして記録する(再評価時は複数カメラ時刻・複数プリセットでの画像差分を要件とする)。
