@@ -1753,6 +1753,14 @@ function ensureBundledAudioSource() {
   if (!ui.audio.hasAttribute('src')) setAudioSource('./archive.mp3');
 }
 
+async function playAudioElement(element) {
+  try {
+    await element.play();
+  } catch (error) {
+    if (!(error instanceof DOMException) || error.name !== 'AbortError') throw error;
+  }
+}
+
 const bridgeContext = 'shader-demo-room';
 const bridgeVersion = 1;
 const bridgeCapabilities = Object.freeze(['pause', 'stats', 'set-preview']);
@@ -1851,7 +1859,9 @@ async function reconcileRuntimeMedia() {
       const elementsToResume = new Set(lifecycleAudioElements);
       if (lifecycleAudioStartPending) elementsToResume.add(ui.audio);
       for (const element of elementsToResume) {
-        if (element.isConnected && element.paused && !element.ended) await element.play();
+        if (element.isConnected && element.paused && !element.ended) {
+          await playAudioElement(element);
+        }
       }
     }
 
@@ -2098,19 +2108,17 @@ async function enterExperience(withAudio, restarting = false) {
       lifecycleAudioStartPending = true;
       queueRuntimeMediaReconciliation();
       try {
-        await ui.audio.play();
+        await playAudioElement(ui.audio);
       } catch (error) {
-        if (!(error instanceof DOMException) || error.name !== 'AbortError') {
-          await rollbackLifecycleMediaIntent({
-            elementWasOwned,
-            contextWasOwned,
-            startWasPending,
-          });
-          throw error;
-        }
+        await rollbackLifecycleMediaIntent({
+          elementWasOwned,
+          contextWasOwned,
+          startWasPending,
+        });
+        throw error;
       }
     } else {
-      await ui.audio.play();
+      await playAudioElement(ui.audio);
     }
     ui.enter.textContent = '启动共鸣仪式';
     ui.enter.disabled = false;
@@ -2337,7 +2345,7 @@ window.addEventListener('keydown', async (event) => {
     } else if (!state.entered) {
       await enterExperience(true);
     } else if (state.audioReady) {
-      if (ui.audio.paused) await ui.audio.play(); else ui.audio.pause();
+      if (ui.audio.paused) await playAudioElement(ui.audio); else ui.audio.pause();
     }
   } else if (event.key.toLowerCase() === 'm') {
     state.muted = !state.muted;
