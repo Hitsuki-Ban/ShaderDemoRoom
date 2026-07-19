@@ -1,4 +1,4 @@
-export function getEmbeddedSrc(path: string, reloadToken: number, qaCapture = false) {
+export function getEmbeddedSrc(path: string, reloadToken: number, qaCapture: boolean) {
   const base = import.meta.env.BASE_URL.endsWith('/')
     ? import.meta.env.BASE_URL
     : `${import.meta.env.BASE_URL}/`;
@@ -11,5 +11,5 @@ export function getEmbeddedSrc(path: string, reloadToken: number, qaCapture = fa
 }
 
 export function getStandaloneExhibitUrl(path: string) {
-  return getEmbeddedSrc(path, 0);
+  return getEmbeddedSrc(path, 0, false);
 }

@@ -22,6 +22,7 @@ describe('EmbeddedExhibitFrame permissions', () => {
         room={getEmbeddedRoom(roomId)}
         settings={{ reloadToken: 0 }}
         title="本地化展品标题"
+        qaCapture={false}
         onBridgeState={vi.fn()}
         onStats={vi.fn()}
       />,
@@ -41,6 +42,7 @@ describe('EmbeddedExhibitFrame permissions', () => {
         room={getEmbeddedRoom('anime-liquid-orb')}
         settings={{ reloadToken: 0 }}
         title="MIZU//KOKORO"
+        qaCapture={false}
         onBridgeState={onBridgeState}
         onStats={onStats}
       />,
@@ -94,6 +96,7 @@ describe('EmbeddedExhibitFrame permissions', () => {
         room={room}
         settings={{ reloadToken: 3 }}
         title="MIZU//KOKORO"
+        qaCapture={false}
         {...callbacks}
       />,
     );

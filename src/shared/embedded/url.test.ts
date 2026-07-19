@@ -3,7 +3,7 @@ import { getEmbeddedSrc } from './url';
 
 describe('getEmbeddedSrc', () => {
   it('keeps the normal embedded URL free of QA state', () => {
-    expect(getEmbeddedSrc('exhibits/mizu-kokoro/', 0)).toBe('/exhibits/mizu-kokoro/');
+    expect(getEmbeddedSrc('exhibits/mizu-kokoro/', 0, false)).toBe('/exhibits/mizu-kokoro/');
   });
 
   it('serializes reload and explicit QA capture state once', () => {

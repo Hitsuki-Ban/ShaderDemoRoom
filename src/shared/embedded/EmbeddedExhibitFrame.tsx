@@ -23,7 +23,7 @@ interface EmbeddedExhibitFrameProps {
   room: EmbeddedRoomDefinition;
   settings: EmbeddedExhibitSettings;
   title: string;
-  qaCapture?: boolean;
+  qaCapture: boolean;
   onBridgeState: (state: EmbeddedBridgeState) => void;
   onStats: (stats: EmbeddedRoomStats) => void;
 }
@@ -32,7 +32,7 @@ export function EmbeddedExhibitFrame({
   room,
   settings,
   title,
-  qaCapture = false,
+  qaCapture,
   onBridgeState,
   onStats,
 }: EmbeddedExhibitFrameProps) {
