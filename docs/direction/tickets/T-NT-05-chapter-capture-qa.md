@@ -66,3 +66,17 @@
 - 独立reviewはP0–P3なしでAPPROVE。`pnpm test` (29 files / 173 tests)、`pnpm lint`、
   `pnpm typecheck`、`pnpm build`、`node scripts/check-exhibit-sync.mjs`、production `qa:ninth-tide`、
   `qa:exhibits` を完走対象とし、最終manifest/11 PNGはworkflowと同じ `output/playwright/ninth-tide/` に生成する。
+
+### Pages実環境フォローアップ (2026-07-19)
+
+- 初回Pages検証で、openingのcanvas/framebuffer/metricsは完全一致したまま、fresh pageの最初の
+  state digestだけが `aca91a…`、media metadata到着後が `c74d0…` になる競合を検出した。
+  `archive.mp3` を意図的に保留して再現し、差分を `state.tideFloat` / `state.phaseLocal` /
+  `globals.sectionLocal` / `globals.tide` の4項目へ限定した。
+- capture modeのvisual score durationを九章時間軸の終端 `354.504` 秒へ固定した。live playbackは
+  引き続き実media durationを使う。retry、timeout緩和、hash toleranceは追加していない。
+- gateの第2 browser runでopeningの最初のrepeatまでMP3 responseを保留し、その後metadataを
+  読み込ませて残り2 repeatを実行する回帰監査を追加した。99 hook callsはmetadata前後を含めて
+  exact一致し、opening pixelsは既存の `b4d1e4…` のまま、canonical state digestは `aca91a…` へ更新した。
+- 修正implementation revisionは `a846b3c13e89fa77601b0106b0421dee04e5d8c2`、app bundle SHA-256は
+  `d89ac26484226a19769a3f68f664e18ba54c2623f545d5caefc98286db854889`。

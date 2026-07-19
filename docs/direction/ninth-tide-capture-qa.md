@@ -1,7 +1,7 @@
 # Ninth Tide deterministic capture QA
 
 - Ticket: `T-NT-05`
-- Implementation revision: `e65b913061ffd32771d87548d02465bbb533755c`
+- Implementation revision: `a846b3c13e89fa77601b0106b0421dee04e5d8c2`
 - Baseline: `captures/ninth-tide-deterministic-baseline-2026-07-19.json`
 - Hit fixture: `hit-targets-v1.json`
 
@@ -42,6 +42,9 @@ Pages workflow は既存のproduction preview serverに対して同じコマン�
   PNG file SHAは転送/encoding診断だけに使う。
 - 3つの独立browser process × 各状態fresh page × 同page3回、合計99 hook callsで、
   framebuffer hash、canvas hash、state digest、metrics、hit resultsの完全一致を要求する。
+- captureのvisual score durationは九章境界の終端 `354.504` 秒に固定し、network media metadataを
+  clock sourceにしない。第2 browser runのopeningでは `archive.mp3` requestを最初のrepeatまで保留し、
+  その後releaseしてfinite durationを確認してから残り2 repeatを実行する。metadata前後もexact一致が必須である。
 
 exact hashは同一gate内の固定Playwright/Chromium/SwiftShader stackだけに対する契約である。
 WebGL実装、OS、CPU architecture、headless mode、browser versionをまたぐ永久goldenにはしない。
@@ -55,7 +58,7 @@ cross-run gateはchapter、非黒、luma range、warm rule、fixtureを使い、
 - renderer: `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)`
 - viewport / screen: 1440×900, DPR 1, `en-US`, UTC, dark, reduced-motion no-preference
 - HTML SHA-256: `de0cd43deb4c6c3a2899fd80ebef4a8615fc0ae0f719cb1fc43f10762fac66a0`
-- app.js SHA-256: `5181fa90248a84b0388898a0161af8b155842870f430d9c722cda3eb987856fb`
+- app.js SHA-256: `d89ac26484226a19769a3f68f664e18ba54c2623f545d5caefc98286db854889`
 
 ## Pixel policy and baseline
 
