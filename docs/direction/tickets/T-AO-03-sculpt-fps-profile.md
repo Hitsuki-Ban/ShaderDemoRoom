@@ -52,6 +52,6 @@ baseline がない状態で shader/outline を変更すると、視覚品質を�
 - 決定論 hook と独立 QA gate を source revision `e26d4c7a8e71e493fa2902446d48139333cd1f1b` で実装した。`?qa=1` が1個だけ存在する standalone / showroom iframe で通常 rAF を停止し、strict input、固定初期乱数、scene/audio/camera/post state の再初期化、1 logical frame、canonical RGBA8 SHA-256 を提供する。通常 URL と重複 `qa` query では hook を公開しない。
 - `pnpm qa:orb` は standalone / showroom それぞれ同一入力3回の exact hash 一致、`logicalFrameDelta=1`、app/独立 audit の queued rAF 0、Promise 解決後の追加 WebGL draw 0 を確認した。
 - RTX 4070 Ti / Chrome 150 / 1440×900 / DPR 2 / high quality で、6条件×idle/sculpt×2逆順 round の24 cadence、14 GPU timer-query breakdown、14 Chrome traceを取得した。全 cadence は headless Chrome の約164.9 FPS ceiling に張り付いたため、FPSを変体順位付けには使用しなかった。
-- `bloom-off` だけが sculpt の summed pass GPU median を両 round で低下させた (20.08% / 56.19%)。同変体の round 間総値は1.0839 / 1.0860 ms (0.19%差)。SMAA、`preserveDrawingBuffer`、refraction RT scale、pixel ratio は改善方向がround間で反転したため棄却した。
+- `bloom-off` だけが sculpt の summed pass GPU median を両 round で低下させた (20.08% / 56.20%)。同変体の round 間総値は1.0839 / 1.0860 ms (0.19%差)。SMAA、`preserveDrawingBuffer`、refraction RT scale、pixel ratio は改善方向がround間で反転したため棄却した。
 - 最大寄与パスは `UnrealBloomPass`。次の最適化票が所有する単一処置は **現行見た目を決定論 visual gate で維持しながら bloom working resolution を下げること** とする。本票では bloom、shader、outline、refraction、post順序、pixel ratio、context attributes を恒久変更していない。
 - 証拠: [raw JSON](../captures/orb-profile-2026-07-19.json) / [要約・再現手順](../captures/orb-profile-2026-07-19.md)
