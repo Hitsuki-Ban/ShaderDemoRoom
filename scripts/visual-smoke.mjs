@@ -217,6 +217,10 @@ async function updateStageHudOverlap() {
 }
 
 async function assertUrlStateContract(urlPage) {
+  const waitForHash = (expectedHash) => urlPage.waitForFunction(
+    (expected) => window.location.hash === expected,
+    expectedHash,
+  );
   const setRangeValue = async (locator, value) => {
     await locator.waitFor({ state: 'attached' });
     await locator.evaluate((element, nextValue) => {
@@ -235,7 +239,7 @@ async function assertUrlStateContract(urlPage) {
 
   await urlPage.goto(`${baseUrl}/#/room/glass-optics`, { waitUntil: 'domcontentloaded' });
   await urlPage.locator('.room-link[href$="#/room/voxel-water"]').click();
-  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water');
+  await waitForHash('#/room/voxel-water');
 
   const defaultUrl = urlPage.url();
   const historyLengthBeforeDrag = await urlPage.evaluate(() => history.length);
@@ -245,7 +249,7 @@ async function assertUrlStateContract(urlPage) {
   await setRangeValue(waveHeight, '1.2');
   await setRangeValue(waveHeight, '1.3');
   await setRangeValue(waveHeight, '1.4');
-  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water?v=1&waveHeight=1.4');
+  await waitForHash('#/room/voxel-water?v=1&waveHeight=1.4');
 
   const sharedUrl = urlPage.url();
   const historyLengthAfterDrag = await urlPage.evaluate(() => history.length);
@@ -274,16 +278,16 @@ async function assertUrlStateContract(urlPage) {
   await sharedPage.close();
 
   await urlPage.goBack({ waitUntil: 'domcontentloaded' });
-  await urlPage.waitForURL((url) => url.hash === '#/room/glass-optics');
+  await waitForHash('#/room/glass-optics');
   await urlPage.goForward({ waitUntil: 'domcontentloaded' });
-  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water?v=1&waveHeight=1.4');
+  await waitForHash('#/room/voxel-water?v=1&waveHeight=1.4');
   await waveHeight.waitFor({ state: 'attached' });
   if (await waveHeight.inputValue() !== '1.4') {
     throw new Error('Forward navigation did not restore URL-backed waveHeight state.');
   }
 
   await setRangeValue(waveHeight, '0.48');
-  await urlPage.waitForURL((url) => url.hash === '#/room/voxel-water');
+  await waitForHash('#/room/voxel-water');
   if (urlPage.url() !== defaultUrl) {
     throw new Error(`Default settings did not restore the query-free URL: ${urlPage.url()}.`);
   }
