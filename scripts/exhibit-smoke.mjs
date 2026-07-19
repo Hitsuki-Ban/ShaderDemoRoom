@@ -367,6 +367,15 @@ if (tideFramePreserved !== 'tide-preserved') {
   throw new Error('Ninth Tide bridge commands unexpectedly reloaded the iframe.');
 }
 
+await page.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main`, {
+  waitUntil: 'domcontentloaded',
+});
+await page.locator('#phaseNumber').waitFor({ state: 'visible' });
+await page.waitForFunction(
+  () => document.querySelector('#phaseNumber')?.textContent === 'VIII',
+);
+const tideDefaultPhase = await page.locator('#phaseNumber').textContent();
+
 for (let section = 0; section < roman.length; section += 1) {
   const url = `${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main&section=${section}`;
   await page.goto(url, { waitUntil: 'domcontentloaded' });
@@ -433,6 +442,7 @@ console.log(
   JSON.stringify(
     {
       baseUrl,
+      tideDefaultPhase,
       tideSections,
       embeddedTideSections,
       orbModes,

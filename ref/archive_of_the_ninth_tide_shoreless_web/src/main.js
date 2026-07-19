@@ -37,6 +37,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const previewParams = new URLSearchParams(location.search);
 const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
 const deterministicCaptureRequested = previewParams.has('preview') || forcedPreview !== undefined;
+const defaultMainPreviewSection = 7;
 
 function mulberry32(seed) {
   let randomState = seed >>> 0;
@@ -164,7 +165,7 @@ const state = {
   ended: false,
   endingCue: 0,
   previewMode: '',
-  previewSection: 4,
+  previewSection: defaultMainPreviewSection,
   audioReady: false,
   playing: false,
   muted: false,
@@ -3589,7 +3590,7 @@ if (deterministicCaptureRequested) {
     }
     section = Number(rawSection);
   } else {
-    section = mode === 'ending' ? 8 : mode === 'opening' ? 0 : 4;
+    section = mode === 'ending' ? 8 : mode === 'opening' ? 0 : defaultMainPreviewSection;
   }
   applyPreview(mode, section);
   window.__NINTH_TIDE_STEP__ = stepDeterministicPreview;
