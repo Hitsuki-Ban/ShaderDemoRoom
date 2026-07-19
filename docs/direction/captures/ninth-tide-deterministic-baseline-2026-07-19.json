@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "ticket": "T-NT-05",
+  "capturedAt": "2026-07-19",
+  "implementationRevision": "c4830a8837f84b92c462f72a9409c50819c4137a",
+  "build": {
+    "htmlSha256": "de0cd43deb4c6c3a2899fd80ebef4a8615fc0ae0f719cb1fc43f10762fac66a0",
+    "appSha256": "56ba8b44c71a2aa52b057469d82a9ecc54c9e05c9b293bb347f8f6de50f9f868"
+  },
+  "environment": {
+    "platform": "win32",
+    "architecture": "x64",
+    "node": "v24.16.0",
+    "pnpm": "11.5.2",
+    "playwright": "1.60.0",
+    "browser": "148.0.7778.96",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1
+    },
+    "contextAttributes": {
+      "alpha": true,
+      "antialias": true,
+      "depth": true,
+      "desynchronized": false,
+      "failIfMajorPerformanceCaveat": false,
+      "powerPreference": "high-performance",
+      "premultipliedAlpha": true,
+      "preserveDrawingBuffer": true,
+      "stencil": false,
+      "xrCompatible": false
+    }
+  },
+  "protocol": {
+    "freshBrowserRuns": 3,
+    "freshPagesPerState": 3,
+    "samePageRepeats": 3,
+    "totalHookCalls": 99,
+    "frameRendersPerHook": 1,
+    "queuedAnimationFramesAfterHook": 0,
+    "mainCpuSettle": {
+      "steps": 120,
+      "deltaSeconds": 0.016666666666666666
+    },
+    "canonicalBytes": "rgba8\\0 + u32be(width) + u32be(height) + top-left row-major RGBA8",
+    "exactComparisonScope": "within one fixed-stack gate run; hashes are evidence, not cross-platform goldens",
+    "roi": {
+      "x": 144,
+      "y": 90,
+      "width": 1152,
+      "height": 720
+    },
+    "warmDominance": {
+      "redToGreenPercent": 108,
+      "redToBluePercent": 115
+    }
+  },
+  "inputs": {
+    "hitFixture": "docs/direction/hit-targets-v1.json",
+    "hitFixtureSha256": "78e04b66b9f258ba6c25fa265984c8939feae92a9f6e163a4e0ca2b1a435fd06",
+    "policy": "scripts/ninth-tide-policy.mjs",
+    "policySha256": "faf60e88fb513ba7ff2365ce9a1440868bf2ba2cf79c8790a6f87afdc7f685ee"
+  },
+  "states": [
+    {
+      "id": "opening",
+      "mode": "opening",
+      "section": 0,
+      "timestampMs": 5750,
+      "phase": "I",
+      "hashes": {
+        "framebufferRgba8": "b4d1e4aa2c056b50187b59c915568c51b6f3e4c1aa1aa800210c213f91a8e7dd",
+        "canvasRgba8": "b4d1e4aa2c056b50187b59c915568c51b6f3e4c1aa1aa800210c213f91a8e7dd"
+      },
+      "stateDigest": "c74d0febc74a333bb6103da0ace99b9ff6c1dd798556ce50e05cebdb9aa3ffc2",
+      "metrics": {
+        "nonBlackPixels": 85319,
+        "roiLuma": 0.2922,
+        "roiRgbMean": {
+          "red": 0.0042,
+          "green": 0.3733,
+          "blue": 0.3369
+        },
+        "warmBalance": -0.3327,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 0.15,
+        "max": 0.55
+      }
+    },
+    {
+      "id": "section-0",
+      "mode": "main",
+      "section": 0,
+      "timestampMs": 24485.45,
+      "phase": "I",
+      "hashes": {
+        "framebufferRgba8": "3d8592b2d71258bd8d70bdb208e0e5f0943302b24eb20ccb0865fc5007e02f50",
+        "canvasRgba8": "3d8592b2d71258bd8d70bdb208e0e5f0943302b24eb20ccb0865fc5007e02f50"
+      },
+      "stateDigest": "b7a5864ed64346a0c8c9c751f3a9d2c44c741241d481c182c1676e084d535e7d",
+      "metrics": {
+        "nonBlackPixels": 825704,
+        "roiLuma": 6.6903,
+        "roiRgbMean": {
+          "red": 1.7582,
+          "green": 8.0887,
+          "blue": 7.3605
+        },
+        "warmBalance": -5.6023,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 4.5,
+        "max": 9
+      }
+    },
+    {
+      "id": "section-1",
+      "mode": "main",
+      "section": 1,
+      "timestampMs": 62008.9,
+      "phase": "II",
+      "hashes": {
+        "framebufferRgba8": "41ad9f84a23a4201e426f149774162290c93c54708e4184d73dfa3cf99c420cf",
+        "canvasRgba8": "41ad9f84a23a4201e426f149774162290c93c54708e4184d73dfa3cf99c420cf"
+      },
+      "stateDigest": "9636d3721be8eb82b27a8f315ffe79b25d2bedbeded694be9fe69886e602e60b",
+      "metrics": {
+        "nonBlackPixels": 1119778,
+        "roiLuma": 4.0563,
+        "roiRgbMean": {
+          "red": 1.0545,
+          "green": 4.6087,
+          "blue": 7.423
+        },
+        "warmBalance": -6.3685,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 2.7,
+        "max": 5.5
+      }
+    },
+    {
+      "id": "section-2",
+      "mode": "main",
+      "section": 2,
+      "timestampMs": 89071.75,
+      "phase": "III",
+      "hashes": {
+        "framebufferRgba8": "90302b1bdf5d003ea123b6697ec613bfe28d07a78eaf31b476c91afc40ff0660",
+        "canvasRgba8": "90302b1bdf5d003ea123b6697ec613bfe28d07a78eaf31b476c91afc40ff0660"
+      },
+      "stateDigest": "572ede55c9fc0b944534a953440f8ab13350f304620ddd176d51320a9aaf0881",
+      "metrics": {
+        "nonBlackPixels": 815042,
+        "roiLuma": 4.8006,
+        "roiRgbMean": {
+          "red": 2.2294,
+          "green": 5.7075,
+          "blue": 3.3886
+        },
+        "warmBalance": -1.1592,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 3.2,
+        "max": 6.5
+      }
+    },
+    {
+      "id": "section-3",
+      "mode": "main",
+      "section": 3,
+      "timestampMs": 124168.7,
+      "phase": "IV",
+      "hashes": {
+        "framebufferRgba8": "31d5a4c18cf1538269bbf2f93b1e251072d9c9ae077f6abda1456737174196b0",
+        "canvasRgba8": "31d5a4c18cf1538269bbf2f93b1e251072d9c9ae077f6abda1456737174196b0"
+      },
+      "stateDigest": "b0061b3099177496eb9418d86bbd9fada5b27aa03be2fd354b34a2ba1af2f5b1",
+      "metrics": {
+        "nonBlackPixels": 773645,
+        "roiLuma": 2.2538,
+        "roiRgbMean": {
+          "red": 1.6483,
+          "green": 2.0982,
+          "blue": 5.5774
+        },
+        "warmBalance": -3.9292,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 1.4,
+        "max": 3.2
+      }
+    },
+    {
+      "id": "section-4",
+      "mode": "main",
+      "section": 4,
+      "timestampMs": 164525,
+      "phase": "V",
+      "hashes": {
+        "framebufferRgba8": "e0c346deb362c521466207eb1b91073940cc2545b12d18d498b8a552c5250913",
+        "canvasRgba8": "e0c346deb362c521466207eb1b91073940cc2545b12d18d498b8a552c5250913"
+      },
+      "stateDigest": "044af4e8887726f1a12d3bbfe39973db6aff4fd7bda22bb815db43ec838d80d1",
+      "metrics": {
+        "nonBlackPixels": 851479,
+        "roiLuma": 5.2573,
+        "roiRgbMean": {
+          "red": 6.3207,
+          "green": 5.2925,
+          "blue": 1.7778
+        },
+        "warmBalance": 4.5429,
+        "warmDominant": true
+      },
+      "acceptedRoiLuma": {
+        "min": 3.5,
+        "max": 7.2
+      }
+    },
+    {
+      "id": "section-5",
+      "mode": "main",
+      "section": 5,
+      "timestampMs": 204347.25,
+      "phase": "VI",
+      "hashes": {
+        "framebufferRgba8": "bcbc94bf2feb359952e263a07c616060057706187e22944cfae5eadddf39d4a7",
+        "canvasRgba8": "bcbc94bf2feb359952e263a07c616060057706187e22944cfae5eadddf39d4a7"
+      },
+      "stateDigest": "506e4ac6d09f5561b0adc08d6621b5e9f3025150dd256b6de03d3e55c21d1c01",
+      "metrics": {
+        "nonBlackPixels": 741223,
+        "roiLuma": 4.1908,
+        "roiRgbMean": {
+          "red": 0.8891,
+          "green": 5.1827,
+          "blue": 4.0873
+        },
+        "warmBalance": -3.1982,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 2.8,
+        "max": 5.7
+      }
+    },
+    {
+      "id": "section-6",
+      "mode": "main",
+      "section": 6,
+      "timestampMs": 242555.65,
+      "phase": "VII",
+      "hashes": {
+        "framebufferRgba8": "050ca2bd914a24884a96b1513e1cf4e19d2792c39b851a01cbcde933649b4399",
+        "canvasRgba8": "050ca2bd914a24884a96b1513e1cf4e19d2792c39b851a01cbcde933649b4399"
+      },
+      "stateDigest": "3402360d990756bf4f3efc0b9448b5723f67f028dca24830280c7264439df0fd",
+      "metrics": {
+        "nonBlackPixels": 435933,
+        "roiLuma": 0.9692,
+        "roiRgbMean": {
+          "red": 1.5607,
+          "green": 0.6337,
+          "blue": 2.5517
+        },
+        "warmBalance": -0.991,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 0.55,
+        "max": 1.5
+      }
+    },
+    {
+      "id": "section-7",
+      "mode": "main",
+      "section": 7,
+      "timestampMs": 295137.2,
+      "phase": "VIII",
+      "hashes": {
+        "framebufferRgba8": "d4891b579a844c36e3ac74432d68a55e50bcc35286601aa6b68c934c5fb964f2",
+        "canvasRgba8": "d4891b579a844c36e3ac74432d68a55e50bcc35286601aa6b68c934c5fb964f2"
+      },
+      "stateDigest": "a67fdd467ee7d321552ea7a34c8b87eaf8de3d2aedec4088d4e9948e3accac43",
+      "metrics": {
+        "nonBlackPixels": 621924,
+        "roiLuma": 3.6748,
+        "roiRgbMean": {
+          "red": 1.3607,
+          "green": 4.4055,
+          "blue": 3.2509
+        },
+        "warmBalance": -1.8902,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 2.4,
+        "max": 5
+      }
+    },
+    {
+      "id": "section-8",
+      "mode": "main",
+      "section": 8,
+      "timestampMs": 342276.2,
+      "phase": "IX",
+      "hashes": {
+        "framebufferRgba8": "a17ea1d95d3c49b94c6cd3e9017a82ca53fc187973c02af66862f2e48cc4fa13",
+        "canvasRgba8": "a17ea1d95d3c49b94c6cd3e9017a82ca53fc187973c02af66862f2e48cc4fa13"
+      },
+      "stateDigest": "237916b07726dbf4e0b810a40190f93a5da738b87e8bbd252d7e1f91bb9e9e3c",
+      "metrics": {
+        "nonBlackPixels": 454250,
+        "roiLuma": 2.9147,
+        "roiRgbMean": {
+          "red": 1.9371,
+          "green": 3.2835,
+          "blue": 2.1411
+        },
+        "warmBalance": -0.204,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 1.8,
+        "max": 4.2
+      }
+    },
+    {
+      "id": "ending",
+      "mode": "ending",
+      "section": 8,
+      "timestampMs": 346000,
+      "phase": "IX",
+      "hashes": {
+        "framebufferRgba8": "b30370c7d26eaac921bc0eb4267746ef5d6f0e7f3b6831fb9f1e94db6c4e8440",
+        "canvasRgba8": "b30370c7d26eaac921bc0eb4267746ef5d6f0e7f3b6831fb9f1e94db6c4e8440"
+      },
+      "stateDigest": "2dac6b6b1e90b98e771b4f72855b7312f30a67aeba4bcfd0f3f540a7ac12af62",
+      "metrics": {
+        "nonBlackPixels": 24211,
+        "roiLuma": 0.0461,
+        "roiRgbMean": {
+          "red": 0.0114,
+          "green": 0.0584,
+          "blue": 0.0266
+        },
+        "warmBalance": -0.0151,
+        "warmDominant": false
+      },
+      "acceptedRoiLuma": {
+        "min": 0.02,
+        "max": 0.09
+      }
+    }
+  ]
+}

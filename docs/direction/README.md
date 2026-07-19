@@ -29,7 +29,7 @@
 
 - **健全性**: `pnpm build` ✅ / `pnpm test` 51件全パス ✅ / `pnpm lint` ✅ / `pnpm typecheck` ✅ / `pnpm qa:visual` ✅(コンソールエラー0)
 - **最新スクリーンショット**: `output/playwright/`(qa:visual で再取得済み。gitignore対象なのでローカルのみ)
-- **Ninth Tide 本編キャプチャ(初)**: `captures/ninth-tide-opening.png`, `ninth-tide-ch1..9.png`, `ninth-tide-ending.png` — `?preview=main&section=0..8` 機構で全9章+開幕+終幕を取得。これまでタイトルゲートしか証拠がなかったギャップ(NT-1)を解消。再取得手順: `pnpm build && vite preview` 起動後 `node docs/direction/captures/capture.mjs`
+- **Ninth Tide 決定論キャプチャ**: [ninth-tide-capture-qa.md](ninth-tide-capture-qa.md) / `captures/ninth-tide-deterministic-baseline-2026-07-19.json` / `hit-targets-v1.json` — `pnpm qa:ninth-tide` が opening + 9章 + ending を99回のstrict single-frame hookで検査する。`captures/ninth-tide-opening.png`, `ninth-tide-ch1..9.png`, `ninth-tide-ending.png` は旧manual captureの履歴証拠であり、再取得やgateには使わない。
 - **旧 FPS チップ実測**: `captures/fps-samples-2026-07-18.json` + `captures/voxel-water-hud-evidence.png` / `glass-optics-hud-evidence.png` — 丸め済み HUD 文字列を読む旧手順の履歴証拠。新しい性能基準には使用しない。
 - **Telemetry protocol v1 参照記録**: `captures/telemetry-reference-2026-07-18.json` — Voxel Water / 1440×900 / 5秒 warm-up + 15秒 measurement。SwiftShader は median 15.37 FPS / 65.05 ms、system Chrome D3D11 (RTX 4070 Ti) は median 200 FPS / 5.00 ms。両方 19 logical-frame calls、renderer raw string と software/hardware 三態を記録。T-SH-02 baseline / T-SH-03 candidate の同一 hardware renderer 5組交錯測定は paired median regression 0.00% で、5% overhead gate を通過。
 
