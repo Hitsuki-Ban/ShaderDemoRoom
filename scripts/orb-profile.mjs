@@ -7,8 +7,6 @@ import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 import {
   assertExactVariantIds,
-  median,
-  nearestRankPercentile,
   ORB_PROFILE_VARIANTS,
   summarizeCadence,
 } from './orb-profile-core.mjs';
@@ -107,7 +105,7 @@ function orbProfileRendererMetadata() {
     contextAttributes: orbProfileGl.getContextAttributes(),
     timerQueryAvailable: orbProfileTimerExtension !== null,
     timerQueryCounterBits: orbProfileTimerExtension
-      ? orbProfileGl.getQuery(orbProfileTimerExtension.TIME_ELAPSED_EXT, orbProfileGl.QUERY_COUNTER_BITS_EXT)
+      ? orbProfileGl.getQuery(orbProfileTimerExtension.TIME_ELAPSED_EXT, orbProfileGl.QUERY_COUNTER_BITS)
       : 0,
     viewport: { width: window.innerWidth, height: window.innerHeight },
     devicePixelRatio: window.devicePixelRatio,
@@ -246,7 +244,11 @@ function applyVariant(source, variantId) {
 
 async function runCommand(command, args) {
   await new Promise((resolvePromise, reject) => {
-    const child = spawn(command, args, { cwd: root, stdio: 'inherit', windowsHide: true });
+    const child = spawn(command, args, {
+      cwd: root,
+      stdio: 'inherit',
+      windowsHide: true,
+    });
     child.once('error', reject);
     child.once('exit', (code) => {
       if (code === 0) resolvePromise();
@@ -266,8 +268,20 @@ async function buildVariant(variant) {
   const original = await readFile(mainPath, 'utf8');
   const transformed = applyVariant(instrumentSource(original), variant.id);
   await writeFile(mainPath, transformed);
-  const pnpmExecutable = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-  await runCommand(pnpmExecutable, ['exec', 'vite', 'build', worktree, '--outDir', dist, '--emptyOutDir']);
+  const packageManagerEntry = process.env.npm_execpath;
+  if (typeof packageManagerEntry !== 'string' || packageManagerEntry.length === 0) {
+    throw new Error('Orb profile builds must run through the project pnpm script so npm_execpath is available.');
+  }
+  await runCommand(process.execPath, [
+    packageManagerEntry,
+    'exec',
+    'vite',
+    'build',
+    worktree,
+    '--outDir',
+    dist,
+    '--emptyOutDir',
+  ]);
   const html = await readFile(join(dist, 'index.html'));
   const htmlText = html.toString('utf8');
   const bundleMatch = htmlText.match(/<script[^>]+src="\.\/([^"]+\.js)"/);
@@ -375,15 +389,42 @@ function summarizeGpuSamples(samples) {
   const labels = ['refraction', 'main', 'bloom', 'grade', 'smaa', 'output'];
   return Object.fromEntries(labels.map((label) => {
     const records = samples.filter((sample) => sample.label === label);
-    if (records.length === 0) throw new Error(`GPU profile returned no ${label} samples.`);
+    if (records.length === 0) {
+      return [label, {
+        sampleCount: 0,
+        zeroGpuSampleCount: 0,
+        gpuMedianMs: null,
+        gpuP95Ms: null,
+        cpuSubmitMedianMs: null,
+        cpuSubmitP95Ms: null,
+      }];
+    }
     const gpu = records.map(({ gpuElapsedMs }) => gpuElapsedMs);
     const cpu = records.map(({ cpuSubmitMs }) => cpuSubmitMs);
+    for (const [metric, values] of [['gpuElapsedMs', gpu], ['cpuSubmitMs', cpu]]) {
+      if (values.some((value) => typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
+        throw new Error(`GPU profile returned an invalid non-negative ${metric} sample for ${label}.`);
+      }
+    }
+    const summarizeNonNegative = (values) => {
+      const sorted = [...values].sort((left, right) => left - right);
+      const middle = Math.floor(sorted.length / 2);
+      return {
+        median: sorted.length % 2 === 0
+          ? (sorted[middle - 1] + sorted[middle]) / 2
+          : sorted[middle],
+        p95: sorted[Math.ceil(0.95 * sorted.length) - 1],
+      };
+    };
+    const gpuSummary = summarizeNonNegative(gpu);
+    const cpuSummary = summarizeNonNegative(cpu);
     return [label, {
       sampleCount: records.length,
-      gpuMedianMs: median(gpu),
-      gpuP95Ms: nearestRankPercentile(gpu, 0.95),
-      cpuSubmitMedianMs: median(cpu),
-      cpuSubmitP95Ms: nearestRankPercentile(cpu, 0.95),
+      zeroGpuSampleCount: gpu.filter((value) => value === 0).length,
+      gpuMedianMs: gpuSummary.median,
+      gpuP95Ms: gpuSummary.p95,
+      cpuSubmitMedianMs: cpuSummary.median,
+      cpuSubmitP95Ms: cpuSummary.p95,
     }];
   }));
 }
@@ -403,8 +444,8 @@ async function preparePage(context, url, variantId, phase) {
   await page.waitForFunction(() => typeof window.__MIZU_KOKORO_PROFILE__ === 'object', undefined, { timeout: 30_000 });
   const metadata = await profileApiCall(page, 'metadata');
   if (metadata.quality !== protocol.quality) throw new Error(`${variantId} quality was ${metadata.quality}.`);
-  if (!metadata.timerQueryAvailable || metadata.timerQueryCounterBits <= 0) {
-    throw new Error(`${variantId} requires a usable EXT_disjoint_timer_query_webgl2 extension.`);
+  if (!metadata.timerQueryAvailable) {
+    throw new Error(`${variantId} requires EXT_disjoint_timer_query_webgl2.`);
   }
   if (!String(metadata.unmaskedRenderer).includes('NVIDIA GeForce RTX 4070 Ti')) {
     throw new Error(`${variantId} renderer is not the fixed NVIDIA GeForce RTX 4070 Ti: ${String(metadata.unmaskedRenderer)}.`);
@@ -417,8 +458,19 @@ async function preparePage(context, url, variantId, phase) {
     const canvas = page.locator('#scene');
     const box = await canvas.boundingBox();
     if (!box) throw new Error(`${variantId} sculpt canvas has no bounding box.`);
-    const pointer = { x: box.x + box.width * 0.5, y: box.y + box.height * 0.5 };
-    await page.mouse.move(pointer.x, pointer.y);
+    let pointer = null;
+    for (const yRatio of [0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65]) {
+      for (const xRatio of [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65]) {
+        const candidate = { x: box.x + box.width * xRatio, y: box.y + box.height * yRatio };
+        await page.mouse.move(candidate.x, candidate.y);
+        if (await canvas.evaluate((element) => element.style.cursor === 'crosshair')) {
+          pointer = candidate;
+          break;
+        }
+      }
+      if (pointer) break;
+    }
+    if (!pointer) throw new Error(`${variantId} could not find a deterministic pointer hit inside the Orb canvas.`);
     await page.mouse.down();
     await page.waitForFunction(() => window.__MIZU_KOKORO_PROFILE__?.isSculpting() === true, undefined, { timeout: 5000 });
     return { page, metadata, consoleErrors, pointer };
@@ -467,8 +519,8 @@ async function readTraceStream(session, streamHandle) {
   return text;
 }
 
-async function measureGpuBreakdown(context, serverUrl, phase, round) {
-  const prepared = await preparePage(context, serverUrl, 'baseline', phase);
+async function measureGpuBreakdown(context, serverUrl, variant, phase, round) {
+  const prepared = await preparePage(context, serverUrl, variant, phase);
   const session = await context.newCDPSession(prepared.page);
   try {
     await collectCadence(prepared.page, protocol.gpuProfileWarmupMs);
@@ -483,12 +535,13 @@ async function measureGpuBreakdown(context, serverUrl, phase, round) {
     await session.send('Tracing.end');
     const complete = await tracingComplete;
     const traceText = await readTraceStream(session, complete.stream);
-    const tracePath = join(tracesRoot, `baseline-${phase}-round-${round}.json`);
+    const tracePath = join(tracesRoot, `${variant}-${phase}-round-${round}.json`);
     await writeFile(tracePath, traceText);
     const trace = JSON.parse(traceText);
     const userTimingEvents = trace.traceEvents.filter((event) => String(event.name).startsWith('orb:'));
     return {
       round,
+      variant,
       phase,
       rawSamples: samples,
       summaryByPass: summarizeGpuSamples(samples),
@@ -552,10 +605,14 @@ try {
         const record = await measureCondition(context, server.baseUrl, build.id, phase, round);
         result.measurements.push(record);
         console.log(`${build.id} round ${round} ${phase}: ${record.summary.fps.toFixed(2)} FPS, p95 ${record.summary.p95FrameTimeMs.toFixed(3)} ms`);
+        await writeFile(resultPath, `${JSON.stringify(result, null, 2)}\n`);
       }
     }
-    for (const phase of ['idle', 'sculpt']) {
-      result.gpuBreakdowns.push(await measureGpuBreakdown(context, server.baseUrl, phase, round));
+    result.gpuBreakdowns.push(await measureGpuBreakdown(context, server.baseUrl, 'baseline', 'idle', round));
+    await writeFile(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+    for (const build of order) {
+      result.gpuBreakdowns.push(await measureGpuBreakdown(context, server.baseUrl, build.id, 'sculpt', round));
+      await writeFile(resultPath, `${JSON.stringify(result, null, 2)}\n`);
     }
     await writeFile(resultPath, `${JSON.stringify(result, null, 2)}\n`);
   }

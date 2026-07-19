@@ -16,6 +16,7 @@
     "qa:ninth-tide": "node scripts/ninth-tide-capture.mjs",
     "qa:orb": "node scripts/orb-deterministic-capture.mjs",
     "qa:orb-profile": "node scripts/orb-profile.mjs",
+    "qa:orb-report": "node scripts/orb-profile-report.mjs",
     "qa:motion": "node scripts/motion-qa.mjs",
     "qa:renderer": "node scripts/renderer-lifecycle.mjs",
     "qa:telemetry-reference": "node scripts/telemetry-reference.mjs",
