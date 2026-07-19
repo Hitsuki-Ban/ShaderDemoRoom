@@ -28,3 +28,22 @@
 
 - preview default だけを所有する。QA capture 基盤は T-NT-05、作品本編の章順は変更しない。
 - ref/ で実装し exhibits を再生成する。
+
+## 完了報告 (2026-07-20)
+
+- Implementation revision: `5dcca94fc0bba3e8f3e740c26777341d1efa16c1`。
+- ref側に `defaultMainPreviewSection = 7` を単一の既定値として置き、初期stateとsection無指定URLの
+  main経路を第VIII章へ揃えた。旧section 4 fallback、alias、移行分岐は追加していない。
+- `qa:exhibits` にsection無指定 `?preview=main` の `VIII` assertを追加した。明示
+  `section=0..8` はI〜IXを厳密に維持し、bridge `set-tide-preview` もI〜IX、iframe instance維持、
+  console error 0で完走した。
+- 変更前後にT-NT-05 gateを実行し、3 browser process × 11 states × 3 repeats = 99 hook callsの
+  `runs` objectが完全一致した。第VIII章は既存hash
+  `d4891b579a844c36e3ac74432d68a55e50bcc35286601aa6b68c934c5fb964f2`、ROI luma `3.6748`、
+  warm false、queued rAF 0を維持した。
+- 原典hero / 旧default V / 新default VIIIの比較スチルと判定根拠を
+  `docs/direction/captures/t-nt-11-preview-default-comparison-2026-07-20.md` に保存した。
+- `pnpm lint`、`pnpm typecheck`、`pnpm test` (31 files / 180 tests)、`pnpm build`、
+  `pnpm exhibits:check`、production `qa:ninth-tide`、`qa:exhibits`、`qa:visual` が通過した。
+- 独立reviewはP0〜P3なしでAPPROVE。独立verifierもfresh production previewで99 hook calls、
+  default VIII、standalone/bridge I〜IX、bundle同期、lint/typecheck/build/testを再確認しPASSした。
