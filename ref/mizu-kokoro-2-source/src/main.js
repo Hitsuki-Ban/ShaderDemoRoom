@@ -217,9 +217,9 @@ controls.autoRotateSpeed = 0.35;
 controls.update();
 
 const cameraFrames = Object.freeze({
-  default: Object.freeze({ positionY: 1.05, targetY: 0.42, distance: 8.1 }),
-  portrait: Object.freeze({ positionY: 0.68, targetY: 0.05, distance: 10.3 }),
-  compact: Object.freeze({ positionY: 0.05, targetY: -0.58, distance: 12.0 })
+  default: Object.freeze({ targetY: 0.42, offsetY: 0.63, positionZ: 8.1 }),
+  portrait: Object.freeze({ targetY: 0.05, offsetY: 0.62, positionZ: 10.18 }),
+  compact: Object.freeze({ targetY: -0.58, offsetY: 0.54, positionZ: 10.18 })
 });
 let activeCameraFrame = '';
 
@@ -227,7 +227,11 @@ function applyResponsiveCameraFrame(width, height) {
   const frameName = width <= 420 ? (height <= 520 ? 'compact' : 'portrait') : 'default';
   if (frameName === activeCameraFrame) return;
   const frame = cameraFrames[frameName];
-  camera.position.set(0, frame.positionY, frame.distance);
+  const orbitDistance = Math.hypot(frame.offsetY, frame.positionZ);
+  if (orbitDistance < controls.minDistance || orbitDistance > controls.maxDistance) {
+    throw new Error(`Orb ${frameName} camera frame violates OrbitControls distance limits.`);
+  }
+  camera.position.set(0, frame.targetY + frame.offsetY, frame.positionZ);
   controls.target.set(0, frame.targetY, 0);
   controls.update();
   activeCameraFrame = frameName;
