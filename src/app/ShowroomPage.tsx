@@ -42,6 +42,8 @@ export function ShowroomPage() {
   const { locale, setLocale, t } = useI18n();
   const activeRoom = getRoomById(roomId);
   const searchParamsKey = searchParams.toString();
+  const qaQueryValues = searchParams.getAll('qa');
+  const qaCapture = qaQueryValues.length === 1 && qaQueryValues[0] === '1';
   const navigationIdentity = `${activeRoom?.id ?? 'invalid'}\u0000${location.key}\u0000${searchParamsKey}`;
   const [settingsState, setSettingsState] = useState(() => {
     const initialSettings = createInitialSettings();
@@ -223,6 +225,7 @@ export function ShowroomPage() {
                 room={activeRoom}
                 settings={settings as EmbeddedExhibitSettings}
                 title={roomLabel}
+                qaCapture={qaCapture}
                 onBridgeState={(bridgeState) =>
                   setEmbeddedTelemetry({
                     locationKey: location.key,

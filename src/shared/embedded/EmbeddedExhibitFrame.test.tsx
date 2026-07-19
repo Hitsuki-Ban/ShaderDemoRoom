@@ -85,4 +85,33 @@ describe('EmbeddedExhibitFrame permissions', () => {
     })));
     expect(frame).toHaveAttribute('data-bridge-state', 'ready');
   });
+
+  it('passes QA capture state only when explicitly requested', () => {
+    const room = getEmbeddedRoom('anime-liquid-orb');
+    const callbacks = { onBridgeState: vi.fn(), onStats: vi.fn() };
+    const { rerender } = render(
+      <EmbeddedExhibitFrame
+        room={room}
+        settings={{ reloadToken: 3 }}
+        title="MIZU//KOKORO"
+        {...callbacks}
+      />,
+    );
+
+    expect(screen.getByTitle('MIZU//KOKORO'))
+      .toHaveAttribute('src', '/exhibits/anime-liquid-orb/index.html?reload=3');
+
+    rerender(
+      <EmbeddedExhibitFrame
+        room={room}
+        settings={{ reloadToken: 3 }}
+        title="MIZU//KOKORO"
+        qaCapture
+        {...callbacks}
+      />,
+    );
+
+    expect(screen.getByTitle('MIZU//KOKORO'))
+      .toHaveAttribute('src', '/exhibits/anime-liquid-orb/index.html?reload=3&qa=1');
+  });
 });
