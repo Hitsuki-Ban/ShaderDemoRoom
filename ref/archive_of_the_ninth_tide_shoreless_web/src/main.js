@@ -34,14 +34,26 @@ const ui = {
 const isCoarse = matchMedia('(pointer: coarse)').matches;
 const isMobile = isCoarse || innerWidth < 820;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const previewParams = new URLSearchParams(location.search);
+const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
+const deterministicCaptureRequested = previewParams.has('preview') || forcedPreview !== undefined;
 
 function mulberry32(seed) {
-  return function () {
-    let t = seed += 0x6D2B79F5;
+  let randomState = seed >>> 0;
+  const generator = function () {
+    let t = randomState = (randomState + 0x6D2B79F5) >>> 0;
     t = Math.imul(t ^ t >>> 15, t | 1);
     t ^= t + Math.imul(t ^ t >>> 7, t | 61);
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
+  generator.getState = () => randomState;
+  generator.setState = (value) => {
+    if (!Number.isInteger(value) || value < 0 || value > 0xFFFFFFFF) {
+      throw new RangeError('Ninth Tide random state must be a uint32.');
+    }
+    randomState = value >>> 0;
+  };
+  return generator;
 }
 const random = mulberry32(0x91A7F4);
 const rand = (a = 0, b = 1) => a + (b - a) * random();
@@ -58,7 +70,9 @@ function showMessage(text, duration = 1700) {
   ui.message.textContent = text;
   ui.message.classList.add('show');
   clearTimeout(showMessage.timer);
-  showMessage.timer = setTimeout(() => ui.message.classList.remove('show'), duration);
+  if (!deterministicCaptureActive) {
+    showMessage.timer = setTimeout(() => ui.message.classList.remove('show'), duration);
+  }
 }
 
 const tideMeta = [
@@ -91,7 +105,12 @@ const palettes = [
 
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance', alpha: false });
+  renderer = new THREE.WebGLRenderer({
+    antialias: !isMobile,
+    powerPreference: 'high-performance',
+    alpha: false,
+    preserveDrawingBuffer: deterministicCaptureRequested
+  });
 } catch (error) {
   console.error(error);
   ui.unsupported.style.display = 'grid';
@@ -1737,6 +1756,10 @@ const lifecycleAudioElements = new Set();
 const lifecycleAudioContexts = new Set();
 let lifecycleAudioStartPending = false;
 let mediaTransition = Promise.resolve();
+let deterministicCaptureActive = false;
+let deterministicStepActive = false;
+let frameRenderCount = 0;
+const deterministicMainSettleSteps = 120;
 const frameStats = {
   frameCount: 0,
   sampleStartedAt: performance.now(),
@@ -1858,7 +1881,7 @@ async function rollbackLifecycleMediaIntent({
 }
 
 function requestNextFrame() {
-  if (!runtimePaused && animationFrameId === null) {
+  if (!runtimePaused && !deterministicCaptureActive && !deterministicStepActive && animationFrameId === null) {
     animationFrameId = requestAnimationFrame(animate);
   }
 }
@@ -2922,12 +2945,7 @@ function updateTransport() {
   ui.index.textContent = `09–${String(Math.floor(progress * 9999)).padStart(4, '0')}`;
 }
 
-function animate(timestamp) {
-  animationFrameId = null;
-  if (runtimePaused) return;
-  timer.update(timestamp);
-  const dt = clamp(timer.getDelta(), 0, 0.05);
-  const elapsed = timer.getElapsed();
+function advanceFrameState(dt, elapsed) {
   state.activeSeconds += dt;
   globals.time.value = elapsed;
 
@@ -2951,7 +2969,21 @@ function animate(timestamp) {
   updateHover();
   updateTransport();
 
+}
+
+function renderFrame(dt, elapsed) {
+  advanceFrameState(dt, elapsed);
   composer.render(dt);
+  frameRenderCount++;
+}
+
+function animate(timestamp) {
+  animationFrameId = null;
+  if (runtimePaused || deterministicCaptureActive || deterministicStepActive) return;
+  timer.update(timestamp);
+  const dt = clamp(timer.getDelta(), 0, 0.05);
+  const elapsed = timer.getElapsed();
+  renderFrame(dt, elapsed);
   recordRenderedFrame(timestamp);
   requestNextFrame();
 }
@@ -3016,17 +3048,522 @@ function applyPreview(mode, section) {
   triggerPulse(new THREE.Vector2(0, 0), mode === 'ending' ? 0.45 : 1.15, 0.34, false);
 }
 
-function stepPreview(timestamp = performance.now()) {
-  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
-  animationFrameId = null;
-  animate(timestamp);
+const baselineMaterialScalarKeys = Object.freeze([
+  'opacity', 'emissiveIntensity', 'roughness', 'metalness', 'linewidth', 'size', 'rotation', 'alphaTest'
+]);
+const baselineMaterialColorKeys = Object.freeze(['color', 'emissive', 'specular']);
+
+function captureValue(value) {
+  if (value === null || ['number', 'string', 'boolean'].includes(typeof value)) {
+    return Object.freeze({ kind: 'primitive', value });
+  }
+  if (value instanceof THREE.Color) {
+    return Object.freeze({ kind: 'color', value: Object.freeze([value.r, value.g, value.b]) });
+  }
+  if (value instanceof THREE.Vector2 || value instanceof THREE.Vector3 || value instanceof THREE.Vector4) {
+    return Object.freeze({ kind: 'vector', value: Object.freeze(value.toArray()) });
+  }
+  if (value instanceof THREE.Quaternion) {
+    return Object.freeze({ kind: 'quaternion', value: Object.freeze(value.toArray()) });
+  }
+  if (value instanceof THREE.Euler) {
+    return Object.freeze({ kind: 'euler', value: Object.freeze([value.x, value.y, value.z, value.order]) });
+  }
+  return Object.freeze({ kind: 'reference', value });
+}
+
+function restoreValue(target, key, snapshot, label) {
+  if (snapshot.kind === 'primitive') {
+    target[key] = snapshot.value;
+  } else if (snapshot.kind === 'color') {
+    target[key].setRGB(...snapshot.value);
+  } else if (snapshot.kind === 'vector' || snapshot.kind === 'quaternion') {
+    target[key].fromArray(snapshot.value);
+  } else if (snapshot.kind === 'euler') {
+    target[key].set(...snapshot.value);
+  } else if (target[key] !== snapshot.value) {
+    throw new Error(`Ninth Tide deterministic baseline reference changed: ${label}.`);
+  }
+}
+
+function captureRecord(record) {
+  return Object.freeze(Object.fromEntries(
+    Object.entries(record).map(([key, value]) => [key, captureValue(value)])
+  ));
+}
+
+function restoreRecord(record, snapshot, label) {
+  const keys = Object.keys(record).sort();
+  const baselineKeys = Object.keys(snapshot).sort();
+  if (keys.length !== baselineKeys.length || keys.some((key, index) => key !== baselineKeys[index])) {
+    throw new Error(`Ninth Tide deterministic ${label} shape changed.`);
+  }
+  for (const key of baselineKeys) restoreValue(record, key, snapshot[key], `${label}.${key}`);
+}
+
+function captureMaterial(material) {
+  const scalars = {};
+  const colors = {};
+  for (const key of baselineMaterialScalarKeys) {
+    if (typeof material[key] === 'number') scalars[key] = material[key];
+  }
+  for (const key of baselineMaterialColorKeys) {
+    if (material[key] instanceof THREE.Color) colors[key] = Object.freeze(material[key].toArray());
+  }
+  return Object.freeze({
+    material,
+    scalars: Object.freeze(scalars),
+    colors: Object.freeze(colors),
+    uniforms: material.uniforms ? captureRecord(
+      Object.fromEntries(Object.entries(material.uniforms).map(([key, uniform]) => [key, uniform.value]))
+    ) : null
+  });
+}
+
+function restoreMaterial(snapshot) {
+  for (const [key, value] of Object.entries(snapshot.scalars)) snapshot.material[key] = value;
+  for (const [key, value] of Object.entries(snapshot.colors)) snapshot.material[key].fromArray(value);
+  if (snapshot.uniforms) {
+    const values = Object.fromEntries(
+      Object.entries(snapshot.material.uniforms).map(([key, uniform]) => [key, uniform.value])
+    );
+    restoreRecord(values, snapshot.uniforms, `material ${snapshot.material.uuid} uniforms`);
+    for (const [key, value] of Object.entries(values)) snapshot.material.uniforms[key].value = value;
+  }
+}
+
+function captureSceneBaseline() {
+  const objects = [];
+  const materials = new Map();
+  const geometries = new Map();
+  const captureObject = (object) => {
+    objects.push(Object.freeze({
+      object,
+      position: Object.freeze(object.position.toArray()),
+      quaternion: Object.freeze(object.quaternion.toArray()),
+      scale: Object.freeze(object.scale.toArray()),
+      visible: object.visible,
+      intensity: typeof object.intensity === 'number' ? object.intensity : null,
+      color: object.color instanceof THREE.Color ? Object.freeze(object.color.toArray()) : null,
+      instanceMatrix: object.isInstancedMesh ? new object.instanceMatrix.array.constructor(object.instanceMatrix.array) : null,
+      instanceColor: object.isInstancedMesh && object.instanceColor
+        ? new object.instanceColor.array.constructor(object.instanceColor.array)
+        : null
+    }));
+    const objectMaterials = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+    for (const material of objectMaterials) {
+      if (!materials.has(material.uuid)) materials.set(material.uuid, captureMaterial(material));
+    }
+    if (object.geometry && !geometries.has(object.geometry.uuid)) {
+      const attributes = Object.fromEntries(Object.entries(object.geometry.attributes).map(([name, attribute]) => [
+        name,
+        Object.freeze({ attribute, array: new attribute.array.constructor(attribute.array) })
+      ]));
+      geometries.set(object.geometry.uuid, Object.freeze({ geometry: object.geometry, attributes: Object.freeze(attributes) }));
+    }
+  };
+  scene.traverse(captureObject);
+  captureObject(camera);
+  return Object.freeze({
+    objects: Object.freeze(objects),
+    materials: Object.freeze([...materials.values()]),
+    geometries: Object.freeze([...geometries.values()])
+  });
+}
+
+function restoreSceneBaseline(snapshot) {
+  for (const entry of snapshot.objects) {
+    entry.object.position.fromArray(entry.position);
+    entry.object.quaternion.fromArray(entry.quaternion);
+    entry.object.scale.fromArray(entry.scale);
+    entry.object.visible = entry.visible;
+    if (entry.intensity !== null) entry.object.intensity = entry.intensity;
+    if (entry.color) entry.object.color.fromArray(entry.color);
+    if (entry.instanceMatrix) {
+      entry.object.instanceMatrix.array.set(entry.instanceMatrix);
+      entry.object.instanceMatrix.needsUpdate = true;
+    }
+    if (entry.instanceColor) {
+      if (!entry.object.instanceColor || entry.object.instanceColor.array.length !== entry.instanceColor.length) {
+        throw new Error(`Ninth Tide deterministic instance color changed: ${entry.object.uuid}.`);
+      }
+      entry.object.instanceColor.array.set(entry.instanceColor);
+      entry.object.instanceColor.needsUpdate = true;
+    }
+    entry.object.updateMatrix();
+  }
+  for (const entry of snapshot.materials) restoreMaterial(entry);
+  for (const entry of snapshot.geometries) {
+    for (const [name, attributeSnapshot] of Object.entries(entry.attributes)) {
+      const attribute = entry.geometry.getAttribute(name);
+      if (attribute !== attributeSnapshot.attribute || attribute.array.length !== attributeSnapshot.array.length) {
+        throw new Error(`Ninth Tide deterministic geometry attribute changed: ${entry.geometry.uuid}.${name}.`);
+      }
+      attribute.array.set(attributeSnapshot.array);
+      attribute.needsUpdate = true;
+    }
+  }
+  scene.updateMatrixWorld(true);
+  camera.updateMatrixWorld(true);
+}
+
+function captureDomBaseline() {
+  const elements = [...new Set([
+    ...Object.values(ui).flatMap((value) => Array.isArray(value) ? value : [value]),
+    ...ui.sideTicks
+  ])];
+  return Object.freeze({
+    rootClassName: document.documentElement.className,
+    rootStyle: document.documentElement.getAttribute('style'),
+    bodyClassName: document.body.className,
+    bodyStyle: document.body.getAttribute('style'),
+    elements: Object.freeze(elements.map((element) => Object.freeze({
+      element,
+      className: element.className,
+      style: element.getAttribute('style'),
+      textContent: element instanceof HTMLAudioElement
+        || element instanceof HTMLInputElement
+        || element.children.length > 0
+        ? null
+        : element.textContent,
+      hidden: 'hidden' in element ? element.hidden : null,
+      disabled: 'disabled' in element ? element.disabled : null
+    })))
+  });
+}
+
+function restoreAttribute(element, name, value) {
+  if (value === null) element.removeAttribute(name); else element.setAttribute(name, value);
+}
+
+function restoreDomBaseline(snapshot) {
+  document.documentElement.className = snapshot.rootClassName;
+  restoreAttribute(document.documentElement, 'style', snapshot.rootStyle);
+  document.body.className = snapshot.bodyClassName;
+  restoreAttribute(document.body, 'style', snapshot.bodyStyle);
+  for (const entry of snapshot.elements) {
+    entry.element.className = entry.className;
+    restoreAttribute(entry.element, 'style', entry.style);
+    if (entry.textContent !== null) entry.element.textContent = entry.textContent;
+    if (entry.hidden !== null) entry.element.hidden = entry.hidden;
+    if (entry.disabled !== null) entry.element.disabled = entry.disabled;
+  }
+}
+
+function assertAfterimageTargets() {
+  if (!(afterimage._textureComp instanceof THREE.WebGLRenderTarget)
+    || !(afterimage._textureOld instanceof THREE.WebGLRenderTarget)
+    || afterimage._textureComp === afterimage._textureOld) {
+    throw new Error('Ninth Tide deterministic capture requires two distinct Afterimage render targets.');
+  }
+}
+
+function clearRenderTarget(target) {
+  if (!(target instanceof THREE.WebGLRenderTarget)) {
+    throw new Error('Ninth Tide deterministic capture encountered an invalid render target.');
+  }
+  renderer.setRenderTarget(target);
+  renderer.clear(true, true, true);
+}
+
+function resetPostprocessHistory(baseline) {
+  assertAfterimageTargets();
+  const previousTarget = renderer.getRenderTarget();
+  const clearColor = renderer.getClearColor(new THREE.Color()).clone();
+  const clearAlpha = renderer.getClearAlpha();
+  renderer.setClearColor(0x000000, 0);
+  composer.readBuffer = baseline.composerReadBuffer;
+  composer.writeBuffer = baseline.composerWriteBuffer;
+  const targets = new Set([
+    composer.renderTarget1,
+    composer.renderTarget2,
+    afterimage._textureComp,
+    afterimage._textureOld,
+    bloom.renderTargetBright,
+    ...bloom.renderTargetsHorizontal,
+    ...bloom.renderTargetsVertical
+  ]);
+  for (const target of targets) clearRenderTarget(target);
+  renderer.setClearColor(clearColor, clearAlpha);
+  renderer.setRenderTarget(previousTarget);
+}
+
+function toHex(bytes) {
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256(bytes) {
+  if (!crypto.subtle || typeof crypto.subtle.digest !== 'function') {
+    throw new Error('Ninth Tide deterministic capture requires crypto.subtle.digest().');
+  }
+  return toHex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+}
+
+async function readCanonicalFramebuffer(gl) {
+  const width = gl.drawingBufferWidth;
+  const height = gl.drawingBufferHeight;
+  if (!Number.isInteger(width) || width <= 0 || !Number.isInteger(height) || height <= 0) {
+    throw new Error('Ninth Tide deterministic capture requires a non-empty drawing buffer.');
+  }
+  const bottomLeft = new Uint8Array(width * height * 4);
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, bottomLeft);
+  if (gl.getError() !== gl.NO_ERROR) throw new Error('Ninth Tide framebuffer readPixels failed.');
+  const canonical = new Uint8Array(14 + bottomLeft.length);
+  canonical.set(new TextEncoder().encode('rgba8\0'), 0);
+  const header = new DataView(canonical.buffer, 0, 14);
+  header.setUint32(6, width, false);
+  header.setUint32(10, height, false);
+  const rowBytes = width * 4;
+  for (let topRow = 0; topRow < height; topRow++) {
+    const sourceRow = height - 1 - topRow;
+    canonical.set(bottomLeft.subarray(sourceRow * rowBytes, (sourceRow + 1) * rowBytes), 14 + topRow * rowBytes);
+  }
+  return { width, height, hash: await sha256(canonical) };
+}
+
+function inspectRenderer(gl) {
+  const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+  if (!debugInfo) throw new Error('Ninth Tide deterministic capture requires WEBGL_debug_renderer_info.');
+  const raw = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+  const contextAttributes = gl.getContextAttributes();
+  if (typeof raw !== 'string' || raw.length === 0 || !contextAttributes) {
+    throw new Error('Ninth Tide deterministic capture could not audit the WebGL renderer.');
+  }
+  return { raw, debugInfoAvailable: true, contextAttributes: { ...contextAttributes } };
+}
+
+// URL/forced preview is the only capture mode. Live embedded preview commands keep the runtime loop.
+if (deterministicCaptureRequested) {
+  assertAfterimageTargets();
+  if (core.geometry.boundingSphere === null) core.geometry.computeBoundingSphere();
+}
+const deterministicBaseline = deterministicCaptureRequested ? Object.freeze({
+  state: captureRecord(state),
+  globals: captureRecord(Object.fromEntries(Object.entries(globals).map(([key, uniform]) => [key, uniform.value]))),
+  scene: captureSceneBaseline(),
+  dom: captureDomBaseline(),
+  pointer: Object.freeze(pointer.toArray()),
+  pointerSmooth: Object.freeze(pointerSmooth.toArray()),
+  spectrum: new Uint8Array(spectrumBytes),
+  randomState: random.getState(),
+  lastTide,
+  frameStats: Object.freeze({ ...frameStats }),
+  audioContext,
+  analyser,
+  frequencyData,
+  timeData,
+  rendererTarget: renderer.getRenderTarget(),
+  rendererExposure: renderer.toneMappingExposure,
+  fogDensity: scene.fog.density,
+  bloomStrength: bloom.strength,
+  bloomRadius: bloom.radius,
+  bloomThreshold: bloom.threshold,
+  afterimageDamp: afterimage.uniforms.damp.value,
+  composerReadBuffer: composer.readBuffer,
+  composerWriteBuffer: composer.writeBuffer,
+  afterimageTextureComp: afterimage._textureComp,
+  afterimageTextureOld: afterimage._textureOld,
+  drawingBufferWidth: renderer.getContext().drawingBufferWidth,
+  drawingBufferHeight: renderer.getContext().drawingBufferHeight
+}) : null;
+
+function restoreDeterministicBaseline() {
+  if (!deterministicBaseline) throw new Error('Ninth Tide deterministic baseline is unavailable.');
+  clearTimeout(showMessage.timer);
+  showMessage.timer = undefined;
+  if (audioContext !== deterministicBaseline.audioContext
+    || analyser !== deterministicBaseline.analyser
+    || frequencyData !== deterministicBaseline.frequencyData
+    || timeData !== deterministicBaseline.timeData) {
+    throw new Error('Ninth Tide audio graph changed after deterministic baseline capture.');
+  }
+  const gl = renderer.getContext();
+  if (gl.drawingBufferWidth !== deterministicBaseline.drawingBufferWidth
+    || gl.drawingBufferHeight !== deterministicBaseline.drawingBufferHeight) {
+    throw new Error('Ninth Tide deterministic capture viewport changed after baseline capture.');
+  }
+  ui.audio.pause();
+  restoreRecord(state, deterministicBaseline.state, 'state');
+  const globalValues = Object.fromEntries(Object.entries(globals).map(([key, uniform]) => [key, uniform.value]));
+  restoreRecord(globalValues, deterministicBaseline.globals, 'globals');
+  for (const [key, value] of Object.entries(globalValues)) globals[key].value = value;
+  restoreSceneBaseline(deterministicBaseline.scene);
+  restoreDomBaseline(deterministicBaseline.dom);
+  pointer.fromArray(deterministicBaseline.pointer);
+  pointerSmooth.fromArray(deterministicBaseline.pointerSmooth);
+  spectrumBytes.set(deterministicBaseline.spectrum);
+  spectrumTexture.needsUpdate = true;
+  random.setState(deterministicBaseline.randomState);
+  lastTide = deterministicBaseline.lastTide;
+  Object.assign(frameStats, deterministicBaseline.frameStats);
+  frameStats.sampleStartedAt = 0;
+  frameStats.sampleFrames = 0;
+  scene.fog.density = deterministicBaseline.fogDensity;
+  bloom.strength = deterministicBaseline.bloomStrength;
+  bloom.radius = deterministicBaseline.bloomRadius;
+  bloom.threshold = deterministicBaseline.bloomThreshold;
+  afterimage.uniforms.damp.value = deterministicBaseline.afterimageDamp;
+  afterimage._textureComp = deterministicBaseline.afterimageTextureComp;
+  afterimage._textureOld = deterministicBaseline.afterimageTextureOld;
+  renderer.toneMappingExposure = deterministicBaseline.rendererExposure;
+  renderer.setRenderTarget(deterministicBaseline.rendererTarget);
+  resetPostprocessHistory(deterministicBaseline);
+}
+
+function canonicalStateForDigest(mode, section, timestampMs) {
+  return {
+    mode,
+    section,
+    timestampMs,
+    state: {
+      ritual: state.ritual,
+      ignite: state.ignite,
+      lightLevel: state.lightLevel,
+      shutdown: state.shutdown,
+      archiveOpen: state.archiveOpen,
+      pulseAge: state.pulseAge,
+      pulseStrength: state.pulseStrength,
+      low: state.low,
+      mid: state.mid,
+      high: state.high,
+      rms: state.rms,
+      energy: state.energy,
+      transient: state.transient,
+      tideIndex: state.tideIndex,
+      tideFloat: state.tideFloat,
+      phaseLocal: state.phaseLocal,
+      phaseTransition: state.phaseTransition,
+      dive: state.dive,
+      yaw: state.yaw,
+      pitch: state.pitch,
+      activeSeconds: state.activeSeconds,
+      syntheticPhase: state.syntheticPhase
+    },
+    globals: {
+      time: globals.time.value,
+      section: globals.section.value,
+      sectionLocal: globals.sectionLocal.value,
+      tide: globals.tide.value,
+      open: globals.open.value,
+      pulseAge: globals.pulseAge.value,
+      pulseStrength: globals.pulseStrength.value
+    },
+    camera: {
+      position: camera.position.toArray(),
+      quaternion: camera.quaternion.toArray()
+    },
+    spectrum: [...spectrumBytes]
+  };
+}
+
+async function digestCanonicalState(mode, section, timestampMs) {
+  const bytes = new TextEncoder().encode(JSON.stringify(canonicalStateForDigest(mode, section, timestampMs)));
+  return sha256(bytes);
+}
+
+function validateDeterministicStepRequest(request) {
+  if (!hasExactKeys(request, ['mode', 'section', 'timestampMs'])) {
+    throw new Error('Ninth Tide deterministic step requires exactly mode, section, and timestampMs.');
+  }
+  if (!['opening', 'main', 'ending'].includes(request.mode)) {
+    throw new TypeError(`Unknown Ninth Tide deterministic mode: ${String(request.mode)}.`);
+  }
+  if (!Number.isInteger(request.section) || request.section < 0 || request.section > 8) {
+    throw new RangeError(`Ninth Tide deterministic section must be an integer from 0 through 8; received ${String(request.section)}.`);
+  }
+  if (typeof request.timestampMs !== 'number' || !Number.isFinite(request.timestampMs) || request.timestampMs < 0) {
+    throw new RangeError(`Ninth Tide deterministic timestampMs must be finite and non-negative; received ${String(request.timestampMs)}.`);
+  }
+}
+
+async function stepDeterministicPreview(request) {
+  if (deterministicStepActive) throw new Error('Ninth Tide deterministic step is already running.');
+  validateDeterministicStepRequest(request);
+  deterministicStepActive = true;
+  try {
+    if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+    restoreDeterministicBaseline();
+    applyPreview(request.mode, request.section);
+    if (request.mode === 'main') {
+      const dt = 1 / 60;
+      const targetElapsed = request.timestampMs / 1000;
+      for (let step = 0; step < deterministicMainSettleSteps; step++) {
+        advanceFrameState(
+          dt,
+          targetElapsed - (deterministicMainSettleSteps - step) * dt
+        );
+      }
+    }
+    const beforeFrameRenders = frameRenderCount;
+    renderer.info.reset();
+    renderer.setRenderTarget(null);
+    renderFrame(1 / 60, request.timestampMs / 1000);
+    const frameRenders = frameRenderCount - beforeFrameRenders;
+    if (frameRenders !== 1) {
+      throw new Error(`Ninth Tide deterministic step rendered ${frameRenders} top-level frames.`);
+    }
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+      throw new Error('Ninth Tide deterministic step queued an animation frame.');
+    }
+    const gl = renderer.getContext();
+    const rendererAudit = inspectRenderer(gl);
+    gl.finish();
+    const framebuffer = await readCanonicalFramebuffer(gl);
+    const stateDigest = await digestCanonicalState(request.mode, request.section, request.timestampMs);
+    renderer.setRenderTarget(deterministicBaseline.rendererTarget);
+    const phase = request.mode === 'opening'
+      ? tideMeta[0][0]
+      : request.mode === 'ending'
+        ? tideMeta[8][0]
+        : tideMeta[request.section][0];
+    return {
+      mode: request.mode,
+      section: request.section,
+      timestampMs: request.timestampMs,
+      frameRenders,
+      queuedAnimationFrames: animationFrameId === null ? 0 : 1,
+      stateDigest,
+      framebuffer,
+      renderer: rendererAudit,
+      chapter: { mode: request.mode, section: request.section, phase },
+      chapterNumber: request.section + 1
+    };
+  } finally {
+    if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+    renderer.setRenderTarget(deterministicBaseline.rendererTarget);
+    deterministicStepActive = false;
+  }
+}
+
+function hitTestDeterministicPreview(request) {
+  if (!hasExactKeys(request, ['clientX', 'clientY'])
+    || typeof request.clientX !== 'number'
+    || !Number.isFinite(request.clientX)
+    || typeof request.clientY !== 'number'
+    || !Number.isFinite(request.clientY)) {
+    throw new Error('Ninth Tide hit test requires finite clientX and clientY values.');
+  }
+  const rect = renderer.domElement.getBoundingClientRect();
+  if (!(rect.width > 0) || !(rect.height > 0)) {
+    throw new Error('Ninth Tide hit test requires a visible renderer canvas.');
+  }
+  const point = new THREE.Vector2(
+    (request.clientX - rect.left) / rect.width * 2 - 1,
+    -((request.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  const queryRaycaster = new THREE.Raycaster();
+  queryRaycaster.setFromCamera(point, camera);
+  return queryRaycaster.intersectObject(core, false).length > 0;
 }
 
 // Preview modes are used only for still capture/testing.
-const params = new URLSearchParams(location.search);
-const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
-if (params.has('preview') || forcedPreview !== undefined) {
-  const mode = forcedPreview ?? params.get('preview');
+if (deterministicCaptureRequested) {
+  deterministicCaptureActive = true;
+  const mode = forcedPreview ?? previewParams.get('preview');
   let section;
   const forcedSection = window.__NINTH_TIDE_PREVIEW_SECTION__;
   if (forcedSection !== undefined) {
@@ -3034,8 +3571,8 @@ if (params.has('preview') || forcedPreview !== undefined) {
       throw new RangeError(`Invalid explicit Ninth Tide preview section: ${String(forcedSection)}.`);
     }
     section = forcedSection;
-  } else if (params.has('section')) {
-    const rawSection = params.get('section');
+  } else if (previewParams.has('section')) {
+    const rawSection = previewParams.get('section');
     if (!/^[0-8]$/.test(rawSection)) {
       throw new RangeError(`Invalid explicit Ninth Tide preview section: ${String(rawSection)}.`);
     }
@@ -3044,13 +3581,13 @@ if (params.has('preview') || forcedPreview !== undefined) {
     section = mode === 'ending' ? 8 : mode === 'opening' ? 0 : 4;
   }
   applyPreview(mode, section);
-  // Deterministic still-capture hook; inert in the public experience.
-  window.__NINTH_TIDE_STEP__ = stepPreview;
+  window.__NINTH_TIDE_STEP__ = stepDeterministicPreview;
+  window.__NINTH_TIDE_HIT_TEST__ = hitTestDeterministicPreview;
 }
 
 initializeRuntimeControl();
 resetStatsSample();
-requestNextFrame();
+if (!deterministicCaptureRequested) requestNextFrame();
 
 window.addEventListener('beforeunload', () => {
   document.removeEventListener('visibilitychange', handleVisibilityChange);
