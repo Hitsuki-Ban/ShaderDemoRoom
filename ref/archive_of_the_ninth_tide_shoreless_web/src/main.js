@@ -3045,6 +3045,11 @@ function applyPreview(mode, section) {
   document.body.classList.toggle('ending', mode === 'ending');
   document.body.classList.remove('ended');
   document.documentElement.style.setProperty('--blackout', mode === 'opening' ? '0.28' : '0');
+  const meta = tideMeta[section];
+  ui.phaseNumber.textContent = meta[0];
+  ui.phaseName.textContent = meta[1];
+  ui.phaseSub.textContent = meta[2];
+  ui.sideTicks.forEach((tick, index) => tick.classList.toggle('active', index === section));
   triggerPulse(new THREE.Vector2(0, 0), mode === 'ending' ? 0.45 : 1.15, 0.34, false);
 }
 
