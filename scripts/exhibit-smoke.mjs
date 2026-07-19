@@ -16,10 +16,35 @@ await Promise.all([
   mkdir(orbHudCaptureDir, { recursive: true }),
 ]);
 
-page.on('console', (message) => {
-  if (message.type() === 'error') consoleErrors.push(message.text());
-});
-page.on('pageerror', (error) => consoleErrors.push(error.message));
+function monitorConsoleErrors(targetPage) {
+  targetPage.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  targetPage.on('pageerror', (error) => consoleErrors.push(error.message));
+}
+
+function isArchiveAudioRequest(request) {
+  return new URL(request.url()).pathname.endsWith(
+    '/exhibits/ninth-tide-archive/archive.mp3',
+  );
+}
+
+function observeArchiveAudioRequests(targetPage) {
+  const requests = [];
+  targetPage.on('request', (request) => {
+    if (isArchiveAudioRequest(request)) {
+      requests.push({
+        url: request.url(),
+        method: request.method(),
+        resourceType: request.resourceType(),
+      });
+    }
+  });
+  return requests;
+}
+
+monitorConsoleErrors(page);
+const archiveAudioRequests = observeArchiveAudioRequests(page);
 
 const tideSections = [];
 const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
@@ -247,26 +272,254 @@ async function assertWallClockTelemetry(iframe, label) {
   return { fps: throttled.fps, frameTimeMs: throttled.frameTimeMs };
 }
 
-async function assertTideMediaStartedWhilePaused(iframe) {
+async function instrumentTideAudio(audio, rejectFirstPlay = false) {
+  await audio.evaluate((element, shouldRejectFirstPlay) => {
+    const originalLoad = element.load.bind(element);
+    const originalPlay = element.play.bind(element);
+    let loadCalls = 0;
+    let playCalls = 0;
+    let firstPlayRejected = false;
+    element.load = () => {
+      loadCalls += 1;
+      return originalLoad();
+    };
+    element.play = () => {
+      playCalls += 1;
+      if (shouldRejectFirstPlay && !firstPlayRejected) {
+        firstPlayRejected = true;
+        return Promise.reject(new DOMException('QA autoplay refusal', 'NotAllowedError'));
+      }
+      return originalPlay();
+    };
+    Object.defineProperty(element.ownerDocument.defaultView, '__ninthTideAudioQa', {
+      configurable: true,
+      value: {
+        get loadCalls() { return loadCalls; },
+        get playCalls() { return playCalls; },
+        get firstPlayRejected() { return firstPlayRejected; },
+      },
+    });
+  }, rejectFirstPlay);
+}
+
+async function readTideAudioQa(audio) {
+  return audio.evaluate((element) => {
+    const audit = element.ownerDocument.defaultView.__ninthTideAudioQa;
+    return {
+      loadCalls: audit.loadCalls,
+      playCalls: audit.playCalls,
+      firstPlayRejected: audit.firstPlayRejected,
+      src: element.getAttribute('src'),
+      currentSrc: element.currentSrc,
+      currentTime: element.currentTime,
+      paused: element.paused,
+    };
+  });
+}
+
+async function waitForTideAudioState(audio, { paused, minimumTime = 0 }) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const state = await audio.evaluate((element) => ({
+      paused: element.paused,
+      currentTime: element.currentTime,
+    }));
+    if (state.paused === paused && state.currentTime >= minimumTime) return state;
+    await page.waitForTimeout(50);
+  }
+  throw new Error(
+    `Ninth Tide audio did not reach paused=${paused}, minimumTime=${minimumTime}.`,
+  );
+}
+
+async function dispatchTideSpace(audio) {
+  await audio.evaluate((element) => {
+    element.ownerDocument.defaultView.dispatchEvent(new KeyboardEvent('keydown', {
+      key: ' ',
+      code: 'Space',
+      bubbles: true,
+      cancelable: true,
+    }));
+  });
+}
+
+async function assertTideSilentDemandLoading() {
+  const silentPage = await context.newPage();
+  monitorConsoleErrors(silentPage);
+  const requests = observeArchiveAudioRequests(silentPage);
+  try {
+    await silentPage.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html`, {
+      waitUntil: 'domcontentloaded',
+    });
+    const audio = silentPage.locator('#audio');
+    if (await audio.getAttribute('src') !== null) {
+      throw new Error('Ninth Tide initial audio unexpectedly owned a source.');
+    }
+    await instrumentTideAudio(audio);
+    await silentPage.locator('#silentBtn').click();
+    await silentPage.locator('body.entered').waitFor({ state: 'attached' });
+    await silentPage.waitForTimeout(250);
+    const audit = await readTideAudioQa(audio);
+    if (requests.length !== 0 || audit.loadCalls !== 0 || audit.src !== null) {
+      throw new Error(
+        `Ninth Tide silent entry loaded archive audio: ${JSON.stringify({ requests, audit })}.`,
+      );
+    }
+    return { requests, loadCalls: audit.loadCalls, source: audit.src };
+  } finally {
+    await silentPage.close();
+  }
+}
+
+async function assertTideAutoplayRetryDemandLoading() {
+  const retryPage = await context.newPage();
+  monitorConsoleErrors(retryPage);
+  const requests = observeArchiveAudioRequests(retryPage);
+  try {
+    await retryPage.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html`, {
+      waitUntil: 'domcontentloaded',
+    });
+    const audio = retryPage.locator('#audio');
+    if (await audio.getAttribute('src') !== null || requests.length !== 0) {
+      throw new Error('Ninth Tide autoplay retry page did not start source-free.');
+    }
+    await instrumentTideAudio(audio, true);
+    const firstRequest = retryPage.waitForRequest(isArchiveAudioRequest);
+    await retryPage.locator('#enterBtn').click();
+    await firstRequest;
+    await retryPage.locator('#enterBtn').filter({ hasText: /^重试音频$/ }).waitFor();
+    await retryPage.locator('#gate').waitFor({ state: 'visible' });
+    await retryPage.locator('#audioState').filter({ hasText: /^PLAYBACK BLOCKED$/ }).waitFor();
+    await retryPage.locator('#gateHint').filter({ hasText: /浏览器阻止了音频播放/ }).waitFor();
+    const refused = await readTideAudioQa(audio);
+    if (
+      requests.length !== 1
+      || refused.loadCalls !== 1
+      || refused.playCalls !== 1
+      || !refused.firstPlayRejected
+      || refused.src !== './archive.mp3'
+    ) {
+      throw new Error(
+        `Ninth Tide autoplay refusal did not preserve one source load: ${JSON.stringify({ requests, refused })}.`,
+      );
+    }
+
+    await retryPage.locator('#enterBtn').click();
+    await retryPage.waitForFunction(() => {
+      const element = document.querySelector('#audio');
+      return element && !element.paused;
+    });
+    const resumed = await readTideAudioQa(audio);
+    if (
+      requests.length !== 1
+      || resumed.loadCalls !== 1
+      || resumed.src !== refused.src
+      || resumed.currentSrc !== refused.currentSrc
+    ) {
+      throw new Error(
+        `Ninth Tide retry replaced or reloaded its source: ${JSON.stringify({ requests, refused, resumed })}.`,
+      );
+    }
+
+    await dispatchTideSpace(audio);
+    await retryPage.waitForFunction(() => document.querySelector('#audio')?.paused === true);
+    const pausedAt = await audio.evaluate((element) => element.currentTime);
+    await retryPage.waitForTimeout(300);
+    const stillPausedAt = await audio.evaluate((element) => element.currentTime);
+    if (Math.abs(stillPausedAt - pausedAt) > 0.05) {
+      throw new Error(`Ninth Tide audio advanced while paused: ${pausedAt} -> ${stillPausedAt}.`);
+    }
+    await dispatchTideSpace(audio);
+    await retryPage.waitForFunction(
+      (minimumTime) => {
+        const element = document.querySelector('#audio');
+        return element && !element.paused && element.currentTime > minimumTime + 0.05;
+      },
+      pausedAt,
+    );
+    await dispatchTideSpace(audio);
+    await retryPage.waitForFunction(() => document.querySelector('#audio')?.paused === true);
+    const finalAudit = await readTideAudioQa(audio);
+    if (requests.length !== 1 || finalAudit.loadCalls !== 1) {
+      throw new Error(
+        `Ninth Tide transport duplicated archive loading: ${JSON.stringify({ requests, finalAudit })}.`,
+      );
+    }
+    return {
+      requests,
+      refused,
+      resumed,
+      final: finalAudit,
+      pausedAt,
+      stillPausedAt,
+    };
+  } finally {
+    await retryPage.close();
+  }
+}
+
+async function assertTideMediaStartedWhilePaused(iframe, requests) {
   const embedded = iframe.contentFrame();
   const audio = embedded.locator('audio');
+  const requestCountBeforeEntry = requests.length;
+  if (await audio.getAttribute('src') !== null) {
+    throw new Error('Embedded Ninth Tide initial audio unexpectedly owned a source.');
+  }
+  await instrumentTideAudio(audio);
   await postEmbeddedCommand(iframe, 'set-paused', { paused: true });
   await waitForEmbeddedStats({ paused: true });
   await page.waitForTimeout(500);
+  const firstRequest = page.waitForRequest(isArchiveAudioRequest);
   await embedded.locator('#enterBtn').click({ force: true });
+  await firstRequest;
   await embedded.locator('#enterBtn:not([disabled])').waitFor({ state: 'attached' });
   if (!(await audio.evaluate((element) => element.paused))) {
     throw new Error('Ninth Tide media played while the runtime was paused.');
+  }
+  const pausedAudit = await readTideAudioQa(audio);
+  if (
+    requests.length - requestCountBeforeEntry !== 1
+    || pausedAudit.loadCalls !== 1
+    || pausedAudit.src !== './archive.mp3'
+  ) {
+    throw new Error(
+      `Ninth Tide paused audio entry did not issue one source load: ${JSON.stringify({ requests, pausedAudit })}.`,
+    );
   }
 
   await postEmbeddedCommand(iframe, 'set-paused', { paused: false });
   await waitForEmbeddedStats({ paused: false });
   const deadline = Date.now() + 10_000;
+  let resumed = false;
   while (Date.now() < deadline) {
     if (!(await audio.evaluate((element) => element.paused))) {
-      return { resumed: true };
+      resumed = true;
+      break;
     }
     await page.waitForTimeout(100);
+  }
+  if (resumed) {
+    await dispatchTideSpace(audio);
+    await waitForTideAudioState(audio, { paused: true });
+    const pausedAt = await audio.evaluate((element) => element.currentTime);
+    await page.waitForTimeout(300);
+    const stillPausedAt = await audio.evaluate((element) => element.currentTime);
+    if (Math.abs(stillPausedAt - pausedAt) > 0.05) {
+      throw new Error(
+        `Embedded Ninth Tide audio advanced while paused: ${pausedAt} -> ${stillPausedAt}.`,
+      );
+    }
+    await dispatchTideSpace(audio);
+    await waitForTideAudioState(audio, { paused: false, minimumTime: pausedAt + 0.05 });
+    await dispatchTideSpace(audio);
+    await waitForTideAudioState(audio, { paused: true });
+    const finalAudit = await readTideAudioQa(audio);
+    if (requests.length - requestCountBeforeEntry !== 1 || finalAudit.loadCalls !== 1) {
+      throw new Error(
+        `Embedded Ninth Tide duplicated archive loading: ${JSON.stringify({ requests, finalAudit })}.`,
+      );
+    }
+    return { resumed, pausedAt, stillPausedAt, audit: finalAudit };
   }
   const diagnostic = await audio.evaluate((element) => ({
     currentSrc: element.currentSrc,
@@ -438,6 +691,8 @@ const orbAudioActive = await embeddedOrb
   .getAttribute('aria-pressed');
 if (orbAudioActive !== 'true') throw new Error('Orb lost its active audio intent.');
 
+const tideSilentDemandLoading = await assertTideSilentDemandLoading();
+const tideAutoplayRetryDemandLoading = await assertTideAutoplayRetryDemandLoading();
 const embeddedTideFrame = await openEmbeddedRoom(
   'ninth-tide-archive',
   ['pause', 'stats', 'set-preview'],
@@ -448,6 +703,7 @@ await embeddedTideFrame.evaluate((element) => {
 });
 const tideMediaStartedWhilePaused = await assertTideMediaStartedWhilePaused(
   embeddedTideFrame,
+  archiveAudioRequests,
 );
 const embeddedTideSections = [];
 for (let section = 0; section < roman.length; section += 1) {
@@ -472,6 +728,7 @@ if (tideFramePreserved !== 'tide-preserved') {
   throw new Error('Ninth Tide bridge commands unexpectedly reloaded the iframe.');
 }
 
+const previewRequestCount = archiveAudioRequests.length;
 await page.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main`, {
   waitUntil: 'domcontentloaded',
 });
@@ -495,6 +752,11 @@ for (let section = 0; section < roman.length; section += 1) {
     phase: await page.locator('#phaseNumber').textContent(),
     canvasCount: await page.locator('canvas').count(),
   });
+}
+if (archiveAudioRequests.length !== previewRequestCount) {
+  throw new Error(
+    `Ninth Tide previews requested archive audio: ${JSON.stringify(archiveAudioRequests)}.`,
+  );
 }
 
 await page.goto(`${baseUrl}/exhibits/anime-liquid-orb/index.html`, {
@@ -773,7 +1035,10 @@ console.log(
         visibility: orbVisibilityLifecycle,
       },
       orbAudioActive,
+      tideSilentDemandLoading,
+      tideAutoplayRetryDemandLoading,
       tideMediaStartedWhilePaused,
+      tideArchiveAudioRequests: archiveAudioRequests,
       orbPauseLifecycle,
       tidePauseLifecycle,
       orbPauseRace,

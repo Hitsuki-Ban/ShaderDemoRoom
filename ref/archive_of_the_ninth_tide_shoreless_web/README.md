@@ -30,6 +30,8 @@ pnpm --filter archive-of-the-ninth-tide-shoreless-layer build
 
 `dist/` 与其中的 `app.js` 都是可再生成、不会提交的产物。`archive.mp3` 的唯一正本位于本目录；仓库根目录的 `pnpm exhibits:build` 会把完整 `dist/` 替换发布到 `public/exhibits/ninth-tide-archive/`，请勿直接编辑该 public 目录。
 
+初始页面、静默下潜和所有 `?preview=` 路径都不会请求 `archive.mp3`。只有用户明确选择音频下潜时，页面才设置音源并开始加载；若浏览器拒绝首次播放，可见的“重试音频”会复用同一音源，不会重新加载或自动降级为静默模式。
+
 ## 操作
 
 - 拖动：环视

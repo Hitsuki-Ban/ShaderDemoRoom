@@ -30,3 +30,11 @@
 
 - audio network lifecycle だけを所有する。kiosk 設置運用は現在のオンライン製品境界外。
 - ref/ で実装し exhibits を再生成する。
+
+## 実施報告 (2026-07-20)
+
+- 初期 `<audio>` から `src` を除去し、`preload="none"` の source-free DOM にした。音声入場だけが共通 `setAudioSource()` を通して `preload="auto"` への切替、source 設定、`load()` 1回を所有する。silent、preview、timeout からこの owner へ進む経路はなく、ローカル file/drop も同じ setter で現在 source を明示的に置換する。
+- `ensureBundledAudioSource()` は source が未選択の最初の音声入場だけで `archive.mp3` を選ぶ。autoplay の `NotAllowedError` は gate を再表示し、`PLAYBACK BLOCKED`、説明文、「重试音频」を可視化する。retry は同じ audio/source に `play()` だけを再実行し、silent へ自動降格しない。従来は failure UI が `body.entered` に隠れていた問題も同じ lifecycle 内で解消した。
+- `qa:exhibits` に独立ページの silent、拒播/retry、通常 audio、host pause、Space pause/resume を追加した。最新版実走では silent が request 0 / load 0 / source null。拒播時は request 1 / load 1 / play 1、retry 後も request 1 / load 1 のまま同じ `src/currentSrc` で再生し、Space pause/resume/pause 後も request/load は増えなかった。embedded の paused-start も request/load 1回、host resume と transport 復帰、pause 中の currentTime 停止を確認し、console error は0件だった。
+- `qa:ninth-tide` は旧 metadata 到達待ちを削除し、opening、九章、ending の各 fresh page で `archive.mp3` request 0を恒常 gate 化した。最終 manifest は3 runs × 11 states = 33/33で `archiveAudioRequests: []`、既存の capture/framebuffer hash、hit fixture、rAF 確定性も通過した。
+- 回帰門は `pnpm lint`、`pnpm typecheck`、`pnpm test` (31 files / 180 tests)、`pnpm build`、`pnpm qa:exhibits`、`pnpm qa:ninth-tide` を通過した。ref/dist と public の `index.html`、`app.js`、`archive.mp3`、license は SHA-256 が一致し、生成 `app.js` は双方 `c09bb77ed531cd3271a3409bfd5047d78072603aa68ae3177a1e1fdd2a523697`。独立 reviewer は material finding なしで APPROVE、独立 verifier も同じ request/load/play 数値と既存 lifecycle 回帰を再走して PASS とした。

@@ -1743,6 +1743,16 @@ let frequencyData = null;
 let timeData = null;
 let objectUrl = null;
 
+function setAudioSource(source) {
+  ui.audio.preload = 'auto';
+  ui.audio.src = source;
+  ui.audio.load();
+}
+
+function ensureBundledAudioSource() {
+  if (!ui.audio.hasAttribute('src')) setAudioSource('./archive.mp3');
+}
+
 const bridgeContext = 'shader-demo-room';
 const bridgeVersion = 1;
 const bridgeCapabilities = Object.freeze(['pause', 'stats', 'set-preview']);
@@ -2078,6 +2088,7 @@ async function enterExperience(withAudio, restarting = false) {
   try {
     ui.enter.disabled = true;
     ui.enter.textContent = '正在校准…';
+    ensureBundledAudioSource();
     await prepareAudio();
     if (restarting || state.ended || ui.audio.currentTime > 0.2) ui.audio.currentTime = 0;
     if (runtimePaused) {
@@ -2104,11 +2115,17 @@ async function enterExperience(withAudio, restarting = false) {
     ui.enter.textContent = '启动共鸣仪式';
     ui.enter.disabled = false;
   } catch (error) {
-    console.error(error);
+    const playbackBlocked = error instanceof DOMException && error.name === 'NotAllowedError';
+    if (!playbackBlocked) console.error(error);
+    state.entered = false;
+    document.body.classList.remove('entered');
     ui.enter.disabled = false;
     ui.enter.textContent = '重试音频';
     ui.fileLabel.hidden = false;
-    ui.hint.textContent = '音频被浏览器拦截或文件不可读。可选择本地音频，或先无声进入。';
+    ui.hint.textContent = playbackBlocked
+      ? '浏览器阻止了音频播放。点击“重试音频”继续；已载入音频不会重复下载。'
+      : '未能播放当前音频。请选择本地音频文件，或点击“重试音频”。';
+    ui.audioState.textContent = playbackBlocked ? 'PLAYBACK BLOCKED' : 'FILE REQUIRED';
     state.audioFailed = true;
   }
 }
@@ -2121,8 +2138,7 @@ ui.file.addEventListener('change', async (event) => {
   if (!file) return;
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
-  ui.audio.src = objectUrl;
-  ui.audio.load();
+  setAudioSource(objectUrl);
   state.audioFailed = false;
   ui.fileLabel.hidden = true;
   ui.hint.textContent = `已载入 ${file.name}`;
@@ -2135,8 +2151,7 @@ window.addEventListener('drop', async (event) => {
   if (!file) return;
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
-  ui.audio.src = objectUrl;
-  ui.audio.load();
+  setAudioSource(objectUrl);
   await enterExperience(true, true);
   showMessage(`AUDIO LOADED / ${file.name.toUpperCase()}`, 2200);
 });
