@@ -18,6 +18,14 @@ uniform vec3 uWeatherLightningTint;
 uniform float uWeatherFogDensity;
 uniform float uRainCurtain;
 uniform float uLightningPulse;
+uniform float uVoxelSpacing;
+uniform float uWaterGridCellMultiple;
+uniform float uStormGridCellMultiple;
+uniform vec2 uVoxelFieldOffset;
+uniform float uVoxelFieldYaw;
+uniform vec3 uSunDirection;
+
+/*__VOXEL_TOON_QUANTIZATION__*/
 
 varying vec2 vUv;
 varying float vWave;
@@ -26,21 +34,33 @@ varying float vFoam;
 varying float vSlope;
 varying vec3 vWorldPosition;
 varying vec3 vWaterNormal;
+varying vec2 vOceanXZ;
 
-float gridLine(vec2 uv) {
-  vec2 gridUv = uv * 28.0;
+float gridLine(vec2 worldPosition, float cellMultiple) {
+  float cellSize = uVoxelSpacing * cellMultiple;
+  vec2 gridUv = worldPosition / cellSize;
   vec2 gridDerivativeX = dFdx(gridUv);
   vec2 gridDerivativeY = dFdy(gridUv);
   vec2 gridFootprint = vec2(
     length(vec2(gridDerivativeX.x, gridDerivativeY.x)),
     length(vec2(gridDerivativeX.y, gridDerivativeY.y))
   );
-  vec2 lineWidth = clamp(vec2(0.075), gridFootprint, vec2(0.48));
+  vec2 lineWidth = clamp(vec2((uVoxelSpacing * 0.12) / cellSize), gridFootprint, vec2(0.48));
   vec2 lineAA = max(gridFootprint * 1.65, vec2(0.015));
   vec2 gridUvDistance = abs(fract(gridUv - 0.5) - 0.5);
   vec2 axisLines = smoothstep(lineWidth + lineAA, lineWidth - lineAA, gridUvDistance);
   float footprintFade = 1.0 - smoothstep(0.18, 0.62, max(gridFootprint.x, gridFootprint.y));
   return max(axisLines.x, axisLines.y) * footprintFade;
+}
+
+vec2 voxelGridPosition(vec2 oceanPosition) {
+  float cosine = cos(uVoxelFieldYaw);
+  float sine = sin(uVoxelFieldYaw);
+  vec2 fieldLocal = vec2(
+    cosine * oceanPosition.x - sine * oceanPosition.y,
+    sine * oceanPosition.x + cosine * oceanPosition.y
+  );
+  return fieldLocal - uVoxelFieldOffset;
 }
 
 float hash(vec2 p) {
@@ -70,8 +90,9 @@ float fbm(vec2 p) {
 }
 
 void main() {
-  float toonPhase = vWave * uToonSteps;
-  float toonRamp = floor(toonPhase) / max(uToonSteps, 1.0);
+  float toonIntervals = max(floor(uToonSteps + 0.5) - 1.0, 1.0);
+  float toonPhase = vWave * toonIntervals;
+  float toonRamp = quantizeWave(vWave, uToonSteps);
   float toonBandDistance = min(fract(toonPhase), 1.0 - fract(toonPhase));
   float toonBandWidth = max(fwidth(toonPhase), 0.012);
   float toonEdgeAccent = 1.0 - smoothstep(toonBandWidth, 0.085 + toonBandWidth, toonBandDistance);
@@ -104,7 +125,8 @@ void main() {
   color = mix(color, uWeatherRimColor, toonEdgeAccent * stormToonContrast * (0.06 + uRainCurtain * 0.05));
   color += toonEdgeAccent * stormToonContrast * smoothstep(0.38, 0.96, toonColorRamp) * vec3(0.02, 0.12, 0.14);
 
-  vec2 stableCell = floor(vWorldPosition.xz / 0.3);
+  vec2 voxelPosition = voxelGridPosition(vOceanXZ);
+  vec2 stableCell = floor(voxelPosition / uVoxelSpacing);
   float cellTint = hash(stableCell) - 0.5;
   float warmMix = smoothstep(0.0, 1.0, uColorTemperature);
   float coolMix = smoothstep(0.0, 1.0, -uColorTemperature);
@@ -112,11 +134,11 @@ void main() {
   color = mix(color, color * vec3(0.8, 0.92, 1.12), coolMix * 0.24);
   color = mix(color, color * vec3(1.12, 0.98, 0.82), warmMix * 0.2);
 
-  float grid = gridLine(vUv);
+  float grid = gridLine(voxelPosition, uWaterGridCellMultiple);
   float gridDistanceFade = 1.0 - smoothstep(14.0, 48.0 + uStorm * 20.0, viewDistance);
   float voxelSurfaceGrid = 0.0;
   if (uStorm > 0.02 || rainBlueSignature > 0.02) {
-    voxelSurfaceGrid = gridLine(vWorldPosition.xz * 0.075);
+    voxelSurfaceGrid = gridLine(voxelPosition, uStormGridCellMultiple);
     voxelSurfaceGrid *= (1.0 - smoothstep(22.0, 68.0, viewDistance)) * (uStorm * 0.92 + rainBlueSignature * 0.22);
   }
   grid = max(grid * gridDistanceFade, voxelSurfaceGrid);
@@ -174,7 +196,7 @@ void main() {
     0.0,
     normalRipple.y * 0.07 * normalDetailFade
   ));
-  vec3 lightDir = normalize(vec3(-0.35, 0.82, 0.44));
+  vec3 lightDir = normalize(uSunDirection);
   float fresnel = pow(1.0 - clamp(dot(normal, viewDir), 0.0, 1.0), 5.0);
   float specular = pow(max(dot(reflect(-lightDir, normal), viewDir), 0.0), mix(18.0, 62.0, uClarity));
   float translucentGlow = (smoothstep(-0.72, 0.62, vWorldPosition.y) * (0.22 + skyFill * 0.16) + fresnel * 0.28) * uClarity;

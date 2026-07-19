@@ -71,3 +71,41 @@ research-stylized-water.md §2.2 選択肢A(推奨)+ §2.8 に従う。
 - **renderOrder / 透明契約**: 本チケットでは材質の transparent を変えない。T-VW-05 の波モデルとシェーダー境界を独立検証した後、T-VW-09 が transparent:false 化と合成契約を別差分で検証する。
 - **太陽ディスクの所有**: 本票は方向の唯一性を保証し、T-VW-04 がその方向からディスク/ハロを描く。方位だけの旧縦光帯は T-VW-04 で削除する。
 - **T-VW-03 が先**: シーム原因の確定と直接修正後に着手し、その最終 scene graph を前提にする。着手順は T-VW-03 → 本チケット。
+
+## 完了報告 (2026-07-20)
+
+- Implementation revision: `2e9b9b6f3024fb39b07b759c9a28a6cf5f23f563`。
+- `waveModel.ts` に4層の方向・周波数・振幅・位相速度・鋭さ、正規化、高さ写像を集約した。
+  同じ型付きテーブルから water / column 用 GLSL と低頻度の CPU 色サンプラーを生成し、
+  marker が欠落・重複する shader source は fail fast とした。旧波形、`currentLayer`、別正規化式は削除した。
+- PlaneGeometry の XZ 化を geometry に焼き込み、実 ocean XZ で同じ波を評価するよう修正した。
+  水面と柱上端は同じ `waveSurfaceY` を使用し、水面法線は `mat3(modelMatrix)` で world space へ変換する。
+- 4096柱の `instanceMatrix` は初期化時だけ設定する静的配置とし、`aOceanXZ` と共有 `uTime`
+  による頂点 shader 変位へ移した。8 FPS の CPU 行列更新を削除し、CPU は約2.7 Hzの色更新だけを担当する。
+- `uSunDirection` の uniform record を sky / water で共有し、同じ正規化 vector を
+  `DirectionalLight.position` にも適用した。shader grid、cell hash、field yaw/offset は
+  `VOXEL_SPACING=0.62` と整数倍だけから構成し、旧 `0.3` / `0.075` / `28-cell` 経路を削除した。
+  plane / column の toon quantization は同じ endpoint-inclusive 2/3/4-bin 定義へ統一した。
+
+### 検証
+
+- `pnpm lint`、`pnpm typecheck`、`pnpm test` (32 files / 196 tests)、
+  `pnpm build`、`pnpm exhibits:check`、`pnpm qa:visual` が通過した。
+  新規 contract test は単一定義、GLSL injection fail-fast、静的 instance matrix、
+  連続 `uTime`、実 ocean 座標、world-space normal、共有 uniform record、共有太陽方向、
+  endpoint-inclusive 量子化、旧 grid magic number 不在を検証する。
+- production build の `qa:water` を各16 frameで再取得した。clear / rain / storm の
+  waterLuma は `162.67 / 116.16 / 108.20`、toonBandSeparation は
+  `7.629 / 6.416 / 3.140`、hueMean は `177.29 / 199.84 / 185.62`。
+  persistent seam score は `1.470 / 1.182 / 0.649` で各 gate
+  `1.5 / 1.5 / 1.0` を通過し、console error は0件だった。
+- SwiftShader で production main `31c3b2b28a3bf371e6d08da3956c9cf9472ce116` と候補を
+  5組・交互順・各5秒warm-up + 15秒測定した。baseline / candidate FPS median は
+  `15.450 / 15.133`、paired median は `0.9978x` (range `0.9580x–1.0353x`) で、
+  本票の非悪化 gate `>=0.95x` を通過した。raw evidence は
+  `docs/direction/captures/t-vw-05-software-pairs-2026-07-20.json`。汎用 `qa:software-pairs` の
+  T-GO-01 用 `1.7x` gate では command exit 1となるため、判定は本票で明記した raw ratio を用いた。
+- 独立 reviewer は performance evidence の永続化と candidate revision の不変性を指摘し、
+  tracked raw JSON + exact implementation SHA へ是正後、P0〜P3 findings なしで APPROVE した。
+  独立 verifier も production source が同 revision と一致すること、全静的/ブラウザ門、
+  三態 water QA、WebGL shader compile、paired performance を再確認して PASS した。

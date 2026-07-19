@@ -8,6 +8,7 @@ uniform vec3 uWeatherHorizonTint;
 uniform vec3 uWeatherCloudTint;
 uniform vec3 uWeatherLightningTint;
 uniform float uLightningPulse;
+uniform vec3 uSunDirection;
 
 varying vec3 vWorldDirection;
 
@@ -68,8 +69,7 @@ void main() {
   cloudColor = mix(cloudColor, uWeatherCloudTint, 0.42 + uStorm * 0.22);
   color = mix(color, cloudColor, cloudMask * cloudBand * (0.12 + uCloudCover * 0.36 + uStorm * 0.12));
 
-  vec2 sunDir = normalize(vec2(cos(uSkyTime * 6.2831853), sin(uSkyTime * 6.2831853)));
-  float sunAlignment = dot(normalize(direction.xz), sunDir);
+  float sunAlignment = dot(normalize(direction.xz), normalize(uSunDirection.xz));
   float sunGlow = smoothstep(0.78, 1.0, sunAlignment) * smoothstep(0.18, 0.7, vertical);
   float sunDisc = smoothstep(0.998, 1.0, sunAlignment) * smoothstep(0.32, 0.8, vertical);
   color += sunGlow * (1.0 - uStorm) * vec3(0.16, 0.18, 0.14) * (0.12 + warmMix * 0.12);

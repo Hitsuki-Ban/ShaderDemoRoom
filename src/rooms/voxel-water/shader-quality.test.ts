@@ -2,22 +2,36 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   Color,
   Camera,
+  BufferGeometry,
+  DirectionalLight,
   InstancedMesh,
   LineSegments,
   Matrix4,
   Mesh,
+  MeshStandardMaterial,
   PerspectiveCamera,
   Points,
   Scene,
   ShaderMaterial,
+  StaticDrawUsage,
   Vector3,
   type Object3D,
 } from 'three';
 import type { RoomRuntimeContext, VoxelWaterSettings } from '../types';
-import fragmentShader from './water.frag.glsl?raw';
-import { createRoomRuntime, WEATHER_LOOKS } from './runtime';
+import {
+  createRoomRuntime,
+  voxelWaterFragmentShader,
+  voxelWaterVertexShader,
+  WEATHER_LOOKS,
+} from './runtime';
 import { voxelWaterDefaults } from './state';
-import vertexShader from './water.vert.glsl?raw';
+import {
+  STORM_GRID_CELL_MULTIPLE,
+  VOXEL_FIELD_OFFSET,
+  VOXEL_FIELD_YAW,
+  VOXEL_SPACING,
+  WATER_GRID_CELL_MULTIPLE,
+} from './waveModel';
 
 function createRuntimeHarness(settings: VoxelWaterSettings = voxelWaterDefaults) {
   let scene: Scene | undefined;
@@ -90,17 +104,45 @@ describe('voxel water runtime contracts', () => {
     const { objects, runtime } = createRuntimeHarness();
     const plane = findObject(
       objects,
-      (object): object is Mesh<never, ShaderMaterial> =>
+      (object): object is Mesh<BufferGeometry, ShaderMaterial> =>
         object.name === 'voxel-water-surface'
         && object instanceof Mesh
         && object.material instanceof ShaderMaterial,
     );
     const declaredUniforms = new Set([
-      ...extractUniformNames(vertexShader),
-      ...extractUniformNames(fragmentShader),
+      ...extractUniformNames(voxelWaterVertexShader),
+      ...extractUniformNames(voxelWaterFragmentShader),
     ]);
 
     expect(new Set(Object.keys(plane.material.uniforms))).toEqual(declaredUniforms);
+    runtime.dispose();
+  });
+
+  it('uses the generated surface model, world-space normals, and one voxel grid scale', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+
+    expect(voxelWaterVertexShader).toContain('displaced.y = waveSurfaceY(normalizedWave);');
+    expect(voxelWaterVertexShader).toContain('mat3(modelMatrix) * localWaterNormal');
+    expect(voxelWaterFragmentShader).toContain('gridLine(voxelPosition, uWaterGridCellMultiple)');
+    expect(voxelWaterFragmentShader).toContain('gridLine(voxelPosition, uStormGridCellMultiple)');
+    expect(voxelWaterFragmentShader).not.toMatch(/\/\s*0\.3\b|0\.075\b|vUv\s*\*\s*28/);
+    expect(plane.material.uniforms).toMatchObject({
+      uVoxelSpacing: { value: VOXEL_SPACING },
+      uWaterGridCellMultiple: { value: WATER_GRID_CELL_MULTIPLE },
+      uStormGridCellMultiple: { value: STORM_GRID_CELL_MULTIPLE },
+      uVoxelFieldYaw: { value: VOXEL_FIELD_YAW },
+    });
+    expect(plane.material.uniforms.uVoxelFieldOffset.value.toArray()).toEqual([
+      VOXEL_FIELD_OFFSET.x,
+      VOXEL_FIELD_OFFSET.z,
+    ]);
     runtime.dispose();
   });
 
@@ -225,6 +267,143 @@ describe('voxel water runtime contracts', () => {
 
     first.runtime.dispose();
     second.runtime.dispose();
+  });
+
+  it('keeps column transforms static while GPU wave uniforms advance continuously', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<never, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const columns = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshStandardMaterial> =>
+        object.name === 'voxel-water-columns'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
+    );
+    const matrixVersion = columns.instanceMatrix.version;
+    const matrixBefore = columns.instanceMatrix.array.slice();
+    const timeBefore = plane.material.uniforms.uTime.value as number;
+
+    for (let frame = 1; frame <= 30; frame += 1) {
+      runtime.render({ elapsed: frame / 60, delta: 1 / 60 });
+    }
+
+    expect(columns.instanceMatrix.usage).toBe(StaticDrawUsage);
+    expect(columns.instanceMatrix.version).toBe(matrixVersion);
+    expect(columns.instanceMatrix.array).toEqual(matrixBefore);
+    expect(plane.material.uniforms.uTime.value).toBeGreaterThan(timeBefore);
+    runtime.dispose();
+  });
+
+  it('bakes the water plane into XZ and binds each column to its real ocean coordinate', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const columns = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshStandardMaterial> =>
+        object.name === 'voxel-water-columns'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
+    );
+    const planePositions = plane.geometry.getAttribute('position');
+    let maxAbsY = 0;
+    let maxAbsZ = 0;
+    for (let index = 0; index < planePositions.count; index += 1) {
+      maxAbsY = Math.max(maxAbsY, Math.abs(planePositions.getY(index)));
+      maxAbsZ = Math.max(maxAbsZ, Math.abs(planePositions.getZ(index)));
+    }
+    expect(plane.rotation.x).toBe(0);
+    expect(maxAbsY).toBeLessThan(0.00001);
+    expect(maxAbsZ).toBeGreaterThan(1);
+
+    const oceanCoordinates = columns.geometry.getAttribute('aOceanXZ');
+    expect(oceanCoordinates.count).toBe(columns.count);
+    const firstMatrix = new Matrix4();
+    columns.getMatrixAt(0, firstMatrix);
+    const localPosition = new Vector3().setFromMatrixPosition(firstMatrix);
+    const rotatedPosition = localPosition.applyAxisAngle(new Vector3(0, 1, 0), columns.rotation.y);
+    expect(oceanCoordinates.getX(0)).toBeCloseTo(rotatedPosition.x, 5);
+    expect(oceanCoordinates.getY(0)).toBeCloseTo(rotatedPosition.z, 5);
+    runtime.dispose();
+  });
+
+  it('injects the shared wave model into columns with the same uniform records', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<never, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const columns = findObject(
+      objects,
+      (object): object is InstancedMesh<never, MeshStandardMaterial> =>
+        object.name === 'voxel-water-columns'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
+    );
+    const shader = {
+      vertexShader: '#include <common>\nvoid main() {\n#include <begin_vertex>\n}',
+      fragmentShader: '',
+      uniforms: {},
+    };
+    columns.material.onBeforeCompile(shader as never, {} as never);
+
+    expect(shader.vertexShader).toContain('attribute vec2 aOceanXZ;');
+    expect(shader.vertexShader).toContain('WaveSample sampleWaveField');
+    expect(shader.vertexShader).toContain('float columnSurfaceY = waveSurfaceY');
+    expect(shader.uniforms).toMatchObject({
+      uTime: plane.material.uniforms.uTime,
+      uWaveHeight: plane.material.uniforms.uWaveHeight,
+      uWind: plane.material.uniforms.uWind,
+    });
+    expect(columns.material.customProgramCacheKey()).toContain('sampleWaveField');
+    runtime.dispose();
+  });
+
+  it('shares one world-space sun direction across sky, water, and the directional light', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<never, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const sky = findObject(
+      objects,
+      (object): object is Mesh<never, ShaderMaterial> =>
+        object instanceof Mesh
+        && object.material instanceof ShaderMaterial
+        && 'uWeatherSkyTint' in object.material.uniforms,
+    );
+    const sun = findObject(
+      objects,
+      (object): object is DirectionalLight => object instanceof DirectionalLight,
+    );
+    const waterSun = plane.material.uniforms.uSunDirection;
+    const skySun = sky.material.uniforms.uSunDirection;
+    const before = (waterSun.value as Vector3).clone();
+
+    expect(skySun).toBe(waterSun);
+    expect(sun.position.clone().normalize().distanceTo(before)).toBeLessThan(0.000001);
+    runtime.render({ elapsed: 10, delta: 10 });
+    const after = waterSun.value as Vector3;
+    expect(after.distanceTo(before)).toBeGreaterThan(0.001);
+    expect(sun.position.clone().normalize().distanceTo(after)).toBeLessThan(0.000001);
+    runtime.dispose();
   });
 
   it('keeps camera resizing and clipping within a stable showroom range', () => {
