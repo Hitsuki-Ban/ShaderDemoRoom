@@ -580,6 +580,15 @@ void main() {
 }
 `;
 
+const freezeMaskGLSL = /* glsl */`
+float freezeMask(vec3 dir) {
+  float normalizedDistance = angularDistance(dir, uFreezeOrigin) / PI;
+  float front = uFreezeProgress * 1.24;
+  float mask = smoothstep(front + 0.055, front - 0.055, normalizedDistance);
+  return mask * smoothstep(0.002, 0.045, uFreezeProgress);
+}
+`;
+
 const liquidFragmentShader = /* glsl */`
 ${commonNoiseGLSL}
 
@@ -613,12 +622,7 @@ varying vec3 vLocalDir;
 varying float vDisplacement;
 varying vec4 vClipPosition;
 
-float freezeMask(vec3 dir) {
-  float normalizedDistance = angularDistance(dir, uFreezeOrigin) / PI;
-  float front = uFreezeProgress * 1.24;
-  float mask = smoothstep(front + 0.055, front - 0.055, normalizedDistance);
-  return mask * smoothstep(0.002, 0.045, uFreezeProgress);
-}
+${freezeMaskGLSL}
 
 float flowLineAt(vec3 q) {
   float longitude = atan(q.z, q.x);
@@ -806,6 +810,8 @@ uniform float uFlowStrength;
 uniform float uTurbulence;
 uniform float uClarity;
 uniform float uFreezeProgress;
+uniform float uFreezeTime;
+uniform vec3 uFreezeOrigin;
 uniform vec3 uDeepColor;
 uniform vec3 uMidColor;
 uniform vec3 uLightColor;
@@ -813,16 +819,18 @@ varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
 varying vec3 vLocalDir;
 varying vec4 vClipPosition;
+${freezeMaskGLSL}
 void main() {
+  float fluidTime = mix(uTime, uFreezeTime, freezeMask(vLocalDir));
   vec3 N = normalize(vWorldNormal);
   vec3 V = normalize(cameraPosition - vWorldPosition);
   float edge = pow(1.0 - abs(dot(N, V)), 0.72);
-  vec3 flow = surfaceFlowVector(vLocalDir, uTime, uTurbulence);
+  vec3 flow = surfaceFlowVector(vLocalDir, fluidTime, uTurbulence);
   vec2 uv = vClipPosition.xy / max(vClipPosition.w, 0.0001) * 0.5 + 0.5;
   vec2 offset = (-N.xy * 0.021 + flow.xy * 0.006 * uFlowStrength) * (0.5 + edge);
   vec3 refracted = texture2D(uSceneTexture, clamp(uv + offset, vec2(0.004), vec2(0.996))).rgb;
-  float innerCaustic = sin((vLocalDir.x + vLocalDir.z) * 21.0 + fbm(vLocalDir * 5.0 + uTime * 0.08) * 6.0);
-  innerCaustic *= sin(vLocalDir.y * 25.0 - uTime * 1.4);
+  float innerCaustic = sin((vLocalDir.x + vLocalDir.z) * 21.0 + fbm(vLocalDir * 5.0 + fluidTime * 0.08) * 6.0);
+  innerCaustic *= sin(vLocalDir.y * 25.0 - fluidTime * 1.4);
   innerCaustic = smoothstep(0.66, 0.98, innerCaustic);
   vec3 absorption = mix(uMidColor, uDeepColor, edge * 0.72);
   vec3 color = mix(refracted * absorption, uMidColor, 0.26 + edge * 0.38);
@@ -2988,6 +2996,17 @@ async function sha256Hex(bytes) {
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('');
 }
 
+async function hashQaRgba8(width, height, topDownPixels) {
+  const header = new TextEncoder().encode('rgba8\0');
+  const canonical = new Uint8Array(header.length + 8 + topDownPixels.length);
+  canonical.set(header, 0);
+  const dimensions = new DataView(canonical.buffer, header.length, 8);
+  dimensions.setUint32(0, width, false);
+  dimensions.setUint32(4, height, false);
+  canonical.set(topDownPixels, header.length + 8);
+  return sha256Hex(canonical);
+}
+
 async function captureQaFramebuffer() {
   const gl = renderer.getContext();
   const width = gl.drawingBufferWidth;
@@ -3020,6 +3039,178 @@ function installQaCaptureHook() {
   let controlsTargetBaseline = null;
   let environmentBaseline = null;
   let captureInProgress = false;
+
+  const volumeCaptureWidth = 1440;
+  const volumeCaptureHeight = 900;
+  const volumeFreezeTime = 1.25;
+  const volumeCaptureRegions = Object.freeze({
+    frozen: Object.freeze({ x: 540, y: 426, width: 48, height: 48 }),
+    unfrozen: Object.freeze({ x: 852, y: 426, width: 48, height: 48 }),
+    interior: Object.freeze({ x: 672, y: 402, width: 96, height: 96 })
+  });
+  const volumeCaptureScene = new THREE.Scene();
+  volumeCaptureScene.background = new THREE.Color(0x000000);
+  const volumeCaptureCamera = new THREE.PerspectiveCamera(
+    42,
+    volumeCaptureWidth / volumeCaptureHeight,
+    0.05,
+    80
+  );
+  volumeCaptureCamera.position.set(8.1, 0.48, 0);
+  volumeCaptureCamera.lookAt(0, 0.48, 0);
+  volumeCaptureCamera.updateMatrixWorld(true);
+  const volumeCaptureMesh = new THREE.Mesh(orbGeometry, volumeMaterial);
+  volumeCaptureMesh.position.y = 0.48;
+  volumeCaptureMesh.scale.setScalar(0.985);
+  volumeCaptureMesh.updateMatrixWorld(true);
+  volumeCaptureScene.add(volumeCaptureMesh);
+  const volumeCaptureTarget = new THREE.WebGLRenderTarget(volumeCaptureWidth, volumeCaptureHeight, {
+    format: THREE.RGBAFormat,
+    type: THREE.UnsignedByteType,
+    colorSpace: THREE.LinearSRGBColorSpace,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    generateMipmaps: false,
+    depthBuffer: true,
+    stencilBuffer: false,
+    samples: 0
+  });
+  volumeCaptureTarget.texture.internalFormat = 'RGBA8';
+  const volumeTextureBytes = new Uint8Array(64 * 64 * 4);
+  for (let y = 0; y < 64; y += 1) {
+    for (let x = 0; x < 64; x += 1) {
+      const offset = (y * 64 + x) * 4;
+      volumeTextureBytes[offset] = Math.round(255 * x / 63);
+      volumeTextureBytes[offset + 1] = Math.round(255 * y / 63);
+      volumeTextureBytes[offset + 2] = ((x >> 3) + (y >> 3)) % 2 === 0 ? 32 : 224;
+      volumeTextureBytes[offset + 3] = 255;
+    }
+  }
+  const volumeCaptureTexture = new THREE.DataTexture(
+    volumeTextureBytes,
+    64,
+    64,
+    THREE.RGBAFormat,
+    THREE.UnsignedByteType
+  );
+  volumeCaptureTexture.colorSpace = THREE.LinearSRGBColorSpace;
+  volumeCaptureTexture.internalFormat = 'RGBA8';
+  volumeCaptureTexture.flipY = false;
+  volumeCaptureTexture.generateMipmaps = false;
+  volumeCaptureTexture.unpackAlignment = 1;
+  volumeCaptureTexture.wrapS = THREE.ClampToEdgeWrapping;
+  volumeCaptureTexture.wrapT = THREE.ClampToEdgeWrapping;
+  volumeCaptureTexture.minFilter = THREE.LinearFilter;
+  volumeCaptureTexture.magFilter = THREE.LinearFilter;
+  volumeCaptureTexture.needsUpdate = true;
+  const volumeTextureHashPromise = hashQaRgba8(64, 64, volumeTextureBytes);
+
+  function bytesToBase64(bytes) {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  function captureVolumeUniformState() {
+    return [
+      'uTime',
+      'uMode',
+      'uFlowStrength',
+      'uTurbulence',
+      'uClarity',
+      'uFreezeProgress',
+      'uFreezeOrigin',
+      'uFreezeTime',
+      'uSceneTexture',
+      'uDeepColor',
+      'uMidColor',
+      'uLightColor'
+    ].map((name) => {
+      const uniform = sharedUniforms[name];
+      const value = uniform.value;
+      const copiedValue = value?.isVector3 || value?.isColor ? value.clone() : value;
+      return { name, uniform, value, copiedValue };
+    });
+  }
+
+  function restoreVolumeUniformState(baseline) {
+    baseline.forEach(({ uniform, value, copiedValue }) => {
+      uniform.value = value;
+      if (value?.isVector3 || value?.isColor) value.copy(copiedValue);
+    });
+  }
+
+  function assertVolumeUniformState(baseline) {
+    baseline.forEach(({ name, uniform, value, copiedValue }) => {
+      if (uniform.value !== value) throw new Error(`MIZU_KOKORO_CAPTURE_VOLUME failed to restore ${name} identity`);
+      if ((value?.isVector3 || value?.isColor) && !value.equals(copiedValue)) {
+        throw new Error(`MIZU_KOKORO_CAPTURE_VOLUME failed to restore ${name} value`);
+      }
+      if (!(value?.isVector3 || value?.isColor) && value !== copiedValue) {
+        throw new Error(`MIZU_KOKORO_CAPTURE_VOLUME failed to restore ${name} value`);
+      }
+    });
+  }
+
+  function copyTopDownRegionRgb(pixels, region) {
+    const rgb = new Uint8Array(region.width * region.height * 3);
+    let targetOffset = 0;
+    for (let y = region.y; y < region.y + region.height; y += 1) {
+      for (let x = region.x; x < region.x + region.width; x += 1) {
+        const sourceOffset = (y * volumeCaptureWidth + x) * 4;
+        rgb[targetOffset] = pixels[sourceOffset];
+        rgb[targetOffset + 1] = pixels[sourceOffset + 1];
+        rgb[targetOffset + 2] = pixels[sourceOffset + 2];
+        targetOffset += 3;
+      }
+    }
+    return rgb;
+  }
+
+  async function captureVolumePixels() {
+    const bottomUpPixels = new Uint8Array(volumeCaptureWidth * volumeCaptureHeight * 4);
+    renderer.getContext().finish();
+    renderer.readRenderTargetPixels(
+      volumeCaptureTarget,
+      0,
+      0,
+      volumeCaptureWidth,
+      volumeCaptureHeight,
+      bottomUpPixels
+    );
+    const topDownPixels = new Uint8Array(bottomUpPixels.length);
+    const rowBytes = volumeCaptureWidth * 4;
+    for (let sourceRow = 0; sourceRow < volumeCaptureHeight; sourceRow += 1) {
+      const targetRow = volumeCaptureHeight - 1 - sourceRow;
+      topDownPixels.set(
+        bottomUpPixels.subarray(sourceRow * rowBytes, (sourceRow + 1) * rowBytes),
+        targetRow * rowBytes
+      );
+    }
+    const regions = {};
+    for (const [name, region] of Object.entries(volumeCaptureRegions)) {
+      const rgb = copyTopDownRegionRgb(topDownPixels, region);
+      regions[name] = {
+        ...region,
+        channels: 'rgb8',
+        sampleCount: region.width * region.height,
+        bytesBase64: bytesToBase64(rgb),
+        hash: await sha256Hex(rgb)
+      };
+    }
+    return {
+      framebuffer: {
+        width: volumeCaptureWidth,
+        height: volumeCaptureHeight,
+        format: 'rgba8',
+        hash: await hashQaRgba8(volumeCaptureWidth, volumeCaptureHeight, topDownPixels)
+      },
+      regions
+    };
+  }
 
   window.__MIZU_KOKORO_STEP__ = async (input) => {
     if (!hasExactKeys(input, ['mode', 'freezeProgress', 'timestamp'])) {
@@ -3106,6 +3297,91 @@ function installQaCaptureHook() {
     } finally {
       captureInProgress = false;
     }
+  };
+
+  window.__MIZU_KOKORO_CAPTURE_VOLUME__ = async (input) => {
+    if (!hasExactKeys(input, ['mode', 'freezeProgress', 'freezeOrigin', 'timestamp'])) {
+      throw new Error(
+        'MIZU_KOKORO_CAPTURE_VOLUME input must contain exactly mode, freezeProgress, freezeOrigin, and timestamp'
+      );
+    }
+    if (!Number.isInteger(input.mode) || input.mode < 0 || input.mode >= modes.length) {
+      throw new Error('MIZU_KOKORO_CAPTURE_VOLUME mode must be an integer from 0 through 3');
+    }
+    if (!Number.isFinite(input.freezeProgress) || input.freezeProgress < 0 || input.freezeProgress > 1) {
+      throw new Error('MIZU_KOKORO_CAPTURE_VOLUME freezeProgress must be a finite number from 0 through 1');
+    }
+    if (
+      !Array.isArray(input.freezeOrigin)
+      || input.freezeOrigin.length !== 3
+      || input.freezeOrigin.some((component) => !Number.isFinite(component))
+    ) {
+      throw new Error('MIZU_KOKORO_CAPTURE_VOLUME freezeOrigin must contain exactly three finite numbers');
+    }
+    const freezeOrigin = new THREE.Vector3(...input.freezeOrigin);
+    if (freezeOrigin.lengthSq() === 0) {
+      throw new Error('MIZU_KOKORO_CAPTURE_VOLUME freezeOrigin must be non-zero');
+    }
+    freezeOrigin.normalize();
+    if (!Number.isFinite(input.timestamp) || input.timestamp < 0) {
+      throw new Error('MIZU_KOKORO_CAPTURE_VOLUME timestamp must be a finite non-negative number');
+    }
+    if (captureInProgress) throw new Error('MIZU_KOKORO_CAPTURE_VOLUME does not allow concurrent calls');
+    captureInProgress = true;
+    const uniformBaseline = captureVolumeUniformState();
+    const previousTarget = renderer.getRenderTarget();
+    const previousCubeFace = renderer.getActiveCubeFace();
+    const previousMipmapLevel = renderer.getActiveMipmapLevel();
+    let capture;
+    try {
+      const mode = modes[input.mode];
+      sharedUniforms.uTime.value = input.timestamp / 1000;
+      sharedUniforms.uMode.value = input.mode;
+      sharedUniforms.uFlowStrength.value = mode.flow;
+      sharedUniforms.uTurbulence.value = mode.turbulence;
+      sharedUniforms.uClarity.value = mode.clarity;
+      sharedUniforms.uFreezeProgress.value = input.freezeProgress;
+      sharedUniforms.uFreezeOrigin.value.copy(freezeOrigin);
+      sharedUniforms.uFreezeTime.value = volumeFreezeTime;
+      sharedUniforms.uSceneTexture.value = volumeCaptureTexture;
+      sharedUniforms.uDeepColor.value.copy(mode.deepColor);
+      sharedUniforms.uMidColor.value.copy(mode.midColor);
+      sharedUniforms.uLightColor.value.copy(mode.lightColor);
+      renderer.setRenderTarget(volumeCaptureTarget);
+      renderer.clear();
+      renderer.render(volumeCaptureScene, volumeCaptureCamera);
+      capture = await captureVolumePixels();
+    } finally {
+      restoreVolumeUniformState(uniformBaseline);
+      renderer.setRenderTarget(previousTarget, previousCubeFace, previousMipmapLevel);
+      captureInProgress = false;
+    }
+    assertVolumeUniformState(uniformBaseline);
+    return {
+      input: {
+        mode: input.mode,
+        freezeProgress: input.freezeProgress,
+        freezeOrigin: freezeOrigin.toArray(),
+        timestamp: input.timestamp
+      },
+      capture: {
+        width: volumeCaptureWidth,
+        height: volumeCaptureHeight,
+        devicePixelRatio: 1,
+        cameraPosition: volumeCaptureCamera.position.toArray(),
+        freezeTime: volumeFreezeTime
+      },
+      texture: {
+        width: 64,
+        height: 64,
+        format: 'rgba8',
+        colorSpace: 'linear-srgb',
+        hash: await volumeTextureHashPromise
+      },
+      framebuffer: capture.framebuffer,
+      regions: capture.regions,
+      stateRestored: true
+    };
   };
 }
 
