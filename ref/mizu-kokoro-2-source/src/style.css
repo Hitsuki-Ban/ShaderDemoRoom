@@ -416,18 +416,25 @@ kbd {
 }
 
 @media (max-width: 680px) {
-  .hero-ui { top: calc(24px + var(--safe-top)); left: calc(24px + var(--safe-left)); width: calc(100vw - 48px); padding: 15px 17px 14px; }
-  .eyebrow { font-size: 8px; margin-bottom: 9px; }
-  .hero-ui h1 { font-size: 38px; }
-  .subtitle { margin-top: 11px; font-size: 9px; }
-  .telemetry { top: auto; bottom: calc(146px + var(--safe-bottom)); right: calc(24px + var(--safe-right)); padding: 10px 7px; }
+  .hero-ui {
+    top: calc(14px + var(--safe-top));
+    left: calc(16px + var(--safe-left));
+    width: min(290px, calc(100vw - 32px));
+    padding: 10px 12px 9px;
+    clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px));
+  }
+  .eyebrow { gap: 7px; margin-bottom: 6px; font-size: 0; }
+  .eyebrow::after { content: "LIVE SPECIMEN // LQ-09"; font: 7px/1 ui-monospace, monospace; letter-spacing: .16em; }
+  .hero-ui h1 { font-size: 28px; line-height: .9; }
+  .subtitle { margin-top: 6px; font-size: 8px; letter-spacing: .08em; }
+  .telemetry { top: auto; bottom: calc(132px + var(--safe-bottom)); right: calc(16px + var(--safe-right)); padding: 9px 6px; }
   .telemetry > div { padding: 0 8px; }
-  .mode-rail { left: calc(24px + var(--safe-left)); bottom: calc(82px + var(--safe-bottom)); width: calc(100vw - 48px); padding: 8px; }
+  .mode-rail { left: calc(16px + var(--safe-left)); bottom: calc(62px + var(--safe-bottom)); width: calc(100vw - 32px); padding: 6px; }
   .mode-rail > p { display: none; }
-  .mode-btn { min-height: 50px; padding: 7px 6px; }
+  .mode-btn { min-height: 42px; padding: 6px; }
   .mode-btn span { font-size: 11px; }
   .mode-btn small { font-size: 7px; }
-  .tool-dock { left: calc(24px + var(--safe-left)); right: auto; bottom: calc(24px + var(--safe-bottom)); width: calc(100vw - 48px); overflow-x: auto; }
+  .tool-dock { left: calc(16px + var(--safe-left)); right: auto; bottom: calc(14px + var(--safe-bottom)); width: calc(100vw - 32px); padding: 4px; overflow-x: auto; }
   .tool-dock button { flex: 1 0 auto; }
   .lab-panel { right: calc(20px + var(--safe-right)); bottom: calc(70px + var(--safe-bottom)); }
   .vertical-label, .credit { display: none; }
@@ -436,10 +443,14 @@ kbd {
 
 @media (max-width: 420px) {
   .telemetry { display: none; }
-  .mode-buttons { gap: 4px; }
-  .mode-btn i { display: none; }
-  .mode-btn span { letter-spacing: .03em; }
-  .hero-ui h1 { font-size: 34px; }
+  .mode-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .mode-btn { min-height: 31px; padding: 4px 8px; }
+  .mode-btn i { top: 5px; right: 7px; }
+  .mode-btn span { font-size: 10px; letter-spacing: .05em; }
+  .mode-btn small { margin-top: 3px; font-size: 7px; }
+  .mode-btn.is-active::after { bottom: 3px; }
+  .hero-ui { width: min(270px, calc(100vw - 32px)); }
+  .hero-ui h1 { font-size: 26px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

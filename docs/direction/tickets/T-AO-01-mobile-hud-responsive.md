@@ -43,3 +43,20 @@ ref/ 側 `style.css`(必要なら `index.html` の構造微修正)のブレー�
 - qa:visual は mobile overflow 0 / HUD overlap 0 を gate している(T-EMB-02 で確立)— これは DOM 要素同士の判定であり、canvas 内のオーブとの重畳は検出しない。本票の検収はスクリーンショット目視+票内に判定基準を記録する。
 - shell 側 HUD(TelemetryPanel 等)は本票のスコープ外。二重 HUD の整理は shell リデザイン(T-SH-03/D-2 系)の管轄。
 - `.hero-ui` 等のセレクタ/DOM 構造を変える場合、`scripts/exhibit-smoke.mjs`(qa:exhibits)と capture 系スクリプトが exhibit 内 DOM に依存していないか確認する(現状の hard assert はブリッジ挙動と console error 0 が中心)。
+
+## 完了報告 (2026-07-19)
+
+- 680px以下のtitle plateを左右16px・上14px、最大270–290px幅、約74px高のspecimen chipへ縮退した。
+  eyebrowは視覚上 `LIVE SPECIMEN // LQ-09` に短縮し、`MIZU//KOKORO` と中英subtitleは保持した。
+- 420px以下のphase buttonsを2×2へ変更した。375×812では各buttonが161×31px、390×844では
+  168×31pxとなり、4 active statesすべてで中文/`CALM` / `SURGE` / `BLOOM` / `VOID` の
+  `scrollWidth == clientWidth` かつ `scrollHeight == clientHeight` を確認した。
+- showroom mobileではtitle plateをorb上端から分離し、phase railを84px、tool dockを41pxへ圧縮した。
+  beforeの「上title + 4列cardの間から約1/4」構図から、orb外周とdaisの全体関係を判読できる中央heroへ回復した。
+  比較証拠は `captures/t-ao-01-showroom-mobile-before.png` と
+  `captures/t-ao-01-showroom-mobile-after.png` に固定した。
+- `pnpm qa:visual` はdesktop 4室 + mobile 3室を完走し、console errors 0、mobile horizontal overflowなし、
+  shell scene/HUD overlapなし。desktopは変更対象media query外で、1440×900 captureに視覚回帰なし。
+- standalone 375×812 / 390×844を別途captureし、title / phase rail / tool dockがviewport内、4 modesに
+  text clippingなし、console errors 0を確認した。`pnpm test` (29 files / 173 tests)、`pnpm lint`、
+  `pnpm typecheck`、production `qa:exhibits` も通過した。
