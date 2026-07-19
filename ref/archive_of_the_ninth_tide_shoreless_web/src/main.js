@@ -89,6 +89,7 @@ const tideMeta = [
 // Boundaries follow the track's beat-synchronous structural changes rather than
 // slicing its duration into nine equal blocks.
 const sectionBoundaries = [0, 48.9709, 75.0469, 103.0966, 145.2408, 183.8092, 224.8853, 260.2260, 330.0484, 354.5040];
+const scoreDuration = sectionBoundaries[sectionBoundaries.length - 1];
 const sectionTransitionDuration = 2.85;
 
 const palettes = [
@@ -2459,8 +2460,13 @@ const paletteScratch = {
   deep: new THREE.Color(), fog: new THREE.Color(), glow: new THREE.Color(), accent: new THREE.Color(), secondary: new THREE.Color()
 };
 let lastTide = -1;
+function resolveVisualScoreDuration() {
+  if (deterministicCaptureRequested) return scoreDuration;
+  return Number.isFinite(ui.audio.duration) ? ui.audio.duration : scoreDuration;
+}
+
 function updateTide(elapsed, dt) {
-  const duration = Number.isFinite(ui.audio.duration) ? ui.audio.duration : 354.504;
+  const duration = resolveVisualScoreDuration();
   let musicTime;
   if (state.previewMode === 'main') {
     const i = clamp(state.previewSection, 0, 8);
@@ -2936,7 +2942,7 @@ function updateHover() {
 }
 
 function updateTransport() {
-  const duration = Number.isFinite(ui.audio.duration) ? ui.audio.duration : 354.504;
+  const duration = resolveVisualScoreDuration();
   const current = state.audioReady ? ui.audio.currentTime : (state.activeSeconds % duration);
   ui.timeNow.textContent = formatTime(current);
   ui.timeTotal.textContent = formatTime(duration);
