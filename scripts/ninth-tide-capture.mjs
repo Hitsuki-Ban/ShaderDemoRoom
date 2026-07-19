@@ -222,6 +222,11 @@ async function captureState(context, config, fixture, policy, runIndex, stateRec
       if (decoded.width !== fixture.canvasBox.width || decoded.height !== fixture.canvasBox.height) {
         throw new Error(`${policy.id} decoded PNG dimensions do not match the committed canvas box.`);
       }
+      if (decoded.captureHash !== hookResult.framebuffer.hash) {
+        throw new Error(
+          `${policy.id} encoded canvas pixels diverged from the direct framebuffer readback.`,
+        );
+      }
       const hits = policy.mode === 'main'
         ? await verifyHits(page, fixture.sections[policy.section])
         : [];

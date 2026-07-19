@@ -236,12 +236,11 @@ export async function analyzePngInBrowser({ base64, roi, warmDominance }) {
     colorSpaceConversion: 'none',
     premultiplyAlpha: 'none',
   });
-  const canvas = typeof OffscreenCanvas === 'function'
-    ? new OffscreenCanvas(bitmap.width, bitmap.height)
-    : Object.assign(document.createElement('canvas'), {
-        width: bitmap.width,
-        height: bitmap.height,
-      });
+  if (typeof OffscreenCanvas !== 'function') {
+    bitmap.close();
+    throw new Error('Ninth Tide PNG analysis requires OffscreenCanvas.');
+  }
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const context = canvas.getContext('2d', {
     alpha: true,
     colorSpace: 'srgb',
