@@ -1,4 +1,6 @@
 import { chromium } from 'playwright';
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
 
 const baseUrl =
   process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
@@ -6,6 +8,9 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 const page = await context.newPage();
 const consoleErrors = [];
+const orbFreezeCaptureDir = path.resolve('output/playwright/orb-freeze');
+
+await mkdir(orbFreezeCaptureDir, { recursive: true });
 
 page.on('console', (message) => {
   if (message.type() === 'error') consoleErrors.push(message.text());
@@ -420,14 +425,227 @@ const center = {
   y: bounds.y + bounds.height / 2,
 };
 
-await page.mouse.dblclick(center.x, center.y);
-await page.waitForFunction(
-  () => document.querySelector('#matter-state')?.textContent === 'CRYSTAL',
-);
-await page.mouse.dblclick(center.x, center.y);
-await page.waitForFunction(
-  () => document.querySelector('#matter-state')?.textContent === 'LIQUID',
-);
+await page.evaluate(() => {
+  const matterState = document.querySelector('#matter-state');
+  const scene = document.querySelector('#scene');
+  const textContent = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+  if (!matterState || !scene || !textContent?.get || !textContent.set) {
+    throw new Error('Orb gesture QA could not instrument the scene state.');
+  }
+  const transitions = [];
+  const pointerEvents = [];
+  const pointerCaptureCalls = [];
+  scene.setPointerCapture = (pointerId) => pointerCaptureCalls.push({ type: 'set', pointerId });
+  scene.releasePointerCapture = (pointerId) => pointerCaptureCalls.push({ type: 'release', pointerId });
+  Object.defineProperty(matterState, 'textContent', {
+    configurable: true,
+    get() {
+      return textContent.get.call(this);
+    },
+    set(value) {
+      transitions.push(String(value));
+      textContent.set.call(this, value);
+    },
+  });
+  for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'dblclick']) {
+    scene.addEventListener(type, (event) => {
+      pointerEvents.push({
+        type,
+        pointerType: 'pointerType' in event ? event.pointerType : null,
+        pointerId: 'pointerId' in event ? event.pointerId : null,
+        isTrusted: event.isTrusted,
+      });
+    });
+  }
+  window.__orbGestureQa = { transitions, pointerEvents, pointerCaptureCalls };
+});
+
+let syntheticPointerId = 10;
+
+async function readOrbGestureQa() {
+  return page.evaluate(() => ({
+    matterState: document.querySelector('#matter-state')?.textContent,
+    transitions: [...window.__orbGestureQa.transitions],
+    pointerEvents: [...window.__orbGestureQa.pointerEvents],
+    pointerCaptureCalls: [...window.__orbGestureQa.pointerCaptureCalls],
+  }));
+}
+
+async function dispatchSyntheticPointerEvents(events, synthesizeDoubleClick = false) {
+  await page.evaluate(({ queuedEvents, includeDoubleClick }) => {
+    const scene = document.querySelector('#scene');
+    if (!scene) throw new Error('Orb scene is unavailable for synthetic pointer input.');
+    for (const queuedEvent of queuedEvents) {
+      scene.dispatchEvent(new PointerEvent(queuedEvent.type, {
+        bubbles: true,
+        cancelable: queuedEvent.type !== 'pointercancel',
+        pointerId: queuedEvent.pointerId,
+        pointerType: queuedEvent.pointerType,
+        isPrimary: true,
+        clientX: queuedEvent.x,
+        clientY: queuedEvent.y,
+        button: queuedEvent.type === 'pointerdown' ? 0 : -1,
+        buttons: queuedEvent.type === 'pointerdown' || queuedEvent.type === 'pointermove' ? 1 : 0,
+        pressure: queuedEvent.type === 'pointerup' || queuedEvent.type === 'pointercancel' ? 0 : 0.5,
+      }));
+    }
+    if (includeDoubleClick) {
+      const finalEvent = queuedEvents.at(-1);
+      scene.dispatchEvent(new MouseEvent('dblclick', {
+        bubbles: true,
+        cancelable: true,
+        clientX: finalEvent.x,
+        clientY: finalEvent.y,
+      }));
+    }
+  }, { queuedEvents: events, includeDoubleClick: synthesizeDoubleClick });
+}
+
+function syntheticTap(pointerType, point) {
+  const pointerId = syntheticPointerId;
+  syntheticPointerId += 1;
+  return [
+    { type: 'pointerdown', pointerType, pointerId, x: point.x, y: point.y },
+    { type: 'pointerup', pointerType, pointerId, x: point.x, y: point.y },
+  ];
+}
+
+async function dispatchDoubleTap(pointerType, point) {
+  await dispatchSyntheticPointerEvents(
+    [...syntheticTap(pointerType, point), ...syntheticTap(pointerType, point)],
+    pointerType === 'mouse',
+  );
+}
+
+async function assertMatterTransitions(label, transitionStart, expectedTransitions, expectedState) {
+  await page.waitForFunction(
+    (state) => document.querySelector('#matter-state')?.textContent === state,
+    expectedState,
+  );
+  const snapshot = await readOrbGestureQa();
+  const actualTransitions = snapshot.transitions.slice(transitionStart);
+  if (JSON.stringify(actualTransitions) !== JSON.stringify(expectedTransitions)) {
+    throw new Error(
+      `${label} produced ${JSON.stringify(actualTransitions)} instead of ${JSON.stringify(expectedTransitions)}.`,
+    );
+  }
+  return snapshot;
+}
+
+const orbFreezeModes = [];
+const freezeScenarios = [
+  { mode: 1, pointerType: 'mouse', point: { x: center.x - 42, y: center.y - 24 } },
+  { mode: 2, pointerType: 'touch', point: { x: center.x + 44, y: center.y - 18 } },
+  { mode: 3, pointerType: 'pen', point: { x: center.x - 36, y: center.y + 34 } },
+  { mode: 4, pointerType: 'mouse', point: { x: center.x + 34, y: center.y + 38 } },
+];
+
+for (const scenario of freezeScenarios) {
+  await page.keyboard.press(`Digit${scenario.mode}`);
+  await page.waitForFunction(
+    (index) => document.querySelector(`.mode-btn[data-mode="${index}"]`)?.classList.contains('is-active'),
+    scenario.mode - 1,
+  );
+  const before = await readOrbGestureQa();
+  await dispatchDoubleTap(scenario.pointerType, scenario.point);
+  const frozenSnapshot = await assertMatterTransitions(
+    `Orb mode ${scenario.mode} ${scenario.pointerType} freeze`,
+    before.transitions.length,
+    ['CRYSTAL'],
+    'CRYSTAL',
+  );
+  await page.waitForTimeout(320);
+  const capturePath = path.join(orbFreezeCaptureDir, `mode-${scenario.mode}-${scenario.pointerType}.png`);
+  await canvas.screenshot({ path: capturePath });
+  await dispatchDoubleTap(scenario.pointerType, scenario.point);
+  const liquidSnapshot = await assertMatterTransitions(
+    `Orb mode ${scenario.mode} ${scenario.pointerType} melt`,
+    frozenSnapshot.transitions.length,
+    ['LIQUID'],
+    'LIQUID',
+  );
+  const pointerUps = liquidSnapshot.pointerEvents
+    .slice(before.pointerEvents.length)
+    .filter((event) => event.type === 'pointerup');
+  if (
+    pointerUps.length !== 4
+    || pointerUps.some((event) => event.pointerType !== scenario.pointerType || event.isTrusted)
+  ) {
+    throw new Error(
+      `Orb mode ${scenario.mode} ${scenario.pointerType} emitted unexpected pointerup events: ${JSON.stringify(pointerUps)}.`,
+    );
+  }
+  orbFreezeModes.push({
+    mode: scenario.mode,
+    pointerType: scenario.pointerType,
+    tapPosition: scenario.point,
+    transitions: liquidSnapshot.transitions.slice(before.transitions.length),
+    syntheticPointerUps: pointerUps.every((event) => !event.isTrusted),
+    capturePath,
+  });
+}
+
+const orbInvalidGestures = [];
+
+async function assertNoFreezeTransition(label, action) {
+  const before = await readOrbGestureQa();
+  await action();
+  await page.waitForTimeout(20);
+  const after = await readOrbGestureQa();
+  const transitions = after.transitions.slice(before.transitions.length);
+  if (after.matterState !== 'LIQUID' || transitions.length !== 0) {
+    throw new Error(`${label} changed Orb matter state: ${JSON.stringify({ after, transitions })}.`);
+  }
+  orbInvalidGestures.push(label);
+}
+
+await assertNoFreezeTransition('single tap and expired pair', async () => {
+  await dispatchSyntheticPointerEvents(syntheticTap('mouse', center));
+  await page.waitForTimeout(320);
+  await dispatchSyntheticPointerEvents(syntheticTap('mouse', center));
+});
+await assertNoFreezeTransition('sculpt drag release', async () => {
+  const pointerId = syntheticPointerId;
+  syntheticPointerId += 1;
+  await dispatchSyntheticPointerEvents([
+    { type: 'pointerdown', pointerType: 'mouse', pointerId, x: center.x, y: center.y },
+    { type: 'pointermove', pointerType: 'mouse', pointerId, x: center.x + 32, y: center.y },
+    { type: 'pointerup', pointerType: 'mouse', pointerId, x: center.x + 32, y: center.y },
+  ]);
+});
+await assertNoFreezeTransition('pointercancel then third tap', async () => {
+  await dispatchSyntheticPointerEvents(syntheticTap('touch', center));
+  const cancelledId = syntheticPointerId;
+  syntheticPointerId += 1;
+  await dispatchSyntheticPointerEvents([
+    { type: 'pointerdown', pointerType: 'touch', pointerId: cancelledId, x: center.x, y: center.y },
+    { type: 'pointercancel', pointerType: 'touch', pointerId: cancelledId, x: center.x, y: center.y },
+  ]);
+  await dispatchSyntheticPointerEvents(syntheticTap('touch', center));
+});
+await page.waitForTimeout(320);
+await assertNoFreezeTransition('double tap beyond distance threshold', async () => {
+  await dispatchSyntheticPointerEvents([
+    ...syntheticTap('mouse', { x: center.x - 36, y: center.y }),
+    ...syntheticTap('mouse', { x: center.x + 36, y: center.y }),
+  ]);
+});
+await assertNoFreezeTransition('different pointer types', async () => {
+  await dispatchSyntheticPointerEvents([
+    ...syntheticTap('mouse', center),
+    ...syntheticTap('pen', center),
+  ]);
+});
+
+const finalOrbGestureQa = await readOrbGestureQa();
+const syntheticDoubleClickCount = finalOrbGestureQa.pointerEvents
+  .filter((event) => event.type === 'dblclick').length;
+if (finalOrbGestureQa.transitions.length !== freezeScenarios.length * 2) {
+  throw new Error(`Orb freeze toggle count was ${finalOrbGestureQa.transitions.length}, expected ${freezeScenarios.length * 2}.`);
+}
+if (syntheticDoubleClickCount !== 4) {
+  throw new Error(`Orb QA expected 4 synthetic dblclick events, observed ${syntheticDoubleClickCount}.`);
+}
 
 await browser.close();
 
@@ -455,7 +673,10 @@ console.log(
       tidePauseRace,
       orbVisibilityLifecycle,
       tideVisibilityLifecycle,
-      orbFreezeCycle: ['LIQUID', 'CRYSTAL', 'LIQUID'],
+      orbFreezeModes,
+      orbInvalidGestures,
+      orbToggleCount: finalOrbGestureQa.transitions.length,
+      syntheticDoubleClickCount,
       consoleErrors: consoleErrors.length,
     },
     null,
