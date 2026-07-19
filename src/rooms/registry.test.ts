@@ -45,6 +45,19 @@ describe('roomRegistry', () => {
     });
   });
 
+  it('declares the renderer profile for every shader room', () => {
+    expect(
+      Object.fromEntries(
+        roomRegistry
+          .filter((room) => room.kind === 'shader')
+          .map((room) => [room.id, room.rendererProfile]),
+      ),
+    ).toEqual({
+      'voxel-water': { transmissionResolutionScale: 1 },
+      'glass-optics': { transmissionResolutionScale: 0.5 },
+    });
+  });
+
   it('keeps each room modular with scene, controller, presets, and i18n namespace', () => {
     for (const room of roomRegistry) {
       expect(room.titleKey).toMatch(/^rooms\.[a-zA-Z0-9]+\.title$/);

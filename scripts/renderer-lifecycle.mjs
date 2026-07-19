@@ -175,6 +175,15 @@ async function readPixelRatio(page) {
   });
 }
 
+async function readTransmissionResolutionScale(page) {
+  return page.evaluate(() => {
+    const serialized = document.querySelector(
+      'canvas[data-renderer-host="shell"]',
+    )?.dataset.rendererTransmissionResolutionScale;
+    return serialized === undefined ? null : Number(serialized);
+  });
+}
+
 async function sampleTelemetry(page, room) {
   await openRoom(page, room);
   await page.waitForTimeout(2500);
@@ -219,11 +228,16 @@ async function runScenario(firstRoom) {
   await assertAnimationState(page, true);
 
   const initialAudit = await readAudit(page);
+  const initialTransmissionResolutionScale = await readTransmissionResolutionScale(page);
   assert(initialAudit.canvasCount === 1, 'Expected exactly one connected shell canvas.');
   assert(initialAudit.contexts.length === 1, 'Expected exactly one shell WebGL context.');
   assert(initialAudit.contexts[0].type === 'webgl2', 'The shell did not create a WebGL2 context.');
   assert(initialAudit.contexts[0].actual?.antialias === true, 'The shell context is not antialiased.');
   assert(initialAudit.creationErrors.length === 0, 'The shell reported context creation errors.');
+  assert(
+    initialTransmissionResolutionScale === (firstRoom === 'glass-optics' ? 0.5 : 1),
+    `Initial renderer profile was not applied in ${firstRoom}: ${initialTransmissionResolutionScale}.`,
+  );
 
   const telemetrySamples = firstRoom === 'voxel-water'
     ? {
@@ -263,9 +277,17 @@ async function runScenario(firstRoom) {
     `Glass pixel ratio changed: ${pixelRatios['glass-optics']}.`,
   );
 
+  const rendererProfileScales = [];
   for (const room of switchSequence) {
     await openRoom(page, room);
     await assertAnimationState(page, shaderRooms.has(room));
+    const transmissionResolutionScale = await readTransmissionResolutionScale(page);
+    const expectedTransmissionResolutionScale = room === 'glass-optics' ? 0.5 : 1;
+    assert(
+      transmissionResolutionScale === expectedTransmissionResolutionScale,
+      `Renderer profile leaked in ${room}: ${transmissionResolutionScale}.`,
+    );
+    rendererProfileScales.push({ room, transmissionResolutionScale });
     const audit = await readAudit(page);
     assert(audit.canvasCount === 1, `Shell canvas count changed in ${room}.`);
     assert(audit.canvasId === initialAudit.canvasId, `Shell canvas identity changed in ${room}.`);
@@ -287,6 +309,7 @@ async function runScenario(firstRoom) {
     firstRoom,
     telemetrySamples,
     pixelRatios,
+    rendererProfileScales,
     switches: switchSequence.length,
   };
 }

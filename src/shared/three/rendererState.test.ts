@@ -14,6 +14,8 @@ import type {
 import { captureRendererState, restoreRendererState } from './rendererState';
 import { createRuntimeSession, disposeRuntimeSession } from './runtimeSession';
 
+const rendererProfile = { transmissionResolutionScale: 0.5 } as const;
+
 function createRendererHarness() {
   let clearColor = new Color(0x112233);
   let clearAlpha = 0.75;
@@ -88,6 +90,7 @@ describe('persistent renderer state ownership', () => {
       const module: RoomRuntimeModule<EmbeddedExhibitSettings> = {
         createRoomRuntime(context) {
           expect('info' in context.renderer).toBe(false);
+          expect(renderer.transmissionResolutionScale).toBe(0.5);
           mutateRenderer(renderer, index);
           return {
             updateSettings: vi.fn(),
@@ -98,10 +101,19 @@ describe('persistent renderer state ownership', () => {
           };
         },
       };
-      const session = createRuntimeSession(renderer, canvas, module, settings, 1);
+      const session = createRuntimeSession(
+        renderer,
+        canvas,
+        module,
+        rendererProfile,
+        settings,
+        1,
+      );
+      expect(canvas.dataset.rendererTransmissionResolutionScale).toBe('0.5');
       disposeRuntimeSession(renderer, session);
 
       expect(captureRendererState(renderer)).toEqual(baseline);
+      expect(canvas.dataset.rendererTransmissionResolutionScale).toBe('1');
       expect(readClear()).toEqual({ alpha: 0.75, color: 0x112233 });
     }
   });
@@ -119,7 +131,14 @@ describe('persistent renderer state ownership', () => {
     };
 
     expect(() =>
-      createRuntimeSession(renderer, canvas, createFailure, settings, 1),
+      createRuntimeSession(
+        renderer,
+        canvas,
+        createFailure,
+        rendererProfile,
+        settings,
+        1,
+      ),
     ).toThrow('create failed');
     expect(captureRendererState(renderer)).toEqual(baseline);
 
@@ -141,11 +160,40 @@ describe('persistent renderer state ownership', () => {
       renderer,
       canvas,
       disposeFailure,
+      rendererProfile,
       settings,
       1,
     );
 
     expect(() => disposeRuntimeSession(renderer, session)).toThrow('dispose failed');
     expect(captureRendererState(renderer)).toEqual(baseline);
+  });
+
+  it('rejects an invalid profile before runtime creation and restores the snapshot', () => {
+    const { renderer } = createRendererHarness();
+    const baseline = captureRendererState(renderer);
+    const canvas = document.createElement('canvas');
+    const createRoomRuntime = vi.fn();
+    const module: RoomRuntimeModule<EmbeddedExhibitSettings> = {
+      createRoomRuntime,
+    };
+
+    expect(() =>
+      createRuntimeSession(
+        renderer,
+        canvas,
+        module,
+        {
+          transmissionResolutionScale: 0.5,
+          unexpectedField: true,
+        } as never,
+        { reloadToken: 0 },
+        1,
+      ),
+    ).toThrow('exactly transmissionResolutionScale');
+    expect(createRoomRuntime).not.toHaveBeenCalled();
+    expect(captureRendererState(renderer)).toEqual(baseline);
+    expect(canvas.dataset.rendererTransmissionResolutionScale).toBe('1');
+    expect(renderer.info.reset).toHaveBeenCalledOnce();
   });
 });

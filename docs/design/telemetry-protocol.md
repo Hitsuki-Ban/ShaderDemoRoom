@@ -95,7 +95,7 @@ The shell serializes the current unrounded `RoomStats` object on the telemetry r
     }
   ],
   "overhead": {
-    "comparison": "T-SH-02 baseline build vs T-SH-03 candidate build",
+    "comparison": "voxel-water baseline vs candidate",
     "baselineUrl": "https://example.invalid/baseline",
     "candidateUrl": "http://127.0.0.1:4173/ShaderDemoRoom",
     "method": { "pairs": 5, "order": "interleaved and alternating", "warmupSeconds": 5, "measurementSeconds": 15 },
@@ -106,6 +106,8 @@ The shell serializes the current unrounded `RoomStats` object on the telemetry r
 ```
 
 Each reference sample contains `second`, the unrounded cadence and renderer-counter fields exported by `RoomStats`, and its sample state. Each overhead pair contains its execution order, independent rAF cadence measurements for baseline and candidate, renderer strings, and the paired regression percentage. `sourceRevision` identifies the commit that contains the measured executable code; a later evidence-only commit may add the generated record.
+
+Room-specific software performance gates use `pnpm qa:software-pairs -- <room-id> <output-path>`. The command requires explicit candidate/baseline URLs and source revisions, launches SwiftShader explicitly, verifies the actual renderer string, and records five alternating pairs plus the exact `pairedSpeedupMedian`. It writes the raw artifact before failing a missed gate; a single reference capture is environment provenance, not a substitute for the paired gate.
 
 The historic `fps-samples-2026-07-18.json` remains provenance for the old rounded-HUD procedure; it is not silently upgraded or treated as a schema-v1 baseline.
 
