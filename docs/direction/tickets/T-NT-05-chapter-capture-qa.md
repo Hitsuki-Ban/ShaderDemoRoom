@@ -42,3 +42,27 @@
 
 - QA 基盤と証拠取得だけを扱い、展示の見た目や preview の意味論を変更しない。
 - レンジ定数は1ファイルに集約するが、未知環境を通す silent tolerance や renderer 別 fallback は設けない。CI renderer を明示的に固定する。
+
+## 完了報告 (2026-07-19)
+
+- Implementation revision: `e65b913061ffd32771d87548d02465bbb533755c`。
+- `docs/direction/captures/capture.mjs` を廃止し、公式 `pnpm qa:ninth-tide`、
+  central policy、strict fixture validator、Pages gateへ置き換えた。
+- URL/forced capture modeは起動時から停止し、strict object hookが毎回scene/audio/synthetic/PRNG/camera/
+  DOM/postprocess baselineを復元する。main章は固定120-step CPU settle後にComposerを1回だけrenderし、
+  Promise解決後もqueued rAFは0。standaloneとembedded live previewのloopは変更していない。
+- Playwright 1.60.0 bundled Chromiumを明示的なSwiftShader flags、1440×900 / DPR 1で起動し、
+  actual renderer raw stringとcontext attributesをhard assertする。3 fresh browser runs × 11 fresh pages ×
+  same-page 3 repeats、合計99 hook callsでframebuffer/canvas RGBA8、state digest、metrics、hit resultsが完全一致した。
+- direct framebufferとcanvas PNG decoded pixelsは同じcanonical SHA-256であることも毎回assertする。
+  exact hashは同一fixed stack内だけのgateとし、cross-platform permanent goldenにはしていない。
+- 11状態すべて非黒、DOM phase一致、calibrated ROI luma range内。`R > 1.08G && R > 1.15B` の
+  warm-dominantはsection 4 (第V章)だけtrue。
+- `hit-targets-v1.json` は9章×9点を固定し、sections 0–6の全positiveがhit、全negativeがmiss。
+  sections 7/8はvertical 70%がhitする一方、horizontal 70%の左右が現行raycastでfalseとなることを保存した。
+- 正式環境、bundle SHA、11 hash/metrics、fixture calibration、再較正手順は
+  `docs/direction/ninth-tide-capture-qa.md` と
+  `docs/direction/captures/ninth-tide-deterministic-baseline-2026-07-19.json` に記録した。
+- 独立reviewはP0–P3なしでAPPROVE。`pnpm test` (29 files / 173 tests)、`pnpm lint`、
+  `pnpm typecheck`、`pnpm build`、`node scripts/check-exhibit-sync.mjs`、production `qa:ninth-tide`、
+  `qa:exhibits` を完走対象とし、最終manifest/11 PNGはworkflowと同じ `output/playwright/ninth-tide/` に生成する。
