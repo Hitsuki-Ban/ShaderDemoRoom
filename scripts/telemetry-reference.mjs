@@ -1,25 +1,16 @@
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { parseTelemetryReferenceConfig } from './telemetry-reference-config.mjs';
 
-const baseUrl = process.env.SHOWROOM_URL;
-const buildId = process.env.TELEMETRY_BUILD_ID;
-const sourceRevision = process.env.TELEMETRY_SOURCE_REVISION;
-const baselineUrl = process.env.TELEMETRY_BASELINE_URL;
 const cliArgs = process.argv.slice(2).filter((argument) => argument !== '--');
-const [outputPath] = cliArgs;
-
-if (
-  !baseUrl ||
-  !baselineUrl ||
-  !buildId ||
-  !sourceRevision ||
-  cliArgs.length !== 1 ||
-  !outputPath
-) {
-  throw new Error(
-    'SHOWROOM_URL, TELEMETRY_BASELINE_URL, TELEMETRY_BUILD_ID, TELEMETRY_SOURCE_REVISION, and one output path are required.',
-  );
-}
+const {
+  baseUrl,
+  baselineUrl,
+  buildId,
+  outputPath,
+  roomId,
+  sourceRevision,
+} = parseTelemetryReferenceConfig(process.env, cliArgs);
 
 const warmupSeconds = 5;
 const measurementSeconds = 15;
@@ -45,7 +36,7 @@ async function captureReference({ expectedClassification, label, launchOptions }
       viewport: { width: 1440, height: 900 },
       deviceScaleFactor: 1,
     });
-    await page.goto(`${baseUrl}/#/room/voxel-water`, {
+    await page.goto(`${baseUrl}/#/room/${roomId}`, {
       waitUntil: 'domcontentloaded',
     });
     await page.waitForSelector('[data-telemetry-json]', { timeout: 15_000 });
@@ -132,7 +123,7 @@ async function measurePageCadence(browser, url, label) {
     deviceScaleFactor: 1,
   });
   try {
-    await page.goto(`${url}/#/room/voxel-water`, {
+    await page.goto(`${url}/#/room/${roomId}`, {
       waitUntil: 'domcontentloaded',
     });
     await page.waitForSelector('canvas[data-renderer-host="shell"]', {
@@ -248,7 +239,10 @@ async function capturePairedOverhead() {
 const software = await captureReference({
   expectedClassification: 'software',
   label: 'bundled-chromium-swiftshader',
-  launchOptions: { headless: true },
+  launchOptions: {
+    headless: true,
+    args: ['--use-gl=angle', '--use-angle=swiftshader'],
+  },
 });
 const hardware = await captureReference({
   expectedClassification: 'hardware',
@@ -266,7 +260,7 @@ const record = {
   recordedAt: new Date().toISOString(),
   buildId,
   sourceRevision,
-  room: { id: 'voxel-water', preset: 'default' },
+  room: { id: roomId, preset: 'default' },
   references: [software, hardware],
   overhead,
 };

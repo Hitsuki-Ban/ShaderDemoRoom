@@ -4,6 +4,7 @@ import type { RendererEnvironment } from '../shared/three/rendererEnvironment';
 import type { Locale, Translator } from '../shared/i18n';
 import type { EmbeddedBridgeCapability } from '../shared/embedded/bridge';
 import type { RoomAccentToken } from '../styles/designTokens';
+import type { RendererProfile } from '../shared/three/rendererProfile';
 
 export type RoomId =
   | 'voxel-water'
@@ -149,6 +150,7 @@ interface BaseRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings
 export interface ShaderRoomDefinition<TSettings extends AnyRoomSettings = AnyRoomSettings>
   extends BaseRoomDefinition<TSettings> {
   kind: 'shader';
+  readonly rendererProfile: RendererProfile;
   readonly loadScene: () => Promise<RoomRuntimeModule<TSettings>>;
 }
 

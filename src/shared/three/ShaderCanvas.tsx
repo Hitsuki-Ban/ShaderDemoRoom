@@ -161,6 +161,7 @@ export function ShaderCanvas({
           renderer,
           canvas,
           module,
+          room.rendererProfile,
           settingsRef.current ?? initialSettings,
           motionScaleRef.current,
         );
