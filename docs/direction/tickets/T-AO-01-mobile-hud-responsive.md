@@ -55,6 +55,10 @@ ref/ 側 `style.css`(必要なら `index.html` の構造微修正)のブレー�
   beforeの「上title + 4列cardの間から約1/4」構図から、orb外周とdaisの全体関係を判読できる中央heroへ回復した。
   比較証拠は `captures/t-ao-01-showroom-mobile-before.png` と
   `captures/t-ao-01-showroom-mobile-after.png` に固定した。
+- CSS-onlyの初回案は414px高のshowroom iframeでphase railがorb下縁とdaisを横切ったため、独立reviewで却下した。
+  縦予算を実測した上で `src/main.js` に明示的なresponsive camera frameを追加した。375–420px portraitは
+  distance 10.3 / target Y 0.05、520px以下のcompact stageはdistance 12 / target Y -0.58とし、
+  title底端→orb+dais→phase rail上端を空隙で分離した。421px以上のdefault frameは従来値のままである。
 - `pnpm qa:visual` はdesktop 4室 + mobile 3室を完走し、console errors 0、mobile horizontal overflowなし、
   shell scene/HUD overlapなし。desktopは変更対象media query外で、1440×900 captureに視覚回帰なし。
 - standalone 375×812 / 390×844を別途captureし、title / phase rail / tool dockがviewport内、4 modesに

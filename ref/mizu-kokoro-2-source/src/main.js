@@ -216,6 +216,23 @@ controls.autoRotate = false;
 controls.autoRotateSpeed = 0.35;
 controls.update();
 
+const cameraFrames = Object.freeze({
+  default: Object.freeze({ positionY: 1.05, targetY: 0.42, distance: 8.1 }),
+  portrait: Object.freeze({ positionY: 0.68, targetY: 0.05, distance: 10.3 }),
+  compact: Object.freeze({ positionY: 0.05, targetY: -0.58, distance: 12.0 })
+});
+let activeCameraFrame = '';
+
+function applyResponsiveCameraFrame(width, height) {
+  const frameName = width <= 420 ? (height <= 520 ? 'compact' : 'portrait') : 'default';
+  if (frameName === activeCameraFrame) return;
+  const frame = cameraFrames[frameName];
+  camera.position.set(0, frame.positionY, frame.distance);
+  controls.target.set(0, frame.targetY, 0);
+  controls.update();
+  activeCameraFrame = frameName;
+}
+
 const hemi = new THREE.HemisphereLight(0x9eeeff, 0x12040f, 0.72);
 scene.add(hemi);
 
@@ -2308,6 +2325,7 @@ $('#capture').addEventListener('click', () => {
 function resize() {
   const width = Math.max(1, window.innerWidth);
   const height = Math.max(1, window.innerHeight);
+  applyResponsiveCameraFrame(width, height);
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
