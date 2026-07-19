@@ -45,3 +45,11 @@
 - **bridge 契約(envelope / capabilities / stats スキーマ)には触れない**。qa:exhibits と shell 側 strict parser(bridge.ts)が exact shape を hard assert しており、変更は契約バージョニング(v2)の話になる。本票は HUD 表示と文書のみ。
 - stats の cadence(500ms)や計測方式を変えないこと。T-SH-03 の telemetry protocol v1 参照記録・5% overhead gate と整合が取れている現状を壊さない。
 - pause 中に `publishRuntimeStats(true)` が送る fps 値は「停止直前の最終サンプル」であり、shell 側は paused フラグで区別している — HUD 側も同じ意味論(paused 表示が数値に優先)に揃える。
+
+## 実施報告 (2026-07-20)
+
+- `synchronizePauseState()` の単一 lifecycle に HUD 表示を揃えた。host pause または `document.hidden` で即座に `PAUSED`、aggregate pause 解除時は既存サンプル窓のリセットと同時に `-- FPS`、新しい 500ms wall-clock 窓が完成してから `NN FPS` を表示する。bridge v1 envelope / capabilities / stats exact shape、`lastRuntimeFps` / `lastRuntimeFrameTimeMs`、cadence と frameCount の意味論は変更していない。
+- `qa:exhibits` は Orb の host pause と visibility の両方で、warm-up 後の数値、`PAUSED`、750ms の frameCount 停止、復帰履歴 `PAUSED → -- FPS → 数値` を MutationObserver で恒常 gate 化した。最新版実走は host `PAUSED → -- FPS → 9/7 FPS`、visibility `PAUSED → -- FPS → 9/7 FPS`、console error 0。既存の wall-clock telemetry、audio intent、pause race、iframe identity、Ninth Tide、4相 × mouse/touch/pen freeze/melt、無効 gesture も同時に通過した。
+- ref README に FRAME の500ms平均、初回/復帰 warm-up、pause/hidden、software renderer の非代表性を明文化した。旧 `visual-current.json` 等は repository / git history に存在しないため、追跡可能な Orb / shell dossier に 2026-07-20 訂正を入れ、bridge、CI、ref 追跡、既完了の double-tap / volume freeze も現状へ同期した。
+- 原典 `preview.png` は `docs/screenshots/v2-calm-water.png` と同一 SHA-256 の歴史リファレンスなので差し替えず保持した。新しい 1440×900 / DPR 1 の実行証拠を `docs/direction/captures/t-ao-04-orb-hud-running.png`、pause 証拠を `docs/direction/captures/t-ao-04-orb-hud-paused.png` に保存し、loading overlay なし・FRAME がそれぞれ数値 / `PAUSED` であることを目視確認した。画像内の低 FPS は SwiftShader の互換性値であり性能 golden ではない。
+- 回帰門は `pnpm lint`、`pnpm typecheck`、`pnpm test` (31 files / 180 tests)、`pnpm build:shell`、`pnpm qa:exhibits`、`pnpm qa:orb`、`pnpm qa:visual` を通過した。Orb full-scene hash は standalone `7441cd852325cb714023e496bd2e3dcf4b06307ee5c8f9f3b26df30513bbc8f6`、showroom `009cdf3b18b976a44b6297accbc44e98ae7de0c575fc433cefd2a5c376eb81b7` のまま。生成 JS は ref / public とも SHA-256 `91748fb875eaac9a1a7214436733569f486197a342578c69a266a731a6d9da2c` で一致した。独立 reviewer は material finding なしで APPROVE、独立 verifier は同じ HUD sequence、180 tests、build、Orb hash、生成物同期と証拠を再確認して PASS とした。

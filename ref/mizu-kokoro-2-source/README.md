@@ -143,6 +143,10 @@ anime-liquid-orb/
 
 现场展示应优先锁定输入延迟和稳定帧率，再增加分辨率与后期强度。
 
+### FRAME HUD
+
+FRAME 欄は直近 500ms の実フレームを wall-clock 時間で平均した値です。初回サンプルと pause 復帰直後は `-- FPS`、showroom からの pause または document 非表示中は `PAUSED`、新しい 500ms 窓が完成すると `NN FPS` を表示します。SwiftShader / software renderer 上の数値は配線とライフサイクルの検証用であり、実機 GPU の性能指標ではありません。
+
 ## 验证状态
 
 - Vite 生产构建通过。

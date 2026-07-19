@@ -62,12 +62,12 @@ Room は 4 つ: ネイティブシェーダー 2 室(Voxel Water / Glass Optics�
 
 ### インフラ / CI / テスト / QA
 - `vite.config.ts`: `base = VITE_BASE_PATH ?? \`/${repoName}/\``(repoName は GITHUB_REPOSITORY、fallback 'ShaderDemoRoom')。build/preview のみ適用、dev は `/`。`chunkSizeWarningLimit: 900`。
-- CI (`.github/workflows/pages.yml`): main への push で pnpm 11.5.2 / Node 24 (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true`) / `pnpm install --frozen-lockfile` / `pnpm test` / `pnpm build` / dist upload / `deploy-pages@v5`。**`pnpm lint` も Playwright QA スクリプトも CI では実行されない。**
-- `package.json` はほぼ全依存(react, three, vite, react-router-dom…)を `"latest"` にピン。例外は `@types/three` (^0.184.1)、`playwright` (^1.60.0)、`pnpm@11.5.2`、`node>=22`。
+- CI (`.github/workflows/pages.yml`、2026-07-20 訂正): main push / PR / workflow_dispatch で frozen install、lint、typecheck、test、production build、exhibit sync、`qa:exhibits` / `qa:orb` / `qa:visual` / `qa:water` / `qa:ninth-tide` を実行し、QA artifacts を14日保持する。push / dispatch の成功時のみ Pages へ deploy する。
+- `package.json` は pnpm 11.5.2 と主要 runtime / dev dependencies を exact version で固定し、Node `>=22` を要求する。
 - テスト: `registry.test.ts`(4 id の順序・一意性・キー形状 regex `^rooms\.[a-zA-Z0-9]+\.title$`・shader room の loadScene・embedded の `^exhibits/.+/index\.html$`)、`ShaderCanvas.test.ts`(**raw-source 文字列テスト** — `'const rawDelta = timer.getDelta()'`、`'const delta = Math.min(rawDelta, 0.05)'`、`'fpsElapsed += rawDelta'`、`'fpsElapsed += delta'` の不在、`"roomId === 'voxel-water' ? 0.6 : 2"`、`"antialias: room.id !== 'voxel-water'"` の各リテラル存在を検証)、`i18n.test.ts`。
 - QA スクリプト:
   - `scripts/visual-smoke.mjs` (`pnpm qa:visual`): headless Chromium 1440x900、`SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom'`。デスクトップ 4 室 + モバイル (390x844) 3 室(glass-optics スキップ)。settle 1600 ms (desktop) / 1400 ms (mobile)。PNG を `output/playwright` へ。ハードフェイル条件は 3 つのみ: console error/pageerror、モバイル横スクロール (`scrollWidth > clientWidth`)、`.scene-hud` と `.stage-viewport` の垂直オーバーラップ(要素欠落もオーバーラップ扱い)。
-  - `scripts/water-qa.mjs` (`pnpm qa:water`): `${baseUrl}/#/room/voxel-water`、**baseUrl デフォルトは `'http://127.0.0.1:4173'` で repo サフィックスなし**(visual-smoke と不整合 — 後述)。'Storm preset' / 'Calm preset' / 'Rain' ボタンを QA_PRESET に応じてクリック。QA_FRAMES=8 枚を QA_FRAME_DELAY_MS=120 で取得し、PNG をプロセス内デコード(Paeth フィルタ含む)。算出メトリクス: frame 間 meanDelta / strongRatio(閾値 delta > 28)/ maxDelta(sampleScale=4 px 間引き)、領域メトリクス sky (x 0.08–0.92, y 0.02–0.28) / horizon (0.06–0.94, 0.24–0.52) / water (0.06–0.94, 0.42–0.94) の lumaMean(Rec.709 係数 0.2126/0.7152/0.0722)、waterCoverage ヒューリスティック `g > r*1.05 && b > r*1.08 && g+b > 92`、saturationRange、toonBandSeparation = (p90−p10 luma)/max(1, activeLumaBands−1)(帯幅 22 の 12 バンド、活性閾値サンプルの 1.8%)、voxelLocalContrast、彩度重み付き circular hueMean、colorSignature {rMean, gMean, bMean, hueMean, saturationMean, cyanBias=(g+b−2r)/510, warmCoolBias=(r−b)/255}。**console error 以外は throw しない — 全ビジュアルメトリクスはレポートのみで assert されない。**
+  - `scripts/water-qa.mjs` (`pnpm qa:water`、2026-07-20 訂正): baseUrl は他 QA と同じ `/ShaderDemoRoom` 付き。フレーム/領域メトリクスを JSON 化し、console error に加えて persistent vertical seam の上限を hard gate とする。
 
 ---
 
@@ -195,10 +195,10 @@ Rail のアクティブ/ホバーは `color-mix(in srgb, var(--room-accent), tra
 | 1 | Gemini レビュー由来の 4 リスク(WebGL context 繰り返し生成 / room 切替時の GPU リソースリーク / コントローラー間グローバル状態汚染 / full-bleed canvas と DOM パネルの pointer-event 競合)を、アーキテクチャが緩和すると宣言 | docs/design/showroom-design-framework.md |
 | 2 | Glass Optics は「an explanatory visual simulation, not a physically exact ray tracer」、Voxel Water は「legible shader behavior over physical ocean accuracy」を優先 — 物理精度への不満はスコープ外と設計段階で宣言済み | docs/design/showroom-design-framework.md |
 | 3 | リファレンスコンセプト画像として `docs/design/primary-showroom-concept.png` を README / docs が参照 | README.md / docs |
-| 4 | リポジトリ直下に untracked の `ref/` ディレクトリが存在し、スコープ内のどのファイルからも参照されていない | git status |
-| 5 | CI は `pnpm test` + `pnpm build` のみ。lint も qa:visual も qa:water も未実行で、ビジュアルリグレッション検知は完全に手動/ローカル | .github/workflows/pages.yml |
-| 6 | water-qa.mjs のビジュアルメトリクスは JSON レポートのみ(console error 以外 throw しない)— 判定は人間/エージェント任せ | scripts/water-qa.mjs |
-| 7 | QA スクリーンショット上の FPS チップ実測: Voxel Water 15 FPS(desktop)/ 20–28 FPS(water-qa 各キャプチャ)、Glass Optics **1 FPS**、MIZU//KOKORO の exhibit 内 FPS 欄は **ダッシュ表示** — コンセプト画のステータスピルは 60 FPS / 16.7 ms を約束している | output/playwright, output/water-qa の各 PNG(visual-current.json) |
+| 4 | **解消済み**: `ref/` は権威ソースとして追跡され、public exhibit は build / sync gate で生成される | git status / exhibit build scripts |
+| 5 | **解消済み**: CI は lint / typecheck / test / build / exhibit sync と5つの Playwright QA を実行し、artifact を保持する | .github/workflows/pages.yml |
+| 6 | **一部解消済み**: water-qa はメトリクス JSON に加え persistent vertical seam を hard gate 化済み | scripts/water-qa.mjs |
+| 7 | 歴史 QA スクリーンショット上の FPS チップ実測: Voxel Water 15 FPS(desktop)/ 20–28 FPS(water-qa 各キャプチャ)、Glass Optics **1 FPS**、MIZU//KOKORO は当時ダッシュ表示。**2026-07-20 訂正**: Orb は 500ms 実測、pause/hidden の `PAUSED`、初回/復帰の `-- FPS` を実装・gate 化済み。新証拠は `docs/direction/captures/t-ao-04-orb-hud-*.png` | output/playwright, output/water-qa の各 PNG(visual-current.json 由来の歴史批評) |
 
 ---
 
@@ -208,8 +208,8 @@ Rail のアクティブ/ホバーは `color-mix(in srgb, var(--room-accent), tra
 2. **canvas 再利用で antialias 属性が死ぬ**: voxel-water ↔ glass-optics の切替は同一 canvas を再利用するが、WebGL の context 生成属性(antialias 等)は最初の getContext のみ有効。`antialias: room.id !== 'voxel-water'` は 2 室目以降サイレントに無効となり、**訪問順によって glass-optics が MSAA なし / voxel-water が MSAA ありになり得る**。embedded room を経由した場合のみ context がリセットされる。
 3. **`renderer.dispose()` に `forceContextLoss()` がない**: shader → embedded → shader の往復で古い GL context が GC まで残留。繰り返しトグルするとブラウザの live context 上限(約 8–16、"Oldest context will be lost")に接触するリスク。
 4. **i18n シームのバイパス(Locked Decision #5 違反)**: ShaderCanvas が 'Loading renderer' と `Loading {room.id}` を、voxel-water Controls が 'Storm preset' / 'Calm preset' をリテラル英語で描画(grep 確認済み)。しかも後者は **water-qa.mjs のボタンセレクタと結合しており、ローカライズすると QA_PRESET=storm/calm 実行がサイレントに壊れる**。
-5. **water-qa の baseUrl 不整合**: water-qa.mjs デフォルト `http://127.0.0.1:4173`(repo サフィックスなし)vs visual-smoke.mjs `http://127.0.0.1:4173/ShaderDemoRoom`。vite preview は `/ShaderDemoRoom/` 配下で配信するため、`pnpm qa:water` を素で叩くと 404(SHOWROOM_URL 必須という暗黙の罠)。
-6. **CI の検証空洞**: lint なし・QA スクリプトなし。かつ package.json がほぼ全依存を `"latest"` ピン — 再現性は pnpm-lock.yaml のみに依存し、lockfile 再生成で three のメジャーが跳ねてもシェーダー破壊が検知されない。
+5. **解消済み: water-qa baseUrl**。他の QA と同じ `http://127.0.0.1:4173/ShaderDemoRoom` を既定値に持つ。
+6. **解消済み: CI の検証空洞 / latest 依存**。CI は静的検査と production Playwright gates を実行し、package.json は主要依存を exact version で固定する。
 7. **アクセント色のトークン外定義**: `#ff56d8`(anime-liquid-orb)と `#79ead9`(ninth-tide-archive)は registry.ts のみに存在。`#79ead9` は `--teal #5af2d1` の近似重複で、tokens と registry のパレットドリフト。
 8. **3 種のニアブラック**(クリアカラー `0x070b10` / `#06090e` / `#02070d`)によるロード時のシーム/フラッシュ可能性。
 9. **アクセシビリティ**: aria-label と iframe title が `t(titleKey)` ではなく raw の room.id('voxel-water' 等)— 未翻訳のハイフン付きマシン id が支援技術に露出。加えて `--subtle #647883` の 11px テキストは `rgba(8,13,19)` 系サーフェス上で WCAG コントラスト境界線。
@@ -232,7 +232,7 @@ Rail のアクティブ/ホバーは `color-mix(in srgb, var(--room-accent), tra
 | 順位 | Room | Wow | 要点 |
 |---|---|---|---|
 | — | コンセプト画 (primary-showroom-concept.png) | 9/10 | 物差し。viewport に主題(灯台・岩・泡・雨)、フルバリューレンジ、pro-tool ガーニッシュ |
-| 1 | MIZU//KOKORO (desktop) | 8/10 | 唯一の完成したビジュアルアイデンティティ。バイリンガル sci-fi-lab タイポと明確なヒーローオブジェクト。ただし exhibit 内 **FPS 欄が「—」で壊れて見える**、モバイルで HUD が非リフロー(6/10) |
+| 1 | MIZU//KOKORO (desktop) | 8/10 | 唯一の完成したビジュアルアイデンティティ。バイリンガル sci-fi-lab タイポと明確なヒーローオブジェクト。FPS dash は 2026-07-20 に修正・QA 化済み。モバイルの HUD 非リフローは継続(6/10) |
 | 2 | Ninth Tide Archive | 6/10 | 端正なゲート(タイトル画面)タイポグラフィ。**ただし全キャプチャがゲート止まりで、肝心の音声リアクティブシェーダーの証拠がゼロ** |
 | 3 | Glass Optics | 5/10 | ビーム→屈折→コースティクスの光学ストーリーは判読可能。だがステージがデフォルト灰色空間、球体はデバッグワイヤーフレーム然、コースティクスが弱い。**チップの「1 FPS」表示はローンチブロッカー**(計測アーティファクトか実性能か要切り分け — 要確認) |
 | 4 | Voxel Water(フラッグシップ) | 2/10 | コンセプトから最遠。焦点なし、天候ストーリーテリングなし、シームアーティファクトあり。旧 v2 ビルド(TRON 調、28 FPS)は 5/10 で、**直近の palette/camera パスで維持すべきコントラストを失った**逆行の疑い |
@@ -243,7 +243,7 @@ Rail のアクティブ/ホバーは `color-mix(in srgb, var(--room-accent), tra
 - palette-camera キャプチャではフレームの 60–80% が無情報の前景で、興味は水平線の細帯に圧縮 — 構図比率が逆。
 - **縦シームアーティファクト**(Clear でシアンの縦線、Storm で赤みの縦線)が「final」QA 画像に写っている。
 
-**FPS 表示の信頼性問題**(シェル管轄): チップの公開実測は Glass Optics 1 FPS / Voxel Water 15–28 FPS / MIZU//KOKORO はダッシュ、対してコンセプトは 60 FPS / 16.7 ms を掲示。計測バグか実性能かに関わらず、**公開ステータスチップとしての信頼性毀損**であり、ヘッドレスキャプチャ環境での値か実機値かの切り分けが必要(要確認)。
+**FPS 表示の信頼性問題(2026-07-20 訂正)**: Orb の dash / stale-number 問題は 500ms 実測と明示的な warm-up / pause 状態で解消済み。Glass Optics 1 FPS と Voxel Water 15–28 FPS は headless/software renderer と実機 GPU の切り分けが引き続き必要で、コンセプトの 60 FPS / 16.7 ms は実測保証として扱わない。
 
 **モバイル**: Voxel Water は canvas が特徴のない細帯なのに約 15 個のスライダーがスクロールの約 7 割を占有 — プロダクトショットが自分のコントロールに従属している。embedded 2 室の canvas 内 HUD は非レスポンシブ(MIZU のタイトルプレートがオーブに被り、フェーズカードのサブラベルが欠け、Ninth Tide のサブタイトルは 'THE SHORELESS / LAYER' と不格好に折り返し)。
 
@@ -253,18 +253,18 @@ Rail のアクティブ/ホバーは `color-mix(in srgb, var(--room-accent), tra
 
 ### P1 — 信頼性・契約・公開品質に直結
 
-- **FPS 表示の信頼性回復** → チップの 1 FPS / 15 FPS / ダッシュ表示の原因切り分け(ヘッドレス Chromium での計測アーティファクトか実性能か — 要確認)。実性能なら最適化、計測系ならヘッドレス時の表示抑制やウォームアップ後計測を検討。drawCalls の「直近フレームスナップショット」も平均系に統一。
+- **FPS 表示の信頼性回復(残件: native rooms)** → Orb の dash / stale-number は解消済み。Glass Optics 1 FPS / Voxel Water 15 FPS の headless Chromium と実機差を切り分け、drawCalls の「直近フレームスナップショット」も平均系に統一する。
 - **persistent renderer 契約の解消** → renderer を routing より上にホイストして真の単一 renderer + scene スワップにするか、ドキュメント(Locked Decision #3)と RoomRail コピー「Switch rooms without remounting the WebGL shell.」を実態に合わせて修正するか、方針を決める。
 - **antialias 属性の canvas 再利用問題** → 訪問順依存の MSAA 不定を解消(room 切替時に canvas を key で張り替える / 属性を全 room で統一 / FBO ベース AA へ移行のいずれか)。
 - **context リーク対策** → `renderer.dispose()` に `forceContextLoss()`(WEBGL_lose_context)を併用し、live context 上限接触を防ぐ。
-- **water-qa の baseUrl 不整合修正** → デフォルトを visual-smoke と同じ `http://127.0.0.1:4173/ShaderDemoRoom` に揃える(現状 `pnpm qa:water` 素実行は 404)。
+- **[解消済み] water-qa の baseUrl** → visual-smoke と同じ `/ShaderDemoRoom` 付き既定値へ統一済み。
 - **i18n バイパス撤去** → 'Loading renderer' / `Loading {room.id}` / 'Storm preset' / 'Calm preset' を `t(key)` 化。同時に water-qa.mjs のボタンセレクタを data-testid 等ロケール非依存に移行(ローカライズで QA が壊れる結合を切る)。
 
 ### P2 — コンセプトとの体験差・ガバナンス
 
 - **プロツール・ガーニッシュの復元** → コンセプトの telemetry ストリップ(FPS/Frame Time スパークライン、Draw Calls、Triangles、Uniforms、Textures、VRAM)を段階導入。gizmo cube / minimap / カメラデバッグ読み出しは room 種別ごとに要否を判断。現状 2 チップとの落差が「pro tool」感の最大の欠落要因。
-- **CI 検証の拡充** → `pnpm lint` と qa:visual を CI に追加(ヘッドレス GL は SwiftShader/ANGLE で)。water-qa のレポートのみメトリクス(toonBandSeparation / cyanBias 等)にプリセット別バジェットを設けて assert 化。
-- **依存ピンの正常化** → `"latest"` ピンをキャレット範囲の明示バージョンへ(特に three のメジャー跳ね対策)。
+- **[基盤解消済み / 継続改善] CI 検証** → 静的検査、build、sync と5つの Playwright QA は導入済み。water-qa の seam 以外のメトリクスに追加 budget が必要かは個別 ticket で判断する。
+- **[解消済み] 依存ピン** → package.json の主要依存を exact version へ固定済み。
 - **アクセント色のトークン統合** → `#ff56d8` / `#79ead9` を tokens.css に昇格し、`#79ead9` と `--teal #5af2d1` の近似重複を解消(統一 or 意図的差別化の明文化)。
 - **ニアブラック統一** → `0x070b10` / `#06090e` / `#02070d` を単一トークンに集約し、ロード時のシーム/フラッシュを排除。
 - **設定と locale の永続化** → settingsByRoom の URL(hash query)シリアライズと locale の localStorage 永続化(static ホスティングの Locked Decision と整合)。共有可能なアートディレクション状態にもなる。
@@ -278,7 +278,7 @@ Rail のアクティブ/ホバーは `color-mix(in srgb, var(--room-accent), tra
 - **iframe allow 最小化** → microphone は ninth-tide-archive のみに限定。
 - **ShaderCanvas.test.ts の挙動テスト化** → raw-source 文字列テストを、delta クランプと pixelRatio ポリシーを実際に検証するユニットテストへ置換。
 - **QA カバレッジ拡張** → visual-smoke にモバイル glass-optics、inspector スクロール、コントロール操作、Ninth Tide の**ゲート通過後**キャプチャを追加(現状シェーダー本体の視覚的証拠がゼロ)。
-- **dead code 掃除** → `isRoomId` の未使用 export 整理。untracked `ref/` ディレクトリの棚卸し(要確認: 保持意図の有無)。
+- **dead code 掃除** → `isRoomId` の未使用 export 整理。`ref/` の追跡方針は決定済み。
 - **'ja' locale の意思決定** → i18n テストにのみ存在する第三 locale を正式サポートするか、テストを en/zh-CN に整理するか決める。
 - **コピーレジスターの整合** → ネイティブ 2 室(スペックシート調)と embedded 2 室(計器ログ調)の文体分裂を、意図的コントラストとして明文化するか統一するか判断。
 
@@ -298,9 +298,9 @@ Rail のアクティブ/ホバーは `color-mix(in srgb, var(--room-accent), tra
 | `F:\WorkSpace\ShaderDemoRoom\src\shared\embedded\EmbeddedExhibitFrame.tsx` | iframe 埋め込みと reloadToken リマウント |
 | `F:\WorkSpace\ShaderDemoRoom\src\rooms\embedded\EmbeddedControls.tsx` | embedded 3 ボタン Controls ファクトリ |
 | `F:\WorkSpace\ShaderDemoRoom\src\shared\ui\ControlPrimitives.tsx` | 共有コントロールプリミティブ |
-| `F:\WorkSpace\ShaderDemoRoom\scripts\water-qa.mjs` | 水 QA(メトリクス算出、baseUrl 不整合あり) |
+| `F:\WorkSpace\ShaderDemoRoom\scripts\water-qa.mjs` | 水 QA(メトリクス算出 + vertical seam gate) |
 | `F:\WorkSpace\ShaderDemoRoom\scripts\visual-smoke.mjs` | ビジュアルスモーク(4 室スクリーンショット + 3 ハードフェイル条件) |
 | `F:\WorkSpace\ShaderDemoRoom\docs\design\showroom-design-framework.md` | 5 つの Locked Decision と Gemini リスクの原典 |
 | `F:\WorkSpace\ShaderDemoRoom\docs\design\primary-showroom-concept.png` | ビジュアルの物差し(コンセプト画) |
-| `F:\WorkSpace\ShaderDemoRoom\.github\workflows\pages.yml` | CI(test + build のみ、QA なし) |
+| `F:\WorkSpace\ShaderDemoRoom\.github\workflows\pages.yml` | CI / production QA / artifact / Pages deploy gate |
 | `F:\WorkSpace\ShaderDemoRoom\vite.config.ts` | base path 算出(`/ShaderDemoRoom/`) |

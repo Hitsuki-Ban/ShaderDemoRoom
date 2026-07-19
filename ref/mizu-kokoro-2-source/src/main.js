@@ -2515,6 +2515,7 @@ function synchronizePauseState() {
   runtimePaused = nextPaused;
 
   if (runtimePaused) {
+    fpsEl.textContent = 'PAUSED';
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
@@ -2530,6 +2531,7 @@ function synchronizePauseState() {
   lastAutoModeChange = now;
   statsSampleStartedAt = now;
   statsSampleFrames = 0;
+  fpsEl.textContent = '-- FPS';
   queueRuntimeAudioReconciliation();
   publishRuntimeStats(false);
   scheduleAnimation();
