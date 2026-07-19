@@ -279,12 +279,17 @@ async function instrumentTideAudio(audio, rejectFirstPlay = false) {
     let loadCalls = 0;
     let playCalls = 0;
     let firstPlayRejected = false;
+    let abortNextPlay = false;
     element.load = () => {
       loadCalls += 1;
       return originalLoad();
     };
     element.play = () => {
       playCalls += 1;
+      if (abortNextPlay) {
+        abortNextPlay = false;
+        return Promise.reject(new DOMException('QA interrupted playback', 'AbortError'));
+      }
       if (shouldRejectFirstPlay && !firstPlayRejected) {
         firstPlayRejected = true;
         return Promise.reject(new DOMException('QA autoplay refusal', 'NotAllowedError'));
@@ -297,6 +302,7 @@ async function instrumentTideAudio(audio, rejectFirstPlay = false) {
         get loadCalls() { return loadCalls; },
         get playCalls() { return playCalls; },
         get firstPlayRejected() { return firstPlayRejected; },
+        abortNextPlay() { abortNextPlay = true; },
       },
     });
   }, rejectFirstPlay);
@@ -340,6 +346,12 @@ async function dispatchTideSpace(audio) {
       bubbles: true,
       cancelable: true,
     }));
+  });
+}
+
+async function abortNextTidePlay(audio) {
+  await audio.evaluate((element) => {
+    element.ownerDocument.defaultView.__ninthTideAudioQa.abortNextPlay();
   });
 }
 
@@ -439,17 +451,37 @@ async function assertTideAutoplayRetryDemandLoading() {
     );
     await dispatchTideSpace(audio);
     await retryPage.waitForFunction(() => document.querySelector('#audio')?.paused === true);
-    const finalAudit = await readTideAudioQa(audio);
-    if (requests.length !== 1 || finalAudit.loadCalls !== 1) {
+    const transportAudit = await readTideAudioQa(audio);
+    if (requests.length !== 1 || transportAudit.loadCalls !== 1) {
       throw new Error(
-        `Ninth Tide transport duplicated archive loading: ${JSON.stringify({ requests, finalAudit })}.`,
+        `Ninth Tide transport duplicated archive loading: ${JSON.stringify({ requests, transportAudit })}.`,
+      );
+    }
+    const consoleErrorCountBeforeAbort = consoleErrors.length;
+    const requestCountBeforeAbort = requests.length;
+    await abortNextTidePlay(audio);
+    await dispatchTideSpace(audio);
+    await retryPage.waitForTimeout(50);
+    const abortAudit = await readTideAudioQa(audio);
+    if (
+      !abortAudit.paused
+      || abortAudit.playCalls !== transportAudit.playCalls + 1
+      || abortAudit.loadCalls !== transportAudit.loadCalls
+      || abortAudit.src !== transportAudit.src
+      || abortAudit.currentSrc !== transportAudit.currentSrc
+      || requests.length !== requestCountBeforeAbort
+      || consoleErrors.length !== consoleErrorCountBeforeAbort
+    ) {
+      throw new Error(
+        `Ninth Tide interrupted play was not contained: ${JSON.stringify({ transportAudit, abortAudit, consoleErrors })}.`,
       );
     }
     return {
       requests,
       refused,
       resumed,
-      final: finalAudit,
+      transport: transportAudit,
+      abortRace: abortAudit,
       pausedAt,
       stillPausedAt,
     };
