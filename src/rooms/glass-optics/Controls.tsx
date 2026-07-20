@@ -62,6 +62,13 @@ export default function GlassOpticsControls({
         />
         <SliderControl
           locale={locale}
+          label={t('rooms.glassOptics.controls.dispersion')}
+          {...glassOpticsDomains.dispersion}
+          value={settings.dispersion}
+          onChange={(dispersion) => onPatch({ dispersion })}
+        />
+        <SliderControl
+          locale={locale}
           label={t('rooms.glassOptics.controls.roughness')}
           {...glassOpticsDomains.roughness}
           value={settings.roughness}

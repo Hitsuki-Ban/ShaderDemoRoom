@@ -9,7 +9,7 @@ import type {
 } from '../rooms/types';
 import { voxelWaterDefaults, voxelWaterDomains } from '../rooms/voxel-water/state';
 
-export const URL_STATE_VERSION = '2';
+export const URL_STATE_VERSION = '3';
 export const URL_STATE_DEBOUNCE_MS = 150;
 export const URL_STATE_RESERVED_KEYS = ['qaTime'] as const;
 
@@ -78,6 +78,7 @@ export const ROOM_URL_STATE_SCHEMA = {
     lightZ: { type: 'number', ...glassOpticsDomains.lightZ },
     beamSpread: { type: 'number', ...glassOpticsDomains.beamSpread },
     ior: { type: 'number', ...glassOpticsDomains.ior },
+    dispersion: { type: 'number', ...glassOpticsDomains.dispersion },
     roughness: { type: 'number', ...glassOpticsDomains.roughness },
     thickness: { type: 'number', ...glassOpticsDomains.thickness },
     autoRotate: { type: 'boolean' },

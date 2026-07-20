@@ -249,7 +249,7 @@ async function assertUrlStateContract(urlPage) {
   await setRangeValue(waveHeight, '1.2');
   await setRangeValue(waveHeight, '1.3');
   await setRangeValue(waveHeight, '1.4');
-  await waitForHash('#/room/voxel-water?v=2&waveHeight=1.4');
+  await waitForHash('#/room/voxel-water?v=3&waveHeight=1.4');
 
   const sharedUrl = urlPage.url();
   const historyLengthAfterDrag = await urlPage.evaluate(() => history.length);
@@ -280,7 +280,7 @@ async function assertUrlStateContract(urlPage) {
   await urlPage.goBack({ waitUntil: 'domcontentloaded' });
   await waitForHash('#/room/glass-optics');
   await urlPage.goForward({ waitUntil: 'domcontentloaded' });
-  await waitForHash('#/room/voxel-water?v=2&waveHeight=1.4');
+  await waitForHash('#/room/voxel-water?v=3&waveHeight=1.4');
   await waveHeight.waitFor({ state: 'attached' });
   if (await waveHeight.inputValue() !== '1.4') {
     throw new Error('Forward navigation did not restore URL-backed waveHeight state.');
@@ -293,7 +293,7 @@ async function assertUrlStateContract(urlPage) {
   }
 
   await urlPage.goto(
-    `${baseUrl}/#/room/voxel-water?v=2&unknown=ignored&waveHeight=999&weather=storm`,
+    `${baseUrl}/#/room/voxel-water?v=3&unknown=ignored&waveHeight=999&weather=storm`,
     { waitUntil: 'domcontentloaded' },
   );
   await waveHeight.waitFor({ state: 'attached' });

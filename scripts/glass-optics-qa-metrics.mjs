@@ -92,6 +92,15 @@ export function measureCausticsDifference(onFrame, offFrame) {
   positiveBytes.sort((left, right) => left - right);
   const peakLinear = percentile(positiveLinear, 0.999);
   const peakBytes = percentile(positiveBytes, 0.999);
+  const focusCoreSamples = Math.min(32, positiveLinear.length);
+  let focusCoreLinearTotal = 0;
+  for (
+    let index = positiveLinear.length - focusCoreSamples;
+    index < positiveLinear.length;
+    index += 1
+  ) {
+    focusCoreLinearTotal += positiveLinear[index];
+  }
   const activeThreshold = Math.max(peakLinear * 0.08, srgbByteToLinear(2));
   const halfThreshold = peakLinear * 0.5;
   const plateauThreshold = peakLinear * 0.995;
@@ -144,6 +153,8 @@ export function measureCausticsDifference(onFrame, offFrame) {
     activeCoverage: activePixels / pixelCount,
     activeMeanLinear: activeLinearTotal / activePixels,
     peakLinearP999: peakLinear,
+    focusCoreSamples,
+    focusCoreLinearMean: focusCoreLinearTotal / focusCoreSamples,
     peakByteP999: peakBytes,
     halfMaxPixels,
     halfMaxEquivalentRadius: Math.sqrt(halfMaxPixels / Math.PI),

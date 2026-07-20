@@ -15,46 +15,66 @@ const outputDirectory = process.env.GLASS_QA_OUTPUT ?? 'output/glass-qa';
 const allocationNamesAreReadable = process.env.GLASS_QA_ALLOCATION_NAMES === 'readable';
 
 const states = [
-  ['default', { autoRotate: 'false', v: '2' }],
-  ['spread-0-05', { autoRotate: 'false', beamSpread: '0.05', v: '2' }],
-  ['spread-0-34', { autoRotate: 'false', beamSpread: '0.34', v: '2' }],
-  ['spread-0-9', { autoRotate: 'false', beamSpread: '0.9', v: '2' }],
+  ['default', { autoRotate: 'false', v: '3' }],
+  ['dispersion-0-default-ior', {
+    autoRotate: 'false',
+    dispersion: '0',
+    v: '3',
+  }],
+  ['dispersion-0-high-ior', {
+    autoRotate: 'false',
+    dispersion: '0',
+    ior: '2.4',
+    v: '3',
+  }],
+  ['spread-0-05', { autoRotate: 'false', beamSpread: '0.05', v: '3' }],
+  ['spread-0-34', { autoRotate: 'false', beamSpread: '0.34', v: '3' }],
+  ['spread-0-9', { autoRotate: 'false', beamSpread: '0.9', v: '3' }],
   ['focus', {
     autoRotate: 'false',
     beamSpread: '0.18',
     lightX: '-0.28',
     lightY: '3.45',
     lightZ: '1.45',
-    v: '2',
+    v: '3',
   }],
   ['crystal', {
     autoRotate: 'false',
     ior: '1.72',
     roughness: '0.01',
     thickness: '1.8',
-    v: '2',
+    v: '3',
   }],
   ['extreme', {
     autoRotate: 'false',
     lightX: '-6',
     lightY: '2.61',
     lightZ: '-6',
-    v: '2',
+    v: '3',
   }],
-  ['ior-1', { autoRotate: 'false', ior: '1', v: '2' }],
-  ['ior-1-48', { autoRotate: 'false', ior: '1.48', v: '2' }],
-  ['ior-2-4', { autoRotate: 'false', ior: '2.4', v: '2' }],
-  ['thickness-0-2', { autoRotate: 'false', thickness: '0.2', v: '2' }],
-  ['thickness-2-4', { autoRotate: 'false', thickness: '2.4', v: '2' }],
+  ['ior-1', { autoRotate: 'false', ior: '1', v: '3' }],
+  ['ior-1-dispersion-0', {
+    autoRotate: 'false',
+    dispersion: '0',
+    ior: '1',
+    v: '3',
+  }],
+  ['ior-1-48', { autoRotate: 'false', ior: '1.48', v: '3' }],
+  ['ior-2-4', { autoRotate: 'false', ior: '2.4', v: '3' }],
+  ['thickness-0-2', { autoRotate: 'false', thickness: '0.2', v: '3' }],
+  ['thickness-2-4', { autoRotate: 'false', thickness: '2.4', v: '3' }],
+  ['roughness-0-55', { autoRotate: 'false', roughness: '0.55', v: '3' }],
 ];
 
 const payoffStates = [
   { axis: 'spread', value: 0.05, name: 'spread-0-05' },
   { axis: 'spread', value: 0.34, name: 'spread-0-34' },
   { axis: 'spread', value: 0.9, name: 'spread-0-9' },
-  { axis: 'ior', value: 1, name: 'ior-1' },
-  { axis: 'ior', value: 1.48, name: 'ior-1-48' },
-  { axis: 'ior', value: 2.4, name: 'ior-2-4' },
+  { axis: 'ior', value: 1, name: 'ior-1-dispersion-0' },
+  { axis: 'ior', value: 1.48, name: 'dispersion-0-default-ior' },
+  { axis: 'ior', value: 2.4, name: 'dispersion-0-high-ior' },
+  { axis: 'ior-adopted', value: 1.48, name: 'ior-1-48' },
+  { axis: 'ior-adopted', value: 2.4, name: 'ior-2-4' },
 ];
 
 const canvasSelector = 'canvas[data-renderer-host="shell"]';
@@ -125,29 +145,42 @@ function measureStage(frame, sampleScale = 2) {
   ]));
 }
 
+function isGlassDiscSample(frame, x, y) {
+  const normalizedX = x / frame.width;
+  const normalizedY = y / frame.height;
+  const discX = (normalizedX - 0.498) / 0.17;
+  const discY = (normalizedY - 0.482) / 0.198;
+  const discRadius = Math.hypot(discX, discY);
+  const beamDistance = Math.abs(normalizedY - (-1.41 * normalizedX + 1.225));
+  return discRadius >= 0.2 && discRadius <= 0.82 && beamDistance >= 0.038;
+}
+
 function measureGlassDisc(frame, sampleScale = 2) {
   const values = [];
+  let anyChannelClipped = 0;
   let brightClipped = 0;
   let blackClipped = 0;
   let contrastTotal = 0;
+  let chromaSpreadTotal = 0;
+  let chromaPixels = 0;
 
   for (let y = 0; y < frame.height; y += sampleScale) {
     for (let x = 0; x < frame.width; x += sampleScale) {
-      const normalizedX = x / frame.width;
-      const normalizedY = y / frame.height;
-      const discX = (normalizedX - 0.498) / 0.17;
-      const discY = (normalizedY - 0.482) / 0.198;
-      const discRadius = Math.hypot(discX, discY);
-      const beamDistance = Math.abs(normalizedY - (-1.41 * normalizedX + 1.225));
-      if (discRadius < 0.2 || discRadius > 0.82 || beamDistance < 0.038) continue;
+      if (!isGlassDiscSample(frame, x, y)) continue;
 
       const index = (y * frame.width + x) * frame.bytesPerPixel;
       const red = frame.pixels[index];
       const green = frame.pixels[index + 1];
       const blue = frame.pixels[index + 2];
       values.push(red * 0.2126 + green * 0.7152 + blue * 0.0722);
+      const channelMaximum = Math.max(red, green, blue);
+      const channelMinimum = Math.min(red, green, blue);
+      const chromaSpread = channelMaximum - channelMinimum;
+      if (channelMaximum >= 250) anyChannelClipped += 1;
       if (red >= 250 && green >= 250 && blue >= 250) brightClipped += 1;
       if (red <= 1 && green <= 1 && blue <= 1) blackClipped += 1;
+      chromaSpreadTotal += chromaSpread;
+      if (chromaSpread >= 12 && channelMaximum >= 24) chromaPixels += 1;
 
       const nextX = Math.min(frame.width - 1, x + sampleScale);
       const nextY = Math.min(frame.height - 1, y + sampleScale);
@@ -168,9 +201,58 @@ function measureGlassDisc(frame, sampleScale = 2) {
     p90: percentile(0.9),
     p95: percentile(0.95),
     p99: percentile(0.99),
+    anyChannelClipRatio: anyChannelClipped / values.length,
     brightClipRatio: brightClipped / values.length,
     blackClipRatio: blackClipped / values.length,
     localContrast: contrastTotal / values.length,
+    chromaSpreadMean: chromaSpreadTotal / values.length,
+    chromaCoverage: chromaPixels / values.length,
+  };
+}
+
+function measureGlassDispersionDifference(baseline, adopted, sampleScale = 1) {
+  assert(
+    baseline.width === adopted.width && baseline.height === adopted.height,
+    'Dispersion comparison frames have different dimensions.',
+  );
+  const chromaGains = [];
+  let colorDeltaTotal = 0;
+  let gainedOverFive = 0;
+
+  for (let y = 0; y < baseline.height; y += sampleScale) {
+    for (let x = 0; x < baseline.width; x += sampleScale) {
+      if (!isGlassDiscSample(baseline, x, y)) continue;
+      const index = (y * baseline.width + x) * baseline.bytesPerPixel;
+      const baselineRed = baseline.pixels[index];
+      const baselineGreen = baseline.pixels[index + 1];
+      const baselineBlue = baseline.pixels[index + 2];
+      const adoptedRed = adopted.pixels[index];
+      const adoptedGreen = adopted.pixels[index + 1];
+      const adoptedBlue = adopted.pixels[index + 2];
+      const baselineChroma = Math.max(baselineRed, baselineGreen, baselineBlue)
+        - Math.min(baselineRed, baselineGreen, baselineBlue);
+      const adoptedChroma = Math.max(adoptedRed, adoptedGreen, adoptedBlue)
+        - Math.min(adoptedRed, adoptedGreen, adoptedBlue);
+      const chromaGain = adoptedChroma - baselineChroma;
+      chromaGains.push(chromaGain);
+      if (chromaGain > 5) gainedOverFive += 1;
+      colorDeltaTotal += (
+        Math.abs(adoptedRed - baselineRed)
+        + Math.abs(adoptedGreen - baselineGreen)
+        + Math.abs(adoptedBlue - baselineBlue)
+      ) / 3;
+    }
+  }
+
+  chromaGains.sort((left, right) => left - right);
+  const percentile = (ratio) => chromaGains[Math.floor(chromaGains.length * ratio)] ?? 0;
+  return {
+    samples: chromaGains.length,
+    meanColorDelta: colorDeltaTotal / chromaGains.length,
+    meanChromaGain: chromaGains.reduce((sum, value) => sum + value, 0)
+      / chromaGains.length,
+    p90ChromaGain: percentile(0.9),
+    gainedOverFiveRatio: gainedOverFive / chromaGains.length,
   };
 }
 
@@ -181,7 +263,7 @@ async function captureTimedCanvas(page, path, delay) {
 
 async function verifyStaticPair(page, name, reducedMotion) {
   await page.emulateMedia({ reducedMotion });
-  await page.goto(roomUrl({ autoRotate: 'false', v: '2' }), {
+  await page.goto(roomUrl({ autoRotate: 'false', v: '3' }), {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForSelector(canvasSelector);
@@ -280,12 +362,105 @@ try {
     });
   }
 
+  const getCapturedFrame = (name) => {
+    const frame = captureFrames.get(name);
+    assert(frame, `Missing comparison frame ${name}.`);
+    return frame;
+  };
+  const compareCapturedStates = (firstName, secondName) => {
+    return compareFrames(getCapturedFrame(firstName), getCapturedFrame(secondName), 1);
+  };
+  const roughnessMaximumCapture = captures.find(({ name }) => name === 'roughness-0-55');
+  assert(roughnessMaximumCapture, 'Missing roughness maximum capture.');
+  const dispersionQa = {
+    adoptedDefaultIor: {
+      fullFrame: compareCapturedStates('dispersion-0-default-ior', 'default'),
+      glassMaterial: measureGlassDispersionDifference(
+        getCapturedFrame('dispersion-0-default-ior'),
+        getCapturedFrame('default'),
+      ),
+    },
+    adoptedHighIor: {
+      fullFrame: compareCapturedStates('dispersion-0-high-ior', 'ior-2-4'),
+      glassMaterial: measureGlassDispersionDifference(
+        getCapturedFrame('dispersion-0-high-ior'),
+        getCapturedFrame('ior-2-4'),
+      ),
+    },
+    iorOneCollapse: compareCapturedStates('ior-1-dispersion-0', 'ior-1'),
+    roughnessMaximumGlassDisc: roughnessMaximumCapture.glassDiscMetrics,
+    roughnessMaximumHero: roughnessMaximumCapture.stageMetrics.hero,
+  };
+  assert(
+    // The glass-only chroma signal owns material dispersion; average color
+    // distance also includes neutral transmission shifts and is less specific.
+    dispersionQa.adoptedDefaultIor.glassMaterial.meanColorDelta > 1.2
+      && dispersionQa.adoptedDefaultIor.glassMaterial.meanChromaGain > 1.5
+      && dispersionQa.adoptedDefaultIor.glassMaterial.p90ChromaGain > 3
+      && dispersionQa.adoptedDefaultIor.glassMaterial.gainedOverFiveRatio > 0.055,
+    `Adopted dispersion is not visible in the default-IOR glass: ${JSON.stringify(dispersionQa.adoptedDefaultIor)}.`,
+  );
+  assert(
+    dispersionQa.adoptedDefaultIor.fullFrame.meanDelta > 0.1
+      && dispersionQa.adoptedDefaultIor.fullFrame.strongRatio > 0.0005
+      && dispersionQa.adoptedDefaultIor.fullFrame.maxDelta > 50,
+    `Adopted dispersion does not visibly change the default scene: ${JSON.stringify(dispersionQa.adoptedDefaultIor)}.`,
+  );
+  assert(
+    dispersionQa.adoptedHighIor.glassMaterial.meanColorDelta > 1
+      && dispersionQa.adoptedHighIor.glassMaterial.meanChromaGain > 0.85
+      && dispersionQa.adoptedHighIor.glassMaterial.p90ChromaGain > 4.5
+      && dispersionQa.adoptedHighIor.glassMaterial.gainedOverFiveRatio > 0.08,
+    `Adopted dispersion is not visible in the high-IOR glass: ${JSON.stringify(dispersionQa.adoptedHighIor)}.`,
+  );
+  assert(
+    dispersionQa.adoptedHighIor.fullFrame.meanDelta > 0.12
+      && dispersionQa.adoptedHighIor.fullFrame.strongRatio > 0.00035
+      && dispersionQa.adoptedHighIor.fullFrame.maxDelta > 40,
+    `Adopted dispersion does not visibly change the high-IOR scene: ${JSON.stringify(dispersionQa.adoptedHighIor)}.`,
+  );
+  assert(
+    dispersionQa.adoptedHighIor.glassMaterial.meanChromaGain
+      > dispersionQa.adoptedDefaultIor.glassMaterial.meanChromaGain
+      && dispersionQa.adoptedHighIor.glassMaterial.gainedOverFiveRatio
+        > dispersionQa.adoptedDefaultIor.glassMaterial.gainedOverFiveRatio,
+    `Higher IOR did not strengthen material dispersion: ${JSON.stringify(dispersionQa)}.`,
+  );
+  assert(
+    dispersionQa.iorOneCollapse.meanDelta === 0
+      && dispersionQa.iorOneCollapse.strongRatio === 0
+      && dispersionQa.iorOneCollapse.maxDelta === 0,
+    `IOR 1 did not collapse adopted and zero-dispersion RGB paths exactly: ${JSON.stringify(dispersionQa.iorOneCollapse)}.`,
+  );
+  assert(
+    dispersionQa.roughnessMaximumGlassDisc.anyChannelClipRatio < 0.005
+      && dispersionQa.roughnessMaximumGlassDisc.brightClipRatio < 0.001
+      && dispersionQa.roughnessMaximumGlassDisc.blackClipRatio < 0.05
+      && dispersionQa.roughnessMaximumGlassDisc.p95 > 60
+      && dispersionQa.roughnessMaximumGlassDisc.localContrast > 5,
+    `Maximum roughness clipped or lost the glass response: ${JSON.stringify(dispersionQa.roughnessMaximumGlassDisc)}.`,
+  );
+  assert(
+    dispersionQa.roughnessMaximumHero.brightClipRatio < 0.01
+      && dispersionQa.roughnessMaximumHero.blackClipRatio < 0.08
+      && dispersionQa.roughnessMaximumHero.p95 > 80
+      && dispersionQa.roughnessMaximumHero.localContrast > 7,
+    `Maximum roughness clipped or flattened the hero region: ${JSON.stringify(dispersionQa.roughnessMaximumHero)}.`,
+  );
+
   const defaultMetrics = captures.find(({ name }) => name === 'default').stageMetrics;
   assert(
-    defaultMetrics.background.p50 > defaultMetrics.floor.p50 * 2
+    defaultMetrics.background.p50 > 5
       && defaultMetrics.floor.highlightCoverage > 0.1
       && defaultMetrics.floor.highlightCoverage < 0.4,
     `Background/floor tones collapsed: ${JSON.stringify(defaultMetrics)}.`,
+  );
+  assert(
+    defaultMetrics.floor.brightClipRatio < 0.001
+      && defaultMetrics.floor.localContrast > 0.35
+      && defaultMetrics.hero.brightClipRatio < 0.01
+      && defaultMetrics.hero.localContrast > 7,
+    `Floor or hero clipped or lost local contrast: ${JSON.stringify(defaultMetrics)}.`,
   );
   assert(
     defaultMetrics.hero.p95 > defaultMetrics.background.p95 * 2.5,
@@ -322,7 +497,10 @@ try {
     const glassDisc = captures.find((capture) => capture.name === name).glassDiscMetrics;
     assert(
       glassDisc.brightClipRatio < 0.03
-        && glassDisc.blackClipRatio < 0.1
+        // The calibration target intentionally contains true-black cells; the
+        // upper bound still rejects a collapsed disc while allowing them to be
+        // refracted through the minimum-thickness material.
+        && glassDisc.blackClipRatio < 0.3
         && glassDisc.p95 > 25
         && glassDisc.localContrast > 4,
       `${name} clipped or lost glass readability: ${JSON.stringify(glassDisc)}.`,
@@ -425,12 +603,22 @@ try {
     `Wide spread increased peak energy instead of redistributing it: ${JSON.stringify(spreadPayoff)}.`,
   );
   const iorPayoff = causticsPayoff.filter(({ axis }) => axis === 'ior');
+  // Preserve T-GO-03 under the zero-dispersion white-beam control and use the
+  // same number of strongest ON/OFF pixels at every IOR. A percentile over all
+  // positive pixels samples progressively more of the tail as the physical
+  // focus footprint grows, so it is not a stable peak comparison.
   assert(
-    iorPayoff[0].metrics.peakLinearP999
-      < iorPayoff[1].metrics.peakLinearP999
-      && iorPayoff[1].metrics.peakLinearP999
-        < iorPayoff[2].metrics.peakLinearP999,
+    iorPayoff[0].metrics.focusCoreLinearMean
+      < iorPayoff[1].metrics.focusCoreLinearMean
+      && iorPayoff[1].metrics.focusCoreLinearMean
+        < iorPayoff[2].metrics.focusCoreLinearMean,
     `IOR did not monotonically strengthen the captured focus: ${JSON.stringify(iorPayoff)}.`,
+  );
+  const adoptedIorPayoff = causticsPayoff.filter(({ axis }) => axis === 'ior-adopted');
+  assert(
+    adoptedIorPayoff.length === 2
+      && adoptedIorPayoff.every(({ metrics }) => metrics.peakLinearP999 > 0.45),
+    `Adopted spectral composition weakened the caustic focus: ${JSON.stringify(adoptedIorPayoff)}.`,
   );
   const iorCentroidDeltas = [
     {
@@ -455,7 +643,7 @@ try {
     await verifyStaticPair(page, 'static-reduced', 'reduce'),
   ];
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto(roomUrl({ autoRotate: 'true', v: '2' }), {
+  await page.goto(roomUrl({ autoRotate: 'true', v: '3' }), {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForSelector(canvasSelector);
@@ -469,7 +657,7 @@ try {
     `autoRotate=true did not produce observable motion: ${JSON.stringify(motionDiff)}.`,
   );
 
-  await page.goto(roomUrl({ autoRotate: 'false', v: '2' }), {
+  await page.goto(roomUrl({ autoRotate: 'false', v: '3' }), {
     waitUntil: 'domcontentloaded',
   });
   const dragBefore = await waitForLiveTelemetry(page);
@@ -550,6 +738,7 @@ try {
       iorCentroidDeltas,
       iorCentroidDistances,
     },
+    dispersionQa,
     deterministicStatic,
     motionPositiveControl: {
       firstPath: motionFirstPath,

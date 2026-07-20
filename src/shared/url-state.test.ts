@@ -32,8 +32,8 @@ describe('room URL settings', () => {
       rain: 0.5,
     };
 
-    expect(serializeRoomUrlSettings('voxel-water', settings).toString()).toBe('rain=0.5&v=2');
-    expect(parseRoomUrlSettings('voxel-water', new URLSearchParams('rain=0.5&v=2')))
+    expect(serializeRoomUrlSettings('voxel-water', settings).toString()).toBe('rain=0.5&v=3');
+    expect(parseRoomUrlSettings('voxel-water', new URLSearchParams('rain=0.5&v=3')))
       .toEqual(settings);
   });
 
@@ -51,17 +51,18 @@ describe('room URL settings', () => {
     };
     const serialized = serializeRoomUrlSettings('glass-optics', settings);
 
-    expect(serialized.toString()).toBe('autoRotate=false&showCaustics=false&v=2');
+    expect(serialized.toString()).toBe('autoRotate=false&showCaustics=false&v=3');
     expect(parseRoomUrlSettings('glass-optics', serialized)).toEqual(settings);
   });
 
-  it('round-trips the full v2 glass domain and revised presets', () => {
+  it('round-trips the full v3 glass domain and dispersion presets', () => {
     const extreme: GlassOpticsSettings = {
       lightX: -6,
       lightY: 2.61,
       lightZ: 6,
       beamSpread: 0.9,
       ior: 2.4,
+      dispersion: 1,
       roughness: 0.55,
       thickness: 2.4,
       autoRotate: false,
@@ -72,20 +73,37 @@ describe('room URL settings', () => {
 
     for (const settings of [extreme, focus, crystal]) {
       const serialized = serializeRoomUrlSettings('glass-optics', settings);
-      expect(serialized.get('v')).toBe('2');
+      expect(serialized.get('v')).toBe('3');
       expect(parseRoomUrlSettings('glass-optics', serialized)).toEqual(settings);
     }
+
+    expect(glassOpticsDefaults.dispersion).toBe(0.45);
+    expect(glassOpticsFocusPreset).not.toHaveProperty('dispersion');
+    expect(glassOpticsCrystalPreset.dispersion).toBe(0.55);
   });
 
-  it('rejects v1 glass settings and rejects out-of-range lightY per field', () => {
+  it('round-trips dispersion=0 without treating it as missing', () => {
+    const settings: GlassOpticsSettings = {
+      ...glassOpticsDefaults,
+      dispersion: 0,
+    };
+    const serialized = serializeRoomUrlSettings('glass-optics', settings);
+
+    expect(serialized.toString()).toBe('dispersion=0&v=3');
+    expect(parseRoomUrlSettings('glass-optics', serialized)).toEqual(settings);
+  });
+
+  it.each(['1', '2'])('rejects the complete v%s glass settings group', (version) => {
     expect(parseRoomUrlSettings(
       'glass-optics',
-      new URLSearchParams('v=1&lightY=2.61&ior=1.7'),
+      new URLSearchParams(`v=${version}&dispersion=0&lightY=2.61&ior=1.7`),
     )).toEqual(glassOpticsDefaults);
+  });
 
+  it('rejects out-of-range lightY per field', () => {
     const parsed = parseRoomUrlSettings(
       'glass-optics',
-      new URLSearchParams('v=2&lightY=2.6&ior=1.7'),
+      new URLSearchParams('v=3&lightY=2.6&ior=1.7'),
     );
     expect(parsed.lightY).toBe(glassOpticsDefaults.lightY);
     expect(parsed.ior).toBe(1.7);
@@ -94,8 +112,9 @@ describe('room URL settings', () => {
   it.each([
     'rain=0.5',
     'rain=0.5&v=1',
-    'rain=0.5&v=3',
-    'rain=0.5&v=2&v=2',
+    'rain=0.5&v=2',
+    'rain=0.5&v=4',
+    'rain=0.5&v=3&v=3',
   ])('rejects the complete settings group for missing or invalid versions: %s', (query) => {
     expect(parseRoomUrlSettings('voxel-water', new URLSearchParams(query)))
       .toEqual(voxelWaterDefaults);
@@ -109,7 +128,7 @@ describe('room URL settings', () => {
   it('falls back duplicate and empty fields independently', () => {
     const parsed = parseRoomUrlSettings(
       'voxel-water',
-      new URLSearchParams('v=2&rain=0.5&rain=0.6&wind=1.2&waveHeight='),
+      new URLSearchParams('v=3&rain=0.5&rain=0.6&wind=1.2&waveHeight='),
     );
 
     expect(parsed.rain).toBe(voxelWaterDefaults.rain);
@@ -120,11 +139,11 @@ describe('room URL settings', () => {
   it('rejects invalid enum, boolean, and non-strict decimal values per field', () => {
     const voxel = parseRoomUrlSettings(
       'voxel-water',
-      new URLSearchParams('v=2&weather=snow&wind=1e0&rain=0.5'),
+      new URLSearchParams('v=3&weather=snow&wind=1e0&rain=0.5'),
     );
     const glass = parseRoomUrlSettings(
       'glass-optics',
-      new URLSearchParams('v=2&autoRotate=1&showCaustics=false'),
+      new URLSearchParams('v=3&autoRotate=1&showCaustics=false'),
     );
 
     expect(voxel.weather).toBe(voxelWaterDefaults.weather);
@@ -137,13 +156,26 @@ describe('room URL settings', () => {
   it('rejects out-of-range and off-step numbers without clamping', () => {
     const parsed = parseRoomUrlSettings(
       'voxel-water',
-      new URLSearchParams('v=2&wind=3.1&waveHeight=0.485&rain=0.5'),
+      new URLSearchParams('v=3&wind=3.1&waveHeight=0.485&rain=0.5'),
     );
 
     expect(parsed.wind).toBe(voxelWaterDefaults.wind);
     expect(parsed.waveHeight).toBe(voxelWaterDefaults.waveHeight);
     expect(parsed.rain).toBe(0.5);
   });
+
+  it.each(['-0.01', '1.01', '0.455'])(
+    'rejects invalid dispersion per field without changing valid siblings: %s',
+    (dispersion) => {
+      const parsed = parseRoomUrlSettings(
+        'glass-optics',
+        new URLSearchParams(`v=3&dispersion=${dispersion}&ior=1.7`),
+      );
+
+      expect(parsed.dispersion).toBe(glassOpticsDefaults.dispersion);
+      expect(parsed.ior).toBe(1.7);
+    },
+  );
 
   it('sorts serialized parameters into canonical key order', () => {
     const settings: VoxelWaterSettings = {
@@ -153,7 +185,7 @@ describe('room URL settings', () => {
     };
 
     expect(serializeRoomUrlSettings('voxel-water', settings).toString())
-      .toBe('rain=0.5&v=2&waveHeight=1.2');
+      .toBe('rain=0.5&v=3&waveHeight=1.2');
   });
 
   it('keeps embedded reload tokens transient', () => {
@@ -162,7 +194,7 @@ describe('room URL settings', () => {
     expect(serializeRoomUrlSettings('anime-liquid-orb', settings).toString()).toBe('');
     expect(parseRoomUrlSettings(
       'anime-liquid-orb',
-      new URLSearchParams('reloadToken=12&v=2'),
+      new URLSearchParams('reloadToken=12&v=3'),
     )).toEqual(animeLiquidOrbDefaults);
     expect(URL_STATE_RESERVED_KEYS).toContain('qaTime');
   });

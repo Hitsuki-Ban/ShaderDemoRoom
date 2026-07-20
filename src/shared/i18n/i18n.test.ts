@@ -37,6 +37,15 @@ describe('i18n catalog', () => {
     expect(t('app.units.degrees')).toBe('°');
   });
 
+  it('localizes the glass dispersion control in both catalogs', () => {
+    expect(createTranslator('en')('rooms.glassOptics.controls.dispersion')).toBe(
+      'Dispersion',
+    );
+    expect(createTranslator('zh-CN')('rooms.glassOptics.controls.dispersion')).toBe(
+      '色分散',
+    );
+  });
+
   it('interpolates all declared parameters', () => {
     expect(createTranslator('en')('app.loadingRoom', { room: 'Voxel Water' })).toBe(
       'Loading Voxel Water…',
