@@ -45,3 +45,13 @@ research-glass-optics.md §2.9(ダークフィールド・ライティングの�
 - **トークン体系**: 床・グリッド・背景の hex はシーン内アート定数であり CSS トークン(T-DS-01)の対象外だが、`Scene.background` はシェルの `--bg` と視覚的に連続する。差し替え後もルーム切替時のフラッシュが出ないことを確認する。
 - **envMapIntensity の単一ソース化**: env 差し替え時にコンストラクタ初期値と更新式を一本化し、生成直後に無条件上書きされる値を残さない。
 - **stageProfile**: shell chrome は `default` のまま(`src/rooms/registry.ts:59`)。シーン内の暗化はシェル chrome(T-SH-04 の dim)とは別レイヤーであり、registry には触れない。
+
+## 作業報告 (2026-07-20)
+
+- PR: [#32 `[T-GO-02] Redesign glass optics stage`](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/32)
+- 実装: 汎用 `RoomEnvironment` を黒地 + 冷色/暖色/トップの 3 本ストリップによる一回限りの PMREM に置換し、ラジアル背景、低 roughness の反射床、抑制したグリッド、固定カメラの再フレーミングを導入した。背景平面 1 draw を含む総 draw calls は全検証状態で 16。`envMapIntensity` は thickness を入力とする単一関数へ集約した。
+- 決定論性: `autoRotate=false` の適用時点で即座に canonical pose と shader time をゼロへ戻し、通常環境/reduced-motion とも 1 秒後・11 秒後の canvas 差分は mean/max/strong pixels すべて 0。`autoRotate=true` の正例では mean delta 1.518 を観測した。
+- 視覚 QA: 8 状態を 1440×900 で検証。thickness 0.2/2.4 の glass-disc マスクで白飛び・黒潰れなし、25% 縮小時も glass/background p99/p95 比 4.168、caustics/grid mean 比 2.223 を維持。デフォルトの caustics p99 は 110.35、floor 61.39、grid 8.44 で、左下の意味領域 coverage は 0.366。
+- 安定性/性能: thickness drag 前後で 16 calls / 25 geometries を維持し、禁止 allocation 0、console error 0。`b63b3dd` との 5 組 interleaved production 比較の paired median は **-0.83%**（許容上限 +5%）。hardware reference は 163.36 FPS。
+- 証拠: `docs/direction/captures/t-go-02-default-after.png`、`t-go-02-thickness-0-2.png`、`t-go-02-thickness-2-4.png`、`t-go-02-glass-qa-2026-07-20.json`、`t-go-02-telemetry-2026-07-20.json`。
+- 検証: `pnpm lint`、`pnpm typecheck`、`pnpm test`（33 files / 237 tests）、`pnpm build`、`pnpm exhibits:check`、`pnpm qa:visual`、`pnpm qa:renderer`、`pnpm qa:glass` を通過。独立レビューで指摘された 2 件の P2（OFF 切替直後の pose reset、hero/thumbnails の ROI）を修正し、delta review は APPROVE、独立 test verification は PASS。
