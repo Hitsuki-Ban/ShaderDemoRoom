@@ -5,6 +5,10 @@ import {
   measureRegion,
   parsePng,
 } from './water-qa-metrics.mjs';
+import {
+  downsampleFrame,
+  measureCausticsDifference,
+} from './glass-optics-qa-metrics.mjs';
 
 const baseUrl = process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
 const outputDirectory = process.env.GLASS_QA_OUTPUT ?? 'output/glass-qa';
@@ -12,6 +16,9 @@ const allocationNamesAreReadable = process.env.GLASS_QA_ALLOCATION_NAMES === 're
 
 const states = [
   ['default', { autoRotate: 'false', v: '2' }],
+  ['spread-0-05', { autoRotate: 'false', beamSpread: '0.05', v: '2' }],
+  ['spread-0-34', { autoRotate: 'false', beamSpread: '0.34', v: '2' }],
+  ['spread-0-9', { autoRotate: 'false', beamSpread: '0.9', v: '2' }],
   ['focus', {
     autoRotate: 'false',
     beamSpread: '0.18',
@@ -35,15 +42,26 @@ const states = [
     v: '2',
   }],
   ['ior-1', { autoRotate: 'false', ior: '1', v: '2' }],
+  ['ior-1-48', { autoRotate: 'false', ior: '1.48', v: '2' }],
   ['ior-2-4', { autoRotate: 'false', ior: '2.4', v: '2' }],
   ['thickness-0-2', { autoRotate: 'false', thickness: '0.2', v: '2' }],
   ['thickness-2-4', { autoRotate: 'false', thickness: '2.4', v: '2' }],
 ];
 
+const payoffStates = [
+  { axis: 'spread', value: 0.05, name: 'spread-0-05' },
+  { axis: 'spread', value: 0.34, name: 'spread-0-34' },
+  { axis: 'spread', value: 0.9, name: 'spread-0-9' },
+  { axis: 'ior', value: 1, name: 'ior-1' },
+  { axis: 'ior', value: 1.48, name: 'ior-1-48' },
+  { axis: 'ior', value: 2.4, name: 'ior-2-4' },
+];
+
 const canvasSelector = 'canvas[data-renderer-host="shell"]';
 const stageRegions = {
   background: { x0: 0.03, x1: 0.7, y0: 0.03, y1: 0.24 },
-  caustics: { x0: 0.16, x1: 0.38, y0: 0.48, y1: 0.66 },
+  caustics: { x0: 0.28, x1: 0.5, y0: 0.48, y1: 0.68 },
+  bottomReflection: { x0: 0.3, x1: 0.75, y0: 0.9, y1: 1 },
   floor: { x0: 0.03, x1: 0.95, y0: 0.72, y1: 0.94 },
   grid: { x0: 0.38, x1: 0.58, y0: 0.72, y1: 0.9 },
   hero: { x0: 0.27, x1: 0.7, y0: 0.27, y1: 0.66 },
@@ -156,35 +174,6 @@ function measureGlassDisc(frame, sampleScale = 2) {
   };
 }
 
-function downsampleFrame(frame, scale) {
-  const width = Math.floor(frame.width / scale);
-  const height = Math.floor(frame.height / scale);
-  const pixels = Buffer.alloc(width * height * frame.bytesPerPixel);
-
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      for (let channel = 0; channel < frame.bytesPerPixel; channel += 1) {
-        let total = 0;
-        for (let offsetY = 0; offsetY < scale; offsetY += 1) {
-          for (let offsetX = 0; offsetX < scale; offsetX += 1) {
-            const sourceX = x * scale + offsetX;
-            const sourceY = y * scale + offsetY;
-            const sourceIndex = (
-              sourceY * frame.width + sourceX
-            ) * frame.bytesPerPixel + channel;
-            total += frame.pixels[sourceIndex];
-          }
-        }
-        pixels[(y * width + x) * frame.bytesPerPixel + channel] = Math.round(
-          total / (scale * scale),
-        );
-      }
-    }
-  }
-
-  return { width, height, bytesPerPixel: frame.bytesPerPixel, pixels };
-}
-
 async function captureTimedCanvas(page, path, delay) {
   await page.waitForTimeout(delay);
   return page.locator(canvasSelector).screenshot({ path });
@@ -261,6 +250,7 @@ try {
   });
 
   const captures = [];
+  const captureFrames = new Map();
   for (const [name, parameters] of states) {
     await page.goto(roomUrl(parameters), { waitUntil: 'domcontentloaded' });
     const telemetry = await waitForLiveTelemetry(page);
@@ -271,6 +261,7 @@ try {
     const frame = parsePng(
       await page.locator(canvasSelector).screenshot({ path: canvasScreenshot }),
     );
+    captureFrames.set(name, frame);
     const thumbnailFrame = downsampleFrame(frame, 4);
     const stageMetrics = measureStage(frame);
     captures.push({
@@ -302,7 +293,9 @@ try {
   );
   assert(
     defaultMetrics.caustics.p99 > defaultMetrics.grid.p99 * 5
-      && defaultMetrics.caustics.p99 > defaultMetrics.floor.p99 * 1.5,
+      && defaultMetrics.caustics.p99 > defaultMetrics.floor.p99 * 1.5
+      && defaultMetrics.caustics.p99 > defaultMetrics.bottomReflection.p99 * 1.1
+      && defaultMetrics.bottomReflection.brightClipRatio < 0.005,
     `Caustics are not the brightest floor feature: ${JSON.stringify(defaultMetrics)}.`,
   );
   assert(
@@ -335,6 +328,127 @@ try {
       `${name} clipped or lost glass readability: ${JSON.stringify(glassDisc)}.`,
     );
   }
+
+  const causticsPayoff = [];
+  let defaultOffStatic;
+  for (const payoffState of payoffStates) {
+    const parameters = states.find(([name]) => name === payoffState.name)?.[1];
+    assert(parameters, `Missing capture parameters for ${payoffState.name}.`);
+    await page.goto(roomUrl({ ...parameters, showCaustics: 'false' }), {
+      waitUntil: 'domcontentloaded',
+    });
+    const telemetry = await waitForLiveTelemetry(page);
+    assert(
+      telemetry.drawCalls === 15,
+      `${payoffState.name} caustics OFF rendered ${telemetry.drawCalls} calls instead of 15.`,
+    );
+    const offPath = `${outputDirectory}/${payoffState.name}-caustics-off-canvas.png`;
+    const offFrame = parsePng(
+      await page.locator(canvasSelector).screenshot({ path: offPath }),
+    );
+    if (payoffState.name === 'spread-0-34') {
+      const repeatPath = `${outputDirectory}/${payoffState.name}-caustics-off-repeat-canvas.png`;
+      const repeatFrame = parsePng(
+        await page.locator(canvasSelector).screenshot({ path: repeatPath }),
+      );
+      const diff = compareFrames(offFrame, repeatFrame, 1);
+      assert(
+        diff.meanDelta === 0 && diff.maxDelta === 0,
+        `Caustics OFF control was not pixel-identical: ${JSON.stringify(diff)}.`,
+      );
+      defaultOffStatic = { firstPath: offPath, secondPath: repeatPath, diff };
+    }
+    const onFrame = captureFrames.get(payoffState.name);
+    assert(onFrame, `Missing ON frame for ${payoffState.name}.`);
+    const metrics = measureCausticsDifference(onFrame, offFrame);
+    const thumbnailMetrics = measureCausticsDifference(
+      downsampleFrame(onFrame, 4),
+      downsampleFrame(offFrame, 4),
+    );
+    const onCapture = captures.find(({ name }) => name === payoffState.name);
+    assert(onCapture, `Missing ON capture report for ${payoffState.name}.`);
+    assert(
+      metrics.activePixels > 100
+        && metrics.peakByteP999 > 6
+        && metrics.plateauRatio < 0.15
+        && metrics.activeCoverage < 0.04
+        && metrics.anyChannelClipRatio < 0.05
+        && metrics.allChannelClipRatio < 0.01,
+      `${payoffState.name} caustics focus is absent, flat, or clipped: ${JSON.stringify(metrics)}.`,
+    );
+    assert(
+      metrics.onHalfMaxByteP999
+        > Math.max(
+          onCapture.stageMetrics.floor.p99,
+          onCapture.stageMetrics.bottomReflection.p99,
+        ) * 1.1,
+      `${payoffState.name} focus is not brighter than the floor: ${JSON.stringify({ metrics, floor: onCapture.stageMetrics.floor, bottomReflection: onCapture.stageMetrics.bottomReflection })}.`,
+    );
+    assert(
+      thumbnailMetrics.peakByteP999 > 10
+        && thumbnailMetrics.activePixels > 10
+        && thumbnailMetrics.halfMaxEquivalentRadius > 1.25
+        && thumbnailMetrics.anyChannelClipRatio < 0.05
+        && thumbnailMetrics.allChannelClipRatio < 0.01,
+      `${payoffState.name} caustics vanished or clipped at 25% scale: ${JSON.stringify(thumbnailMetrics)}.`,
+    );
+    causticsPayoff.push({
+      ...payoffState,
+      onPath: onCapture.canvasScreenshot,
+      offPath,
+      onTelemetry: onCapture.telemetry,
+      offTelemetry: telemetry,
+      metrics,
+      thumbnailMetrics,
+    });
+  }
+  assert(defaultOffStatic, 'Missing deterministic caustics OFF control.');
+
+  const spreadPayoff = causticsPayoff.filter(({ axis }) => axis === 'spread');
+  assert(
+    spreadPayoff[0].metrics.halfMaxEquivalentRadius
+      < spreadPayoff[1].metrics.halfMaxEquivalentRadius
+      && spreadPayoff[1].metrics.halfMaxEquivalentRadius
+        < spreadPayoff[2].metrics.halfMaxEquivalentRadius,
+    `Beam spread did not monotonically broaden the focus: ${JSON.stringify(spreadPayoff)}.`,
+  );
+  assert(
+    spreadPayoff[0].metrics.activeCoverage
+      < spreadPayoff[1].metrics.activeCoverage
+      && spreadPayoff[1].metrics.activeCoverage
+        < spreadPayoff[2].metrics.activeCoverage,
+    `Beam spread did not monotonically expand the active footprint: ${JSON.stringify(spreadPayoff)}.`,
+  );
+  assert(
+    spreadPayoff[2].metrics.peakByteP999
+      < spreadPayoff[1].metrics.peakByteP999 * 1.6,
+    `Wide spread increased peak energy instead of redistributing it: ${JSON.stringify(spreadPayoff)}.`,
+  );
+  const iorPayoff = causticsPayoff.filter(({ axis }) => axis === 'ior');
+  assert(
+    iorPayoff[0].metrics.peakLinearP999
+      < iorPayoff[1].metrics.peakLinearP999
+      && iorPayoff[1].metrics.peakLinearP999
+        < iorPayoff[2].metrics.peakLinearP999,
+    `IOR did not monotonically strengthen the captured focus: ${JSON.stringify(iorPayoff)}.`,
+  );
+  const iorCentroidDeltas = [
+    {
+      x: iorPayoff[1].metrics.centroid.x - iorPayoff[0].metrics.centroid.x,
+      y: iorPayoff[1].metrics.centroid.y - iorPayoff[0].metrics.centroid.y,
+    },
+    {
+      x: iorPayoff[2].metrics.centroid.x - iorPayoff[1].metrics.centroid.x,
+      y: iorPayoff[2].metrics.centroid.y - iorPayoff[1].metrics.centroid.y,
+    },
+  ];
+  const iorCentroidDistances = iorCentroidDeltas.map(({ x, y }) => Math.hypot(x, y));
+  assert(
+    iorCentroidDistances.every((distance) => distance > 0.002)
+      && iorCentroidDeltas[0].x * iorCentroidDeltas[1].x
+        + iorCentroidDeltas[0].y * iorCentroidDeltas[1].y > 0,
+    `IOR focus position did not move monotonically: ${JSON.stringify({ iorPayoff, iorCentroidDeltas })}.`,
+  );
 
   const deterministicStatic = [
     await verifyStaticPair(page, 'static-normal', 'no-preference'),
@@ -423,12 +537,19 @@ try {
   assert(errors.length === 0, `Browser errors:\n${errors.join('\n')}`);
 
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     recordedAt: new Date().toISOString(),
     browserVersion: browser.version(),
     baseUrl,
     viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
     captures,
+    causticsPayoff: {
+      alphaGate: 'CAUSTICS_ENABLED_INTENSITY * CAUSTICS_ALPHA_BUDGET <= 0.9',
+      defaultOffStatic,
+      states: causticsPayoff,
+      iorCentroidDeltas,
+      iorCentroidDistances,
+    },
     deterministicStatic,
     motionPositiveControl: {
       firstPath: motionFirstPath,

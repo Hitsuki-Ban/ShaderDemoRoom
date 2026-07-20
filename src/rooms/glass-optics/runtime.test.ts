@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  AdditiveBlending,
   Camera,
   CylinderGeometry,
   DataTexture,
@@ -13,18 +14,35 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
+  PlaneGeometry,
+  PointLight,
   Scene,
   ShaderMaterial,
+  SphereGeometry,
   Texture,
+  Vector2,
   Vector3,
   type Object3D,
 } from 'three';
 import type { GlassOpticsSettings, RoomRuntimeContext } from '../types';
 import {
+  CAUSTICS_ALPHA_BUDGET,
+  CAUSTICS_ENABLED_INTENSITY,
+  type CausticsProfile,
+  calculateCausticsProfileInto,
+  causticsIntensity,
   createGlassMaterial,
   createRoomRuntime,
   glassEnvironmentIntensity,
+  setCausticsDirectionFromOutgoing,
 } from './runtime';
+import causticsFragmentShader from './caustics.frag.glsl?raw';
+import {
+  calculateGlassAimDirectionInto,
+  createGlassLightPathResult,
+  createGlassLightPathWorkspace,
+  traceGlassRayInto,
+} from './light-path';
 import {
   glassOpticsCrystalPreset,
   glassOpticsDefaults,
@@ -122,7 +140,246 @@ function isInstanceZeroScaled(mesh: InstancedMesh, index: number) {
     .every((element) => mesh.instanceMatrix.array[offset + element] === 0);
 }
 
+function createCausticsProfile(beamSpread: number, ior: number) {
+  const output: CausticsProfile = {
+    focus: 0,
+    intensityScale: 0,
+    hotspotRadius: 0,
+    planeScale: 0,
+    cuspLength: 0,
+    cuspWidth: 0,
+    ringRadius: 0,
+    ringWidth: 0,
+  };
+  return calculateCausticsProfileInto(beamSpread, ior, output);
+}
+
+function findCaustics(objects: Object3D[]) {
+  const caustics = objects.find((object): object is Mesh<PlaneGeometry, ShaderMaterial> =>
+    object instanceof Mesh
+    && object.name === 'glass-optics-caustics'
+    && object.material instanceof ShaderMaterial);
+  expect(caustics).toBeDefined();
+  return caustics!;
+}
+
 describe('glass optics runtime contracts', () => {
+  it('uses one bounded caustics intensity for creation and updates', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const caustics = findCaustics(objects);
+    const marker = objects.find((object) =>
+      object.name === 'glass-optics-floor-marker') as Mesh<SphereGeometry, MeshBasicMaterial>;
+    const markerColor = marker.material.color.getHex();
+    const pointLight = objects.find((object): object is PointLight =>
+      object instanceof PointLight);
+    const defaultProfile = createCausticsProfile(
+      glassOpticsDefaults.beamSpread,
+      glassOpticsDefaults.ior,
+    );
+
+    expect(caustics.material.uniforms.uIntensity.value).toBe(
+      causticsIntensity(true, defaultProfile.intensityScale),
+    );
+    expect(CAUSTICS_ENABLED_INTENSITY * CAUSTICS_ALPHA_BUDGET)
+      .toBeLessThanOrEqual(0.9);
+    expect(caustics.material.blending).toBe(AdditiveBlending);
+    expect(caustics.material.premultipliedAlpha).toBe(false);
+    expect(caustics.material.depthWrite).toBe(false);
+    expect(caustics.renderOrder).toBe(5);
+    expect(marker.material.depthTest).toBe(true);
+    expect(marker.material.blending).toBe(AdditiveBlending);
+    expect(marker.material.opacity).toBe(0.12);
+    expect(pointLight?.intensity).toBe(1.5);
+
+    runtime.updateSettings({ ...glassOpticsDefaults, showCaustics: false });
+    expect(caustics.material.uniforms.uIntensity.value).toBe(
+      causticsIntensity(false, defaultProfile.intensityScale),
+    );
+    expect(caustics.material.uniforms.uIntensity.value).toBe(0);
+    expect(caustics.visible).toBe(false);
+    expect(marker.visible).toBe(true);
+    expect(marker.material.color.getHex()).toBe(markerColor);
+
+    runtime.updateSettings({ ...glassOpticsDefaults, showCaustics: true });
+    expect(caustics.material.uniforms.uIntensity.value).toBe(
+      causticsIntensity(true, defaultProfile.intensityScale),
+    );
+    expect(caustics.visible).toBe(true);
+    expect(marker.material.color.getHex()).toBe(markerColor);
+
+    const profile = createCausticsProfile(0.9, 2.4);
+    runtime.updateSettings({
+      ...glassOpticsDefaults,
+      beamSpread: 0.9,
+      ior: 2.4,
+    });
+    expect(caustics.material.uniforms.uFocus.value).toBe(profile.focus);
+    expect(caustics.material.uniforms.uFocusRadius.value).toBe(profile.hotspotRadius);
+    expect(caustics.material.uniforms.uCuspLength.value).toBe(profile.cuspLength);
+    expect(caustics.material.uniforms.uCuspWidth.value).toBe(profile.cuspWidth);
+    expect(caustics.material.uniforms.uRingRadius.value).toBe(profile.ringRadius);
+    expect(caustics.material.uniforms.uRingWidth.value).toBe(profile.ringWidth);
+    expect(caustics.material.uniforms.uIntensity.value).toBe(
+      causticsIntensity(true, profile.intensityScale),
+    );
+    expect(caustics.scale.x).toBe(profile.planeScale);
+    runtime.dispose();
+  });
+
+  it('keeps caustics profiles finite and monotonic across declared domains', () => {
+    const beamSpreads = [
+      glassOpticsDomains.beamSpread.min,
+      glassOpticsDefaults.beamSpread,
+      glassOpticsDomains.beamSpread.max,
+    ];
+    const iorValues = [
+      glassOpticsDomains.ior.min,
+      glassOpticsDefaults.ior,
+      glassOpticsDomains.ior.max,
+    ];
+    const profiles = beamSpreads.flatMap((beamSpread) =>
+      iorValues.map((ior) => createCausticsProfile(beamSpread, ior)));
+
+    for (const profile of profiles) {
+      expect(Object.values(profile).every(Number.isFinite)).toBe(true);
+      expect(profile.focus).toBeGreaterThanOrEqual(0);
+      expect(profile.focus).toBeLessThanOrEqual(1);
+      expect(profile.intensityScale).toBeGreaterThan(0);
+      expect(profile.intensityScale).toBeLessThanOrEqual(1);
+      expect(profile.hotspotRadius).toBeGreaterThan(0);
+      expect(profile.hotspotRadius * profile.planeScale).toBeGreaterThan(0);
+    }
+
+    for (const ior of iorValues) {
+      const spreads = beamSpreads.map((beamSpread) =>
+        createCausticsProfile(beamSpread, ior));
+      expect(spreads[1]!.hotspotRadius).toBeGreaterThan(spreads[0]!.hotspotRadius);
+      expect(spreads[2]!.hotspotRadius).toBeGreaterThan(spreads[1]!.hotspotRadius);
+      expect(spreads[1]!.hotspotRadius * spreads[1]!.planeScale)
+        .toBeGreaterThan(spreads[0]!.hotspotRadius * spreads[0]!.planeScale);
+      expect(spreads[2]!.hotspotRadius * spreads[2]!.planeScale)
+        .toBeGreaterThan(spreads[1]!.hotspotRadius * spreads[1]!.planeScale);
+      expect(spreads[1]!.intensityScale).toBe(spreads[0]!.intensityScale);
+      expect(spreads[2]!.intensityScale).toBeLessThan(spreads[1]!.intensityScale);
+      const defaultHotspotEnergy = spreads[1]!.intensityScale
+        * (spreads[1]!.hotspotRadius * spreads[1]!.planeScale) ** 2;
+      const wideHotspotEnergy = spreads[2]!.intensityScale
+        * (spreads[2]!.hotspotRadius * spreads[2]!.planeScale) ** 2;
+      expect(wideHotspotEnergy).toBeCloseTo(defaultHotspotEnergy, 12);
+    }
+    for (const beamSpread of beamSpreads) {
+      const iors = iorValues.map((ior) =>
+        createCausticsProfile(beamSpread, ior));
+      expect(iors[1]!.focus).toBeGreaterThan(iors[0]!.focus);
+      expect(iors[2]!.focus).toBeGreaterThan(iors[1]!.focus);
+      expect(iors[1]!.hotspotRadius).toBeLessThan(iors[0]!.hotspotRadius);
+      expect(iors[2]!.hotspotRadius).toBeLessThan(iors[1]!.hotspotRadius);
+      expect(iors[1]!.hotspotRadius * iors[1]!.planeScale)
+        .toBeLessThan(iors[0]!.hotspotRadius * iors[0]!.planeScale);
+      expect(iors[2]!.hotspotRadius * iors[2]!.planeScale)
+        .toBeLessThan(iors[1]!.hotspotRadius * iors[1]!.planeScale);
+    }
+  });
+
+  it('maps outgoing floor projection into plane-local direction', () => {
+    const direction = new Vector2();
+
+    expect(setCausticsDirectionFromOutgoing(
+      new Vector3(3, -2, 4),
+      direction,
+    )).toBe('projected');
+    expect(direction.x).toBeCloseTo(0.6);
+    expect(direction.y).toBeCloseTo(-0.8);
+
+    expect(setCausticsDirectionFromOutgoing(
+      new Vector3(0, -1, 0),
+      direction,
+    )).toBe('canonical');
+    expect(direction.toArray()).toEqual([1, 0]);
+  });
+
+  it('drives the caustics direction from the traced outgoing ray', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const material = findCaustics(objects).material;
+    const source = new Vector3(
+      glassOpticsDefaults.lightX,
+      glassOpticsDefaults.lightY,
+      glassOpticsDefaults.lightZ,
+    );
+    const aimDirection = new Vector3();
+    calculateGlassAimDirectionInto(
+      source,
+      aimDirection,
+      new Vector3(),
+      new Vector3(),
+      new Vector3(),
+    );
+    const lightPath = createGlassLightPathResult();
+    expect(traceGlassRayInto(
+      source,
+      aimDirection,
+      glassOpticsDefaults.ior,
+      lightPath,
+      createGlassLightPathWorkspace(),
+    )).toBe('complete');
+    const expectedDirection = new Vector2();
+    setCausticsDirectionFromOutgoing(
+      lightPath.outgoingDirection,
+      expectedDirection,
+    );
+    const runtimeDirection = material.uniforms.uDirection.value as Vector2;
+    expect(runtimeDirection.x).toBeCloseTo(expectedDirection.x);
+    expect(runtimeDirection.y).toBeCloseTo(expectedDirection.y);
+    runtime.dispose();
+  });
+
+  it('keeps the caustics center and floor marker on the same physical hit', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const caustics = findCaustics(objects);
+    const marker = objects.find((object) =>
+      object.name === 'glass-optics-floor-marker') as Mesh;
+
+    const expectSharedFloorHit = () => {
+      expect(caustics.visible).toBe(true);
+      expect(marker.visible).toBe(true);
+      expect(caustics.position.x).toBeCloseTo(marker.position.x);
+      expect(caustics.position.z).toBeCloseTo(marker.position.z);
+    };
+    expectSharedFloorHit();
+
+    runtime.updateSettings({
+      ...glassOpticsDefaults,
+      lightX: glassOpticsDefaults.lightX + 0.6,
+    });
+    expectSharedFloorHit();
+    runtime.dispose();
+  });
+
+  it('stops caustics time when motion scale is zero', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const material = findCaustics(objects).material;
+
+    runtime.setMotionScale(0);
+    runtime.render({ elapsed: 4, delta: 4 });
+    runtime.render({ elapsed: 12, delta: 8 });
+    expect(material.uniforms.uTime.value).toBe(0);
+    runtime.dispose();
+  });
+
+  it('uses the bounded focus-cusp shader without the retired noise formula', () => {
+    expect(causticsFragmentShader).toContain('boundedUnion');
+    expect(causticsFragmentShader).toContain('uniform float uFocus;');
+    expect(causticsFragmentShader).toContain('uniform float uFocusRadius;');
+    expect(causticsFragmentShader).toContain('uniform vec2 uDirection;');
+    expect(causticsFragmentShader).toContain(
+      `gl_FragColor = vec4(color, shape * ${CAUSTICS_ALPHA_BUDGET.toFixed(2)} * uIntensity);`,
+    );
+    expect(causticsFragmentShader).toContain('#include <colorspace_fragment>');
+    expect(causticsFragmentShader).not.toMatch(/\brings\b|\bspokes\b|\bstreaks\b/);
+    expect(causticsFragmentShader).not.toContain('color * shape');
+    expect(causticsFragmentShader).not.toContain('color * uIntensity');
+  });
+
   it('builds a transmissive physical material from room settings', () => {
     const material = createGlassMaterial(glassOpticsDefaults);
 

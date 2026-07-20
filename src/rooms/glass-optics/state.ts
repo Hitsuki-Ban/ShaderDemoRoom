@@ -19,9 +19,9 @@ export const glassOpticsDomains = {
 >;
 
 export const glassOpticsDefaults: DeepReadonly<GlassOpticsSettings> = {
-  lightX: -0.05,
+  lightX: 2,
   lightY: 3.2,
-  lightZ: 2.05,
+  lightZ: 1,
   beamSpread: 0.34,
   ior: 1.48,
   roughness: 0.04,
