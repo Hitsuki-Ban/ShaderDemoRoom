@@ -82,7 +82,6 @@ export type WeatherLook = {
   columnTintMix: number;
   columnBrightness: number;
   columnLightFloor: number;
-  columnOpacity: number;
   cloudOpacityBase: number;
 };
 
@@ -110,7 +109,6 @@ export const WEATHER_LOOKS = {
     columnTintMix: 0.04,
     columnBrightness: 1.16,
     columnLightFloor: 0.12,
-    columnOpacity: 1,
     cloudOpacityBase: 0.06,
   },
   rain: {
@@ -136,7 +134,6 @@ export const WEATHER_LOOKS = {
     columnTintMix: 0.6,
     columnBrightness: 0.98,
     columnLightFloor: 0.02,
-    columnOpacity: 1,
     cloudOpacityBase: 0.16,
   },
   storm: {
@@ -162,7 +159,6 @@ export const WEATHER_LOOKS = {
     columnTintMix: 0.5,
     columnBrightness: 0.96,
     columnLightFloor: 0.12,
-    columnOpacity: 1,
     cloudOpacityBase: 0.28,
   },
 } satisfies Record<VoxelWaterSettings['weather'], WeatherLook>;
@@ -286,6 +282,7 @@ export function createRoomRuntime(
     vertexShader: voxelWaterVertexShader,
     fragmentShader: voxelWaterFragmentShader,
     transparent: true,
+    depthTest: true,
     depthWrite: false,
     uniforms: {
       ...waveUniforms,
@@ -328,7 +325,7 @@ export function createRoomRuntime(
     waterMaterial,
   );
   plane.name = 'voxel-water-surface';
-  plane.renderOrder = 1;
+  plane.renderOrder = 2;
   plane.userData.oceanStrategy = INFINITE_OCEAN_STRATEGY;
   root.add(plane);
 
@@ -340,8 +337,9 @@ export function createRoomRuntime(
     emissiveIntensity: 0.68,
     vertexColors: true,
     toneMapped: false,
-    transparent: true,
-    opacity: 1,
+    transparent: false,
+    depthTest: true,
+    depthWrite: true,
   });
   columnMaterial.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, waveUniforms);
@@ -360,7 +358,7 @@ export function createRoomRuntime(
   columns.rotation.y = VOXEL_FIELD_YAW;
   columns.frustumCulled = false;
   columns.name = 'voxel-water-columns';
-  columns.renderOrder = 2;
+  columns.renderOrder = 1;
   root.add(columns);
 
   const oceanCoordinates = new Float32Array(columnCount * 2);
@@ -531,7 +529,6 @@ export function createRoomRuntime(
     cloudMaterial.color.copy(weatherLook.cloudColor);
     columnMaterial.color.set(0xffffff);
     columnMaterial.emissive.copy(weatherLook.columnEmissive);
-    columnMaterial.opacity = weatherLook.columnOpacity;
     columnMaterial.roughness = 0.7 - settings.clarity * 0.12 + settings.rain * 0.08;
     columnMaterial.emissiveIntensity =
       0.46 + settings.clarity * 0.2 + settings.foam * 0.05 + weatherLook.rainCurtain * 0.07 + weatherLook.strength * 0.16;

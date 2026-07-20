@@ -90,8 +90,7 @@ describe('voxel water runtime contracts', () => {
       expect(look.fogDensity).toBeGreaterThanOrEqual(0);
       expect(look.rainCurtain).toBeGreaterThanOrEqual(0);
       expect(look.rainCurtain).toBeLessThanOrEqual(1);
-      expect(look.columnOpacity).toBeGreaterThan(0);
-      expect(look.columnOpacity).toBeLessThanOrEqual(1);
+      expect(look).not.toHaveProperty('columnOpacity');
       expect(look.waterTint).toBeInstanceOf(Color);
       expect(look.fogColor).toBeInstanceOf(Color);
     }
@@ -146,8 +145,15 @@ describe('voxel water runtime contracts', () => {
     runtime.dispose();
   });
 
-  it('enforces the transparent scene ordering and depth-write contract on real objects', () => {
+  it('separates opaque occluders from the ordered transparent water composition', () => {
     const { objects, runtime } = createRuntimeHarness();
+    const sky = findObject(
+      objects,
+      (object): object is Mesh<never, ShaderMaterial> =>
+        object instanceof Mesh
+        && object.material instanceof ShaderMaterial
+        && 'uWeatherSkyTint' in object.material.uniforms,
+    );
     const plane = findObject(
       objects,
       (object): object is Mesh<never, ShaderMaterial> =>
@@ -157,7 +163,10 @@ describe('voxel water runtime contracts', () => {
     );
     const columns = findObject(
       objects,
-      (object): object is InstancedMesh => object.name === 'voxel-water-columns' && object instanceof InstancedMesh,
+      (object): object is InstancedMesh<BufferGeometry, MeshStandardMaterial> =>
+        object.name === 'voxel-water-columns'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
     );
     const spray = findObject(
       objects,
@@ -172,16 +181,26 @@ describe('voxel water runtime contracts', () => {
       (object): object is LineSegments => object.name === 'voxel-water-grid' && object instanceof LineSegments,
     );
 
-    expect(plane.renderOrder).toBeLessThan(columns.renderOrder);
-    expect(columns.renderOrder).toBeLessThan(spray.renderOrder);
+    expect(sky.renderOrder).toBe(0);
+    expect(columns.renderOrder).toBe(1);
+    expect(plane.renderOrder).toBe(2);
+    expect(plane.renderOrder).toBeLessThan(spray.renderOrder);
     expect(spray.renderOrder).toBeLessThan(rain.renderOrder);
     expect(rain.renderOrder).toBeLessThan(grid.renderOrder);
-    for (const object of [plane, columns, spray, rain, grid]) {
+
+    expect(sky.material.transparent).toBe(false);
+    expect(sky.material.depthTest).toBe(false);
+    expect(sky.material.depthWrite).toBe(false);
+    expect(columns.material.transparent).toBe(false);
+    expect(columns.material.depthTest).toBe(true);
+    expect(columns.material.depthWrite).toBe(true);
+    expect(columns.material.opacity).toBe(1);
+    expect(plane.material.transparent).toBe(true);
+    expect(plane.material.depthTest).toBe(true);
+    expect(plane.material.depthWrite).toBe(false);
+    for (const object of [spray, rain, grid]) {
       const material = Array.isArray(object.material) ? object.material[0] : object.material;
       expect(material.transparent).toBe(true);
-    }
-    for (const object of [plane, spray, rain, grid]) {
-      const material = Array.isArray(object.material) ? object.material[0] : object.material;
       expect(material.depthWrite).toBe(false);
     }
 
@@ -197,6 +216,13 @@ describe('voxel water runtime contracts', () => {
         && object instanceof Mesh
         && object.material instanceof ShaderMaterial,
     );
+    const columns = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshStandardMaterial> =>
+        object.name === 'voxel-water-columns'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
+    );
     const nextSettings: VoxelWaterSettings = {
       ...voxelWaterDefaults,
       weather: 'storm',
@@ -211,6 +237,8 @@ describe('voxel water runtime contracts', () => {
     expect(plane.material.uniforms.uRain.value).toBe(nextSettings.rain);
     expect(plane.material.uniforms.uWaveHeight.value).toBe(nextSettings.waveHeight);
     expect(plane.material.uniforms.uStorm.value).toBe(WEATHER_LOOKS.storm.strength);
+    expect(columns.material.transparent).toBe(false);
+    expect(columns.material.opacity).toBe(1);
     runtime.dispose();
   });
 

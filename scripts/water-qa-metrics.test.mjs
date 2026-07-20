@@ -98,8 +98,8 @@ describe('water QA pixel metrics', () => {
     const seam = measureVerticalSeam(makeFrame(width, height, colors));
 
     expect(seam.score).toBeGreaterThan(50);
-    expect(seam.xTop).toBe(50);
-    expect(seam.slope).toBe(0);
+    expect(Math.abs(seam.xTop - 50)).toBeLessThanOrEqual(1);
+    expect(Math.abs(seam.slope)).toBeLessThanOrEqual(0.05);
   });
 
   it('tracks a slightly slanted vertical RGB outlier', () => {
@@ -114,8 +114,45 @@ describe('water QA pixel metrics', () => {
     const seam = measureVerticalSeam(makeFrame(width, height, colors));
 
     expect(seam.score).toBeGreaterThan(50);
-    expect(seam.xTop).toBe(60);
-    expect(seam.slope).toBeCloseTo(-0.1, 10);
+    expect(Math.abs(seam.xTop - 60)).toBeLessThanOrEqual(1);
+    expect(Math.abs(seam.slope + 0.1)).toBeLessThanOrEqual(0.05);
+  });
+
+  it('does not mistake a broad high-contrast object edge for a thin seam', () => {
+    const width = 100;
+    const height = 100;
+    const colors = Array.from({ length: width * height }, (_, index) => (
+      index % width < 50 ? [20, 60, 80] : [180, 220, 240]
+    ));
+
+    expect(measureVerticalSeam(makeFrame(width, height, colors)).score).toBe(0);
+  });
+
+  it('detects a thin intermediate-color seam laid over a broad object edge', () => {
+    const width = 100;
+    const height = 100;
+    const yStart = Math.floor(height * 0.28);
+    const yEnd = Math.floor(height * 0.94);
+    const colors = Array.from({ length: width * height }, (_, index) => (
+      index % width < 50 ? [20, 60, 80] : [180, 220, 240]
+    ));
+    for (let y = yStart; y < yEnd; y += 1) {
+      colors[y * width + 50] = [100, 140, 160];
+    }
+
+    expect(measureVerticalSeam(makeFrame(width, height, colors)).score).toBeGreaterThan(50);
+  });
+
+  it('does not mistake intermittent high-contrast points for a continuous seam', () => {
+    const width = 100;
+    const height = 100;
+    const yStart = Math.floor(height * 0.28);
+    const colors = Array.from({ length: width * height }, () => [80, 120, 140]);
+    for (let y = yStart; y < Math.floor(height * 0.94); y += 3) {
+      colors[y * width + 50] = [10, 20, 30];
+    }
+
+    expect(measureVerticalSeam(makeFrame(width, height, colors)).score).toBe(0);
   });
 
   it('detects a low-contrast seam in the storm foreground scan', () => {
@@ -134,7 +171,7 @@ describe('water QA pixel metrics', () => {
     });
 
     expect(seam.score).toBeGreaterThan(MAX_STORM_FOREGROUND_SEAM_SCORE);
-    expect(seam.xTop).toBe(82);
+    expect(Math.abs(seam.xTop - 82)).toBeLessThanOrEqual(1);
   });
 
   it('gates a persistent seam without treating one transient frame as persistent', () => {

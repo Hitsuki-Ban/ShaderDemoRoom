@@ -313,8 +313,7 @@ export function measureVerticalSeam(frame, scan = {
       if (xBottom < xStart || xBottom >= xEnd) {
         continue;
       }
-      let total = 0;
-      let count = 0;
+      const rowScores = [];
 
       for (let y = yStart; y < yEnd; y += 1) {
         const x = Math.round(xTop + slope * (y - yStart));
@@ -327,19 +326,23 @@ export function measureVerticalSeam(frame, scan = {
         const rightIndex = (y * frame.width + x + neighborOffset) * frame.bytesPerPixel;
         let rowScore = 0;
         for (let channel = 0; channel < 3; channel += 1) {
-          const neighborMean = (
-            frame.pixels[leftIndex + channel] + frame.pixels[rightIndex + channel]
-          ) / 2;
-          rowScore += Math.abs(frame.pixels[centerIndex + channel] - neighborMean) / 3;
+          const left = frame.pixels[leftIndex + channel];
+          const right = frame.pixels[rightIndex + channel];
+          const center = frame.pixels[centerIndex + channel];
+          rowScore += Math.min(
+            Math.abs(center - left),
+            Math.abs(center - right),
+          ) / 3;
         }
-        total += rowScore;
-        count += 1;
+        rowScores.push(rowScore);
       }
 
-      if (count === 0) {
+      if (rowScores.length === 0) {
         continue;
       }
-      const score = total / count;
+      rowScores.sort((left, right) => left - right);
+      const continuityIndex = Math.floor((rowScores.length - 1) * 0.4);
+      const score = rowScores[continuityIndex];
       if (score > bestScore) {
         bestScore = score;
         bestXTop = xTop;
