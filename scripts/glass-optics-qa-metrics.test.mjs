@@ -52,10 +52,24 @@ describe('glass optics QA metrics', () => {
     expect(metrics.peakByteP999).toBeGreaterThan(50);
     expect(metrics.halfMaxEquivalentRadius).toBeGreaterThan(0);
     expect(metrics.activeMeanLinear).toBeGreaterThan(0);
+    expect(metrics.focusCoreSamples).toBe(32);
+    expect(metrics.focusCoreLinearMean).toBeGreaterThan(0);
     expect(metrics.plateauCoverage).toBeLessThanOrEqual(metrics.plateauRatio);
     expect(Math.abs(metrics.centroid.x - 0.5)).toBeLessThan(0.05);
     expect(Math.abs(metrics.centroid.y - 5 / 12)).toBeLessThan(0.05);
     expect(metrics.allChannelClipRatio).toBe(0);
+  });
+
+  it('uses a fixed-size focus core independent of footprint cardinality', () => {
+    const off = frame(20, 20);
+    const on = frame(20, 20, (x, y) => (
+      y < 2 && x < 16 ? [200, 200, 200, 255] : [20, 20, 20, 255]
+    ));
+    const metrics = measureCausticsDifference(on, off);
+
+    expect(metrics.positivePixels).toBe(400);
+    expect(metrics.focusCoreSamples).toBe(32);
+    expect(metrics.focusCoreLinearMean).toBeCloseTo(srgbByteToLinear(200), 12);
   });
 
   it('rejects a flat peak even when a dim tail makes the active footprint large', () => {

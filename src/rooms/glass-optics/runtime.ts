@@ -183,6 +183,10 @@ export function glassEnvironmentIntensity(thickness: number) {
   return 1.05 + thickness * 0.28;
 }
 
+export function glassShellOpacity(ior: number) {
+  return Math.min(0.08, 0.03 + (ior - 1) * 0.03);
+}
+
 export function glassSpectralIorOffset(ior: number, dispersion: number) {
   return (ior - 1) * 0.025 * dispersion;
 }
@@ -432,13 +436,14 @@ export function createRoomRuntime(
   const glassShellMaterial = new MeshBasicMaterial({
     color: 0xb9fbff,
     transparent: true,
-    opacity: Math.min(0.08, 0.03 + (settings.ior - 1) * 0.03),
+    opacity: glassShellOpacity(settings.ior),
     wireframe: true,
     blending: AdditiveBlending,
     depthWrite: false,
     toneMapped: false,
   });
   const glassShell = new Mesh(new IcosahedronGeometry(1.365, 3), glassShellMaterial);
+  glassShell.name = 'glass-optics-glass-shell';
   glassShell.renderOrder = 4;
   glassGroup.add(glassShell);
 
@@ -758,7 +763,7 @@ export function createRoomRuntime(
     glassMaterial.roughness = settings.roughness;
     glassMaterial.thickness = settings.thickness;
     glassMaterial.envMapIntensity = glassEnvironmentIntensity(settings.thickness);
-    glassShellMaterial.opacity = Math.min(0.14, 0.05 + (settings.ior - 1) * 0.05);
+    glassShellMaterial.opacity = glassShellOpacity(settings.ior);
     calculateCausticsProfileInto(settings.beamSpread, settings.ior, causticsProfile);
     causticsMaterial.uniforms.uIntensity.value = causticsIntensity(
       settings.showCaustics,

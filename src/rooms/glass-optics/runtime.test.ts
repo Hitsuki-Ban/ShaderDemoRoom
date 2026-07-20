@@ -6,6 +6,7 @@ import {
   CylinderGeometry,
   Group,
   GridHelper,
+  IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
   Mesh,
@@ -34,6 +35,7 @@ import {
   createGlassMaterial,
   createRoomRuntime,
   glassEnvironmentIntensity,
+  glassShellOpacity,
   glassSpectralIorOffset,
   setCausticsDirectionFromOutgoing,
 } from './runtime';
@@ -561,6 +563,31 @@ describe('glass optics runtime contracts', () => {
     runtime.dispose();
   });
 
+  it('keeps shell opacity on one IOR-only curve across unrelated updates', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const shell = objects.find((object): object is Mesh<IcosahedronGeometry, MeshBasicMaterial> =>
+      object instanceof Mesh
+      && object.name === 'glass-optics-glass-shell'
+      && object.material instanceof MeshBasicMaterial);
+    expect(shell).toBeDefined();
+    expect(shell?.material.opacity).toBe(glassShellOpacity(glassOpticsDefaults.ior));
+
+    runtime.updateSettings({
+      ...glassOpticsDefaults,
+      dispersion: 0.82,
+      roughness: 0.31,
+      thickness: 2.1,
+    });
+    expect(shell?.material.opacity).toBe(glassShellOpacity(glassOpticsDefaults.ior));
+
+    runtime.updateSettings({
+      ...glassOpticsDefaults,
+      ior: 2.4,
+    });
+    expect(shell?.material.opacity).toBe(glassShellOpacity(2.4));
+    runtime.dispose();
+  });
+
   it('updates the physical material dispersion directly from settings', () => {
     const { objects, runtime } = createRuntimeHarness();
     const material = objects
@@ -636,6 +663,7 @@ describe('glass optics runtime contracts', () => {
       expect(batch.count).toBe(8);
       expect(batch.geometry).toBeInstanceOf(CylinderGeometry);
       expect((batch.geometry as CylinderGeometry).parameters.radialSegments).toBe(3);
+      expect((batch.geometry as CylinderGeometry).parameters.heightSegments).toBe(1);
       expect(batch.material).toBeInstanceOf(MeshBasicMaterial);
       expect(batch.material.vertexColors).toBe(false);
       expect(batch.frustumCulled).toBe(false);
