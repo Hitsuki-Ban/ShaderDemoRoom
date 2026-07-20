@@ -55,16 +55,16 @@
 - after: [`../captures/t-go-06-after.png`](../captures/t-go-06-after.png)
 - calibration target close-up: [`../captures/t-go-06-reference-panel-closeup.png`](../captures/t-go-06-reference-panel-closeup.png)
 - Glass QA: [`../captures/t-go-06-glass-qa-2026-07-21.json`](../captures/t-go-06-glass-qa-2026-07-21.json) — 16 states pass、default `15 calls / 5 textures / 23 geometries / 14 programs / 5,542 triangles`、25% glass-disc local contrast `21.04`、maximum roughness broad contrast `11.39`、静止2回差分 `maxDelta 0`、IOR=1 dispersion collapse `meanDelta 0`、180-frame drag `15 → 15 calls / 23 → 23 geometries / 5 → 5 textures / 15 → 15 warmed programs / forbidden allocation 0`。
-- performance: [`../captures/t-go-06-telemetry-2026-07-21.json`](../captures/t-go-06-telemetry-2026-07-21.json) — 同一 RTX 4070 Ti / D3D11 で T-GO-05 の公開版と候補を5組交錯・交互測定し、paired median regression **−6.12%** (許容上限 +5%)。候補の system Chrome median `89.70 FPS`、SwiftShader median `5.95 FPS`、いずれも 15 calls。
+- performance: [`../captures/t-go-06-telemetry-2026-07-21.json`](../captures/t-go-06-telemetry-2026-07-21.json) — candidate `1eb074086f745aac45bd8ac15203353c48a6172f` と T-GO-05 baseline `c48b021e1ea8e125b06210afaad55e1520afd648` を、同一 RTX 4070 Ti / D3D11 で5組交錯・交互測定し、paired median regression **−16.16%** (許容上限 +5%)。候補の system Chrome median `164.77 FPS`、SwiftShader median `6.19 FPS`、いずれも 15 calls。
 
 ### 検証
 
 - `pnpm build` ✅
-- `pnpm test` ✅ — 35 files / 271 tests
+- `pnpm test` ✅ — 35 files / 273 tests
 - `pnpm lint` ✅
 - `pnpm typecheck` ✅
 - `pnpm exhibits:check` ✅
 - `pnpm qa:visual` ✅ — desktop/mobile 14 captures、console errors 0、overflow/telemetry/i18n/URL-state gates pass
 - `pnpm qa:glass` ✅ — 16 states、default 15 calls、stable geometry/resources
-- `pnpm qa:telemetry-reference` ✅ — paired overhead gate −6.12%
+- `pnpm qa:telemetry-reference` ✅ — paired overhead gate −16.16%、candidate/baseline の full commit SHA を記録
 - `pnpm qa:renderer` ⚠️ — Glass は8回すべて 15 calls (`6.05–6.24 FPS`) で安定。未変更の Voxel Water が同じ SwiftShader run で mean `13.86 FPS` となり、歴史基準の 10% FPS budget だけを下回ったためコマンド全体は fail。本票の Glass topology / lifecycle 回帰は検出されていない。
