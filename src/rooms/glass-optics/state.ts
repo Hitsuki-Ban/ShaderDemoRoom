@@ -11,6 +11,7 @@ export const glassOpticsDomains = {
   lightZ: { min: -6, max: 6, step: 0.01 },
   beamSpread: { min: 0.05, max: 0.9, step: 0.01 },
   ior: { min: 1, max: 2.4, step: 0.01 },
+  dispersion: { min: 0, max: 1, step: 0.01 },
   roughness: { min: 0, max: 0.55, step: 0.01 },
   thickness: { min: 0.2, max: 2.4, step: 0.01 },
 } as const satisfies Record<
@@ -24,6 +25,7 @@ export const glassOpticsDefaults: DeepReadonly<GlassOpticsSettings> = {
   lightZ: 1,
   beamSpread: 0.34,
   ior: 1.48,
+  dispersion: 0.45,
   roughness: 0.04,
   thickness: 1.25,
   autoRotate: true,
@@ -39,6 +41,7 @@ export const glassOpticsFocusPreset: DeepReadonly<Partial<GlassOpticsSettings>> 
 
 export const glassOpticsCrystalPreset: DeepReadonly<Partial<GlassOpticsSettings>> = {
   ior: 1.72,
+  dispersion: 0.55,
   thickness: 1.8,
   roughness: 0.01,
   showCaustics: true,

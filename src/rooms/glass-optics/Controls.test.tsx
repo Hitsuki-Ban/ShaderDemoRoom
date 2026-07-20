@@ -9,6 +9,38 @@ import {
 } from './state';
 
 describe('glass optics controls', () => {
+  it.each([
+    ['en', 'Dispersion'],
+    ['zh-CN', '色分散'],
+  ] as const)('exposes the dispersion domain and localized label in %s', (locale, label) => {
+    const onPatch = vi.fn();
+
+    render(
+      <GlassOpticsControls
+        settings={glassOpticsDefaults}
+        onChange={vi.fn()}
+        onPatch={onPatch}
+        onReset={vi.fn()}
+        locale={locale}
+        t={createTranslator(locale)}
+      />,
+    );
+
+    const valueOutput = screen.getByRole('status', {
+      name: new RegExp(`^${label} 0[.,]45$`),
+    });
+    const slider = valueOutput.closest('label')?.querySelector('input[type="range"]');
+    expect(slider).not.toBeNull();
+    if (!slider) throw new Error('Dispersion slider is missing from its localized control.');
+    expect(slider).toHaveAttribute('min', '0');
+    expect(slider).toHaveAttribute('max', '1');
+    expect(slider).toHaveAttribute('step', '0.01');
+    expect(slider).toHaveValue('0.45');
+
+    fireEvent.change(slider, { target: { value: '0' } });
+    expect(onPatch).toHaveBeenCalledWith({ dispersion: 0 });
+  });
+
   it('localizes preset actions without changing their payloads', () => {
     const onPatch = vi.fn();
 

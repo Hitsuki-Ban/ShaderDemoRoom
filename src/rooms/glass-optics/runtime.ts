@@ -4,7 +4,6 @@ import {
   BoxGeometry,
   Color,
   CylinderGeometry,
-  DataTexture,
   DirectionalLight,
   DoubleSide,
   DynamicDrawUsage,
@@ -13,7 +12,6 @@ import {
   Group,
   IcosahedronGeometry,
   InstancedMesh,
-  LinearFilter,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -24,12 +22,9 @@ import {
   PlaneGeometry,
   PointLight,
   Quaternion,
-  RGBAFormat,
   Scene,
   ShaderMaterial,
   SphereGeometry,
-  SRGBColorSpace,
-  UnsignedByteType,
   Vector2,
   Vector3,
   type Material,
@@ -70,11 +65,30 @@ function disposeObject(object: Object3D) {
   });
 }
 
-const BEAM_INSTANCE_COUNT = 4;
+const BEAM_INSTANCE_COUNT = 8;
 const BEAM_INCOMING_INDEX = 0;
 const BEAM_REFLECTED_INDEX = 1;
-const BEAM_INTERNAL_INDEX = 2;
-const BEAM_OUTGOING_INDEX = 3;
+const BEAM_INTERNAL_RED_INDEX = 2;
+const BEAM_INTERNAL_GREEN_INDEX = 3;
+const BEAM_INTERNAL_BLUE_INDEX = 4;
+const BEAM_OUTGOING_RED_INDEX = 5;
+const BEAM_OUTGOING_GREEN_INDEX = 6;
+const BEAM_OUTGOING_BLUE_INDEX = 7;
+
+const SPECTRAL_GREEN_INDEX = 1;
+const SPECTRAL_PATH_COUNT = 3;
+const SPECTRAL_CORE_RADIUS = 0.02;
+const SPECTRAL_GLOW_RADIUS = 0.065;
+// The RGB centerlines and endpoints stay on the exact r184 IOR paths. Rotating
+// the triangular cross-section only gives overlapping rays a readable teaching
+// cue; it cannot amplify, offset, or otherwise alter the traced path.
+// At the adopted default, the blades land at -40/0/+40 degrees: evenly spaced
+// within the triangle's 120-degree rotational symmetry. The teaching cue caps
+// there while the exact physical centerlines continue to separate with IOR.
+const SPECTRAL_ADOPTED_CROSS_SECTION_ROLL = Math.PI * 40 / 180;
+const SPECTRAL_ADOPTED_IOR_OFFSET = (
+  glassOpticsDefaults.ior - 1
+) * 0.025 * glassOpticsDefaults.dispersion;
 
 const GLASS_STAGE_BACKGROUND = 0x03070b;
 const GLASS_STAGE_FOG = 0x03070b;
@@ -169,6 +183,10 @@ export function glassEnvironmentIntensity(thickness: number) {
   return 1.05 + thickness * 0.28;
 }
 
+export function glassSpectralIorOffset(ior: number, dispersion: number) {
+  return (ior - 1) * 0.025 * dispersion;
+}
+
 function createDarkFieldEnvironment() {
   const environmentScene = new Scene();
   environmentScene.name = 'glass-optics-darkfield-environment';
@@ -224,40 +242,6 @@ function createDarkFieldEnvironment() {
   return environmentScene;
 }
 
-function createRadialBackgroundTexture() {
-  const width = 192;
-  const height = 128;
-  const data = new Uint8Array(width * height * 4);
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const normalizedX = (x / (width - 1) - 0.48) * 1.12;
-      const normalizedY = (y / (height - 1) - 0.54) * 0.92;
-      const radial = Math.max(0, 1 - Math.hypot(normalizedX, normalizedY) / 0.74);
-      const halo = radial * radial * (3 - 2 * radial);
-      const warmBias = Math.max(0, normalizedX) * halo;
-      const offset = (y * width + x) * 4;
-      data[offset] = Math.round(3 + halo * 5 + warmBias * 4);
-      data[offset + 1] = Math.round(7 + halo * 17 + warmBias * 2);
-      data[offset + 2] = Math.round(11 + halo * 25);
-      data[offset + 3] = 255;
-    }
-  }
-  const texture = new DataTexture(
-    data,
-    width,
-    height,
-    RGBAFormat,
-    UnsignedByteType,
-  );
-  texture.name = 'glass-optics-radial-background-texture';
-  texture.colorSpace = SRGBColorSpace;
-  texture.magFilter = LinearFilter;
-  texture.minFilter = LinearFilter;
-  texture.generateMipmaps = false;
-  texture.needsUpdate = true;
-  return texture;
-}
-
 export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>) {
   const material = new MeshPhysicalMaterial({
     color: 0xe8fdff,
@@ -266,19 +250,21 @@ export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>)
     transmission: 1,
     thickness: settings.thickness,
     ior: settings.ior,
-    transparent: true,
+    dispersion: settings.dispersion,
+    transparent: false,
     opacity: 1,
     reflectivity: 0.92,
     envMapIntensity: glassEnvironmentIntensity(settings.thickness),
     clearcoat: 1,
     clearcoatRoughness: 0.02,
-    attenuationColor: 0x9ff4ff,
+    attenuationColor: 0xffffff,
     attenuationDistance: 4.2,
     specularIntensity: 1,
     specularColor: 0xffffff,
   });
 
   material.ior = settings.ior;
+  material.dispersion = settings.dispersion;
   return material;
 }
 
@@ -302,18 +288,29 @@ export function createRoomRuntime(
   const aimPoint = new Vector3();
   const aimDirection = new Vector3();
   const reflectedEnd = new Vector3();
-  const lightPath = createGlassLightPathResult();
-  const lightPathWorkspace = createGlassLightPathWorkspace();
+  const spectralLightPaths = [
+    createGlassLightPathResult(),
+    createGlassLightPathResult(),
+    createGlassLightPathResult(),
+  ];
+  const spectralLightPathWorkspaces = [
+    createGlassLightPathWorkspace(),
+    createGlassLightPathWorkspace(),
+    createGlassLightPathWorkspace(),
+  ];
+  const lightPath = spectralLightPaths[SPECTRAL_GREEN_INDEX];
   const beamMidpoint = new Vector3();
   const beamDirection = new Vector3();
   const beamScale = new Vector3();
   const beamQuaternion = new Quaternion();
+  const beamRollQuaternion = new Quaternion();
   const beamMatrix = new Matrix4();
   const beamYAxis = new Vector3(0, 1, 0);
-  const incomingColor = new Color(0x8deeff);
+  const incomingColor = new Color(0xffffff);
   const reflectedColor = new Color(0xffc067);
-  const internalColor = new Color(0xf8ffff);
-  const outgoingColor = new Color(0xb8f8ff);
+  const spectralRed = new Color(1, 0, 0);
+  const spectralGreen = new Color(0, 1, 0);
+  const spectralBlue = new Color(0, 0, 1);
   const workingBeamColor = new Color();
   const causticsDirection = new Vector2(1, 0);
   const causticsProfile: CausticsProfile = {
@@ -346,21 +343,6 @@ export function createRoomRuntime(
   );
   disposeObject(darkFieldEnvironment);
   scene.environment = environment.texture;
-
-  const backgroundTexture = createRadialBackgroundTexture();
-  const backgroundMaterial = new MeshBasicMaterial({
-    map: backgroundTexture,
-    transparent: true,
-    opacity: 1,
-    depthWrite: false,
-    depthTest: true,
-    toneMapped: false,
-  });
-  const backgroundPlane = new Mesh(new PlaneGeometry(30, 18), backgroundMaterial);
-  backgroundPlane.name = 'glass-optics-radial-background';
-  backgroundPlane.position.set(4.2, 2.8, -4.8);
-  backgroundPlane.renderOrder = 0;
-  scene.add(backgroundPlane);
 
   const ambient = new AmbientLight(0x8fb8ff, 0.62);
   const keyLight = new DirectionalLight(0xffffff, 1.55);
@@ -402,32 +384,37 @@ export function createRoomRuntime(
       }
     `,
     fragmentShader: `
-      uniform float uTime;
       varying vec2 vUv;
 
       void main() {
-        float scan = fract((vUv.x + uTime * 0.018) * 7.0);
-        float stripe = smoothstep(0.18, 0.0, abs(scan - 0.5));
-        float centerX = smoothstep(0.018, 0.0, abs(vUv.x - 0.5));
-        float centerY = smoothstep(0.014, 0.0, abs(vUv.y - 0.48));
-        float edge = 1.0 - smoothstep(0.0, 0.08, min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y)));
-        vec3 cyan = vec3(0.24, 0.92, 1.0);
-        vec3 amber = vec3(1.0, 0.72, 0.28);
-        vec3 color = mix(cyan, amber, smoothstep(0.12, 0.9, vUv.x));
-        float mask = 0.1 + stripe * 0.42 + max(centerX, centerY) * 0.64 + edge * 0.24;
-        gl_FragColor = vec4(color * mask, mask * 0.58);
+        float phase = abs(fract(vUv.x * 12.0) - 0.5);
+        float antialiasWidth = max(fwidth(phase) * 0.5, 0.001);
+        float stripe = 1.0 - smoothstep(
+          0.025 - antialiasWidth,
+          0.025 + antialiasWidth,
+          phase
+        );
+        stripe *= smoothstep(0.16, 0.22, vUv.y);
+        float edgeDistance = min(
+          min(vUv.x, 1.0 - vUv.x),
+          min(vUv.y, 1.0 - vUv.y)
+        );
+        float edge = 1.0 - smoothstep(0.0, 0.025, edgeDistance);
+        vec3 dark = vec3(0.0);
+        vec3 neutral = vec3(1.0);
+        vec3 color = mix(dark, neutral, stripe);
+        color += vec3(0.05, 0.14, 0.16) * edge;
+        gl_FragColor = vec4(color, 1.0);
       }
     `,
-    uniforms: {
-      uTime: { value: 0 },
-    },
-    transparent: true,
+    transparent: false,
     depthWrite: false,
     side: DoubleSide,
   });
   referenceMaterial.toneMapped = false;
-  const referencePanel = new Mesh(new PlaneGeometry(3.3, 2.35), referenceMaterial);
-  referencePanel.position.set(0, 1.35, -1.85);
+  const referencePanel = new Mesh(new PlaneGeometry(3.8, 2.7), referenceMaterial);
+  referencePanel.name = 'glass-optics-dispersion-reference';
+  referencePanel.position.set(1.55, 1.0, -1.85);
   referencePanel.renderOrder = 1;
   root.add(referencePanel);
 
@@ -445,7 +432,7 @@ export function createRoomRuntime(
   const glassShellMaterial = new MeshBasicMaterial({
     color: 0xb9fbff,
     transparent: true,
-    opacity: Math.min(0.14, 0.05 + (settings.ior - 1) * 0.05),
+    opacity: Math.min(0.08, 0.03 + (settings.ior - 1) * 0.03),
     wireframe: true,
     blending: AdditiveBlending,
     depthWrite: false,
@@ -500,12 +487,12 @@ export function createRoomRuntime(
     toneMapped: false,
   });
   const coreBeams = new InstancedMesh(
-    new CylinderGeometry(1, 1, 1, 8, 1, false),
+    new CylinderGeometry(1, 1, 1, 3, 1, false),
     coreBeamMaterial,
     BEAM_INSTANCE_COUNT,
   );
   const glowBeams = new InstancedMesh(
-    new CylinderGeometry(1, 1, 1, 8, 1, false),
+    new CylinderGeometry(1, 1, 1, 3, 1, false),
     glowBeamMaterial,
     BEAM_INSTANCE_COUNT,
   );
@@ -524,12 +511,20 @@ export function createRoomRuntime(
   }
   coreBeams.setColorAt(BEAM_INCOMING_INDEX, incomingColor);
   coreBeams.setColorAt(BEAM_REFLECTED_INDEX, reflectedColor);
-  coreBeams.setColorAt(BEAM_INTERNAL_INDEX, internalColor);
-  coreBeams.setColorAt(BEAM_OUTGOING_INDEX, outgoingColor);
+  coreBeams.setColorAt(BEAM_INTERNAL_RED_INDEX, spectralRed);
+  coreBeams.setColorAt(BEAM_INTERNAL_GREEN_INDEX, spectralGreen);
+  coreBeams.setColorAt(BEAM_INTERNAL_BLUE_INDEX, spectralBlue);
+  coreBeams.setColorAt(BEAM_OUTGOING_RED_INDEX, spectralRed);
+  coreBeams.setColorAt(BEAM_OUTGOING_GREEN_INDEX, spectralGreen);
+  coreBeams.setColorAt(BEAM_OUTGOING_BLUE_INDEX, spectralBlue);
   glowBeams.setColorAt(BEAM_INCOMING_INDEX, incomingColor);
   glowBeams.setColorAt(BEAM_REFLECTED_INDEX, reflectedColor);
-  glowBeams.setColorAt(BEAM_INTERNAL_INDEX, internalColor);
-  glowBeams.setColorAt(BEAM_OUTGOING_INDEX, outgoingColor);
+  glowBeams.setColorAt(BEAM_INTERNAL_RED_INDEX, spectralRed);
+  glowBeams.setColorAt(BEAM_INTERNAL_GREEN_INDEX, spectralGreen);
+  glowBeams.setColorAt(BEAM_INTERNAL_BLUE_INDEX, spectralBlue);
+  glowBeams.setColorAt(BEAM_OUTGOING_RED_INDEX, spectralRed);
+  glowBeams.setColorAt(BEAM_OUTGOING_GREEN_INDEX, spectralGreen);
+  glowBeams.setColorAt(BEAM_OUTGOING_BLUE_INDEX, spectralBlue);
   root.add(glowBeams, coreBeams);
 
   const markerMaterial = new MeshBasicMaterial({
@@ -611,6 +606,8 @@ export function createRoomRuntime(
     end: Vector3,
     coreRadius: number,
     glowRadius: number,
+    crossSectionRoll = 0,
+    crossSectionAspect = 1,
   ) => {
     beamDirection.copy(end).sub(start);
     const length = beamDirection.length();
@@ -621,12 +618,16 @@ export function createRoomRuntime(
     beamDirection.multiplyScalar(1 / length);
     beamMidpoint.copy(start).add(end).multiplyScalar(0.5);
     beamQuaternion.setFromUnitVectors(beamYAxis, beamDirection);
+    if (crossSectionRoll !== 0) {
+      beamRollQuaternion.setFromAxisAngle(beamYAxis, crossSectionRoll);
+      beamQuaternion.multiply(beamRollQuaternion);
+    }
 
-    beamScale.set(coreRadius, length, coreRadius);
+    beamScale.set(coreRadius, length, coreRadius * crossSectionAspect);
     beamMatrix.compose(beamMidpoint, beamQuaternion, beamScale);
     coreBeams.setMatrixAt(index, beamMatrix);
 
-    beamScale.set(glowRadius, length, glowRadius);
+    beamScale.set(glowRadius, length, glowRadius * crossSectionAspect);
     beamMatrix.compose(beamMidpoint, beamQuaternion, beamScale);
     glowBeams.setMatrixAt(index, beamMatrix);
   };
@@ -644,13 +645,23 @@ export function createRoomRuntime(
       aimOffsetAxis,
       aimPoint,
     );
-    traceGlassRayInto(
-      sourcePosition,
-      aimDirection,
+    const spectralIorOffset = glassSpectralIorOffset(
       settings.ior,
-      lightPath,
-      lightPathWorkspace,
+      settings.dispersion,
     );
+    const spectralCrossSectionRoll = Math.min(
+      spectralIorOffset / SPECTRAL_ADOPTED_IOR_OFFSET,
+      1,
+    ) * SPECTRAL_ADOPTED_CROSS_SECTION_ROLL;
+    for (let index = 0; index < SPECTRAL_PATH_COUNT; index += 1) {
+      traceGlassRayInto(
+        sourcePosition,
+        aimDirection,
+        settings.ior + (index - SPECTRAL_GREEN_INDEX) * spectralIorOffset,
+        spectralLightPaths[index],
+        spectralLightPathWorkspaces[index],
+      );
+    }
 
     source.position.copy(sourcePosition);
     sourceHalo.position.copy(sourcePosition);
@@ -683,27 +694,36 @@ export function createRoomRuntime(
     } else {
       hideBeamSegment(BEAM_REFLECTED_INDEX);
     }
-    if ((lightPath.segmentMask & GLASS_SEGMENT_INTERNAL) !== 0) {
-      updateBeamSegment(
-        BEAM_INTERNAL_INDEX,
-        lightPath.entryPoint,
-        lightPath.exitPoint,
-        0.018 * radiusScale,
-        0.07 * radiusScale,
-      );
-    } else {
-      hideBeamSegment(BEAM_INTERNAL_INDEX);
-    }
-    if ((lightPath.segmentMask & GLASS_SEGMENT_OUTGOING) !== 0) {
-      updateBeamSegment(
-        BEAM_OUTGOING_INDEX,
-        lightPath.exitPoint,
-        lightPath.floorHit,
-        0.018 * radiusScale,
-        0.07 * radiusScale,
-      );
-    } else {
-      hideBeamSegment(BEAM_OUTGOING_INDEX);
+    for (let index = 0; index < SPECTRAL_PATH_COUNT; index += 1) {
+      const spectralPath = spectralLightPaths[index];
+      const internalIndex = BEAM_INTERNAL_RED_INDEX + index;
+      const outgoingIndex = BEAM_OUTGOING_RED_INDEX + index;
+      if ((spectralPath.segmentMask & GLASS_SEGMENT_INTERNAL) !== 0) {
+        updateBeamSegment(
+          internalIndex,
+          spectralPath.entryPoint,
+          spectralPath.exitPoint,
+          SPECTRAL_CORE_RADIUS * radiusScale,
+          SPECTRAL_GLOW_RADIUS * radiusScale,
+          (index - SPECTRAL_GREEN_INDEX) * spectralCrossSectionRoll,
+          0.35,
+        );
+      } else {
+        hideBeamSegment(internalIndex);
+      }
+      if ((spectralPath.segmentMask & GLASS_SEGMENT_OUTGOING) !== 0) {
+        updateBeamSegment(
+          outgoingIndex,
+          spectralPath.exitPoint,
+          spectralPath.floorHit,
+          SPECTRAL_CORE_RADIUS * radiusScale,
+          SPECTRAL_GLOW_RADIUS * radiusScale,
+          (index - SPECTRAL_GREEN_INDEX) * spectralCrossSectionRoll,
+          0.35,
+        );
+      } else {
+        hideBeamSegment(outgoingIndex);
+      }
     }
     coreBeams.instanceMatrix.needsUpdate = true;
     glowBeams.instanceMatrix.needsUpdate = true;
@@ -734,6 +754,7 @@ export function createRoomRuntime(
 
   const updateMaterial = () => {
     glassMaterial.ior = settings.ior;
+    glassMaterial.dispersion = settings.dispersion;
     glassMaterial.roughness = settings.roughness;
     glassMaterial.thickness = settings.thickness;
     glassMaterial.envMapIntensity = glassEnvironmentIntensity(settings.thickness);
@@ -756,7 +777,6 @@ export function createRoomRuntime(
 
   const applyMotionPhase = () => {
     causticsMaterial.uniforms.uTime.value = motionElapsed;
-    referenceMaterial.uniforms.uTime.value = motionElapsed;
     sourceMaterial.color.setHSL(
       0.1,
       0.95,
@@ -780,6 +800,7 @@ export function createRoomRuntime(
         || nextSettings.lightY !== settings.lightY
         || nextSettings.lightZ !== settings.lightZ
         || nextSettings.ior !== settings.ior
+        || nextSettings.dispersion !== settings.dispersion
         || nextSettings.beamSpread !== settings.beamSpread;
       settings = nextSettings;
       if (!settings.autoRotate) applyCanonicalPose();
@@ -807,10 +828,7 @@ export function createRoomRuntime(
     },
     dispose() {
       disposeObject(root);
-      disposeObject(backgroundPlane);
-      backgroundTexture.dispose();
       [
-        referenceMaterial,
         glassMaterial,
         glassShellMaterial,
         sourceMaterial,

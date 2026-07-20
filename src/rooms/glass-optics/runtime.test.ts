@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AdditiveBlending,
   Camera,
+  Color,
   CylinderGeometry,
-  DataTexture,
   Group,
   GridHelper,
   InstancedMesh,
@@ -34,6 +34,7 @@ import {
   createGlassMaterial,
   createRoomRuntime,
   glassEnvironmentIntensity,
+  glassSpectralIorOffset,
   setCausticsDirectionFromOutgoing,
 } from './runtime';
 import causticsFragmentShader from './caustics.frag.glsl?raw';
@@ -132,6 +133,28 @@ function readInstanceScale(mesh: InstancedMesh, index: number) {
   matrix.fromArray(mesh.instanceMatrix.array, index * 16);
   matrix.decompose(position, mesh.quaternion.clone(), scale);
   return scale;
+}
+
+function readInstanceMatrix(mesh: InstancedMesh, index: number) {
+  return Array.from(mesh.instanceMatrix.array.slice(index * 16, index * 16 + 16));
+}
+
+function readInstanceCenterline(mesh: InstancedMesh, index: number) {
+  const matrix = readInstanceMatrix(mesh, index);
+  return [
+    matrix[4],
+    matrix[5],
+    matrix[6],
+    matrix[12],
+    matrix[13],
+    matrix[14],
+  ];
+}
+
+function readInstanceColor(mesh: InstancedMesh, index: number) {
+  const color = new Color();
+  mesh.getColorAt(index, color);
+  return color.toArray();
 }
 
 function isInstanceZeroScaled(mesh: InstancedMesh, index: number) {
@@ -355,6 +378,67 @@ describe('glass optics runtime contracts', () => {
     runtime.dispose();
   });
 
+  it('drives markers, reflected intensity, and caustics exclusively from the G path', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const batches = findBeamBatches(objects);
+    const source = new Vector3(
+      glassOpticsDefaults.lightX,
+      glassOpticsDefaults.lightY,
+      glassOpticsDefaults.lightZ,
+    );
+    const aimDirection = new Vector3();
+    calculateGlassAimDirectionInto(
+      source,
+      aimDirection,
+      new Vector3(),
+      new Vector3(),
+      new Vector3(),
+    );
+    const greenPath = createGlassLightPathResult();
+    traceGlassRayInto(
+      source,
+      aimDirection,
+      glassOpticsDefaults.ior,
+      greenPath,
+      createGlassLightPathWorkspace(),
+    );
+    const redPath = createGlassLightPathResult();
+    traceGlassRayInto(
+      source,
+      aimDirection,
+      glassOpticsDefaults.ior - glassSpectralIorOffset(
+        glassOpticsDefaults.ior,
+        glassOpticsDefaults.dispersion,
+      ),
+      redPath,
+      createGlassLightPathWorkspace(),
+    );
+    expect(redPath.reflectance).not.toBe(greenPath.reflectance);
+
+    const entryMarker = objects.find((object) =>
+      object.name === 'glass-optics-entry-marker')!;
+    const exitMarker = objects.find((object) =>
+      object.name === 'glass-optics-exit-marker')!;
+    const floorMarker = objects.find((object) =>
+      object.name === 'glass-optics-floor-marker')!;
+    const caustics = findCaustics(objects);
+    expect(entryMarker.position.toArray()).toEqual(greenPath.entryPoint.toArray());
+    expect(exitMarker.position.toArray()).toEqual(greenPath.exitPoint.toArray());
+    expect(floorMarker.position.toArray()).toEqual(greenPath.floorHit.toArray());
+    expect([caustics.position.x, caustics.position.z])
+      .toEqual([greenPath.floorHit.x, greenPath.floorHit.z]);
+
+    const expectedReflectionColor = new Color(0xffc067)
+      .multiplyScalar(greenPath.reflectance * 8)
+      .toArray();
+    for (const batch of batches) {
+      readInstanceColor(batch, 1).forEach((channel, index) => {
+        expect(channel).toBeCloseTo(expectedReflectionColor[index]!, 7);
+      });
+    }
+    runtime.dispose();
+  });
+
   it('stops caustics time when motion scale is zero', () => {
     const { objects, runtime } = createRuntimeHarness();
     const material = findCaustics(objects).material;
@@ -386,9 +470,12 @@ describe('glass optics runtime contracts', () => {
     expect(material).toBeInstanceOf(MeshPhysicalMaterial);
     expect(material.transmission).toBe(1);
     expect(material.ior).toBe(glassOpticsDefaults.ior);
+    expect(material.dispersion).toBe(glassOpticsDefaults.dispersion);
     expect(material.thickness).toBe(glassOpticsDefaults.thickness);
     expect(material.roughness).toBe(glassOpticsDefaults.roughness);
+    expect(material.transparent).toBe(false);
     expect(material.opacity).toBe(1);
+    expect(material.attenuationColor.getHex()).toBe(0xffffff);
     expect(material.clearcoat).toBe(1);
     expect(material.attenuationDistance).toBeGreaterThan(0);
     expect(material.envMapIntensity).toBe(
@@ -423,23 +510,24 @@ describe('glass optics runtime contracts', () => {
     expect(environmentTarget.dispose).toHaveBeenCalledTimes(1);
   });
 
-  it('builds one transparent radial backdrop over a subdued reflective floor', () => {
+  it('builds one sparse opaque dispersion reference over a subdued reflective floor', () => {
     const { objects, runtime } = createRuntimeHarness();
-    const background = objects.find((object) =>
-      object.name === 'glass-optics-radial-background');
+    const reference = objects.find((object) =>
+      object.name === 'glass-optics-dispersion-reference');
     const floor = objects.find((object) =>
       object.name === 'glass-optics-reflective-floor');
     const grid = objects.find((object) =>
       object.name === 'glass-optics-subdued-grid');
 
-    expect(background).toBeInstanceOf(Mesh);
-    expect((background as Mesh).material).toBeInstanceOf(MeshBasicMaterial);
-    const backgroundMaterial = (background as Mesh).material as MeshBasicMaterial;
-    expect(backgroundMaterial.transparent).toBe(true);
-    expect(backgroundMaterial.opacity).toBe(1);
-    expect(backgroundMaterial.depthWrite).toBe(false);
-    expect(backgroundMaterial.depthTest).toBe(true);
-    expect(backgroundMaterial.map).toBeInstanceOf(DataTexture);
+    expect(reference).toBeInstanceOf(Mesh);
+    expect((reference as Mesh).material).toBeInstanceOf(ShaderMaterial);
+    const referenceMaterial = (reference as Mesh).material as ShaderMaterial;
+    expect(referenceMaterial.transparent).toBe(false);
+    expect(referenceMaterial.depthWrite).toBe(false);
+    expect(referenceMaterial.fragmentShader).toContain('vUv.x * 12.0');
+    expect(referenceMaterial.fragmentShader).toContain('vec3 neutral');
+    expect(objects.some((object) =>
+      object.name === 'glass-optics-radial-background')).toBe(false);
 
     expect(floor).toBeInstanceOf(Mesh);
     expect((floor as Mesh).material).toBeInstanceOf(MeshStandardMaterial);
@@ -473,6 +561,23 @@ describe('glass optics runtime contracts', () => {
     runtime.dispose();
   });
 
+  it('updates the physical material dispersion directly from settings', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const material = objects
+      .filter((object): object is Mesh => object instanceof Mesh)
+      .map((mesh) => mesh.material)
+      .find((candidate): candidate is MeshPhysicalMaterial =>
+        candidate instanceof MeshPhysicalMaterial)!;
+
+    expect(material.dispersion).toBe(glassOpticsDefaults.dispersion);
+    runtime.updateSettings({
+      ...glassOpticsDefaults,
+      dispersion: 0.82,
+    });
+    expect(material.dispersion).toBe(0.82);
+    runtime.dispose();
+  });
+
   it('holds every animated stage element at zero phase when auto rotate is off', () => {
     const { objects, runtime } = createRuntimeHarness({
       ...glassOpticsDefaults,
@@ -491,7 +596,7 @@ describe('glass optics runtime contracts', () => {
     runtime.render({ elapsed: 15, delta: 10 });
     expect(root.rotation.y).toBe(0);
     expect(glassGroup.rotation.toArray()).toEqual([0, 0, 0, 'XYZ']);
-    expect(animatedMaterials).toHaveLength(2);
+    expect(animatedMaterials).toHaveLength(1);
     expect(animatedMaterials.every((material) => material.uniforms.uTime.value === 0)).toBe(true);
     runtime.dispose();
   });
@@ -523,13 +628,14 @@ describe('glass optics runtime contracts', () => {
     expectPresetWithinDomains(glassOpticsCrystalPreset);
   });
 
-  it('uses exactly two permanent four-slot instanced beam batches', () => {
+  it('uses exactly two permanent eight-slot spectral beam batches', () => {
     const { objects, runtime } = createRuntimeHarness();
     const batches = findBeamBatches(objects);
 
     for (const batch of batches) {
-      expect(batch.count).toBe(4);
+      expect(batch.count).toBe(8);
       expect(batch.geometry).toBeInstanceOf(CylinderGeometry);
+      expect((batch.geometry as CylinderGeometry).parameters.radialSegments).toBe(3);
       expect(batch.material).toBeInstanceOf(MeshBasicMaterial);
       expect(batch.material.vertexColors).toBe(false);
       expect(batch.frustumCulled).toBe(false);
@@ -538,9 +644,78 @@ describe('glass optics runtime contracts', () => {
       for (let index = 0; index < batch.count; index += 1) {
         expect(readInstanceScale(batch, index).y).toBeGreaterThan(0);
       }
+      expect(readInstanceColor(batch, 0)).toEqual([1, 1, 1]);
+      expect(readInstanceColor(batch, 2)).toEqual([1, 0, 0]);
+      expect(readInstanceColor(batch, 3)).toEqual([0, 1, 0]);
+      expect(readInstanceColor(batch, 4)).toEqual([0, 0, 1]);
+      expect(readInstanceColor(batch, 5)).toEqual([1, 0, 0]);
+      expect(readInstanceColor(batch, 6)).toEqual([0, 1, 0]);
+      expect(readInstanceColor(batch, 7)).toEqual([0, 0, 1]);
+      expect(readInstanceScale(batch, 2).z)
+        .toBeCloseTo(readInstanceScale(batch, 2).x * 0.35, 7);
     }
 
     runtime.dispose();
+  });
+
+  it('uses the exact three r184 spectral IOR offset without beam-spread coupling', () => {
+    expect(glassSpectralIorOffset(1.48, 0.45))
+      .toBe((1.48 - 1) * 0.025 * 0.45);
+    expect(glassSpectralIorOffset(2.4, 0.55))
+      .toBe((2.4 - 1) * 0.025 * 0.55);
+    expect(glassSpectralIorOffset(1, 1)).toBe(0);
+    expect(glassSpectralIorOffset(2.4, 0)).toBe(0);
+  });
+
+  it.each([
+    { ior: glassOpticsDefaults.ior, dispersion: 0 },
+    { ior: 1, dispersion: glassOpticsDefaults.dispersion },
+  ])('collapses all RGB path matrices exactly at ior=$ior dispersion=$dispersion', ({
+    ior,
+    dispersion,
+  }) => {
+    const { objects, runtime } = createRuntimeHarness({
+      ...glassOpticsDefaults,
+      ior,
+      dispersion,
+    });
+
+    for (const batch of findBeamBatches(objects)) {
+      expect(readInstanceMatrix(batch, 2)).toEqual(readInstanceMatrix(batch, 3));
+      expect(readInstanceMatrix(batch, 4)).toEqual(readInstanceMatrix(batch, 3));
+      expect(readInstanceMatrix(batch, 5)).toEqual(readInstanceMatrix(batch, 6));
+      expect(readInstanceMatrix(batch, 7)).toEqual(readInstanceMatrix(batch, 6));
+    }
+    runtime.dispose();
+  });
+
+  it('separates adopted RGB paths while keeping beamSpread out of their centerlines', () => {
+    const narrow = createRuntimeHarness({
+      ...glassOpticsDefaults,
+      beamSpread: glassOpticsDomains.beamSpread.min,
+    });
+    const wide = createRuntimeHarness({
+      ...glassOpticsDefaults,
+      beamSpread: glassOpticsDomains.beamSpread.max,
+    });
+    const narrowBatches = findBeamBatches(narrow.objects);
+    const wideBatches = findBeamBatches(wide.objects);
+
+    for (let batchIndex = 0; batchIndex < narrowBatches.length; batchIndex += 1) {
+      const narrowBatch = narrowBatches[batchIndex]!;
+      const wideBatch = wideBatches[batchIndex]!;
+      expect(readInstanceMatrix(narrowBatch, 2)).not.toEqual(readInstanceMatrix(narrowBatch, 3));
+      expect(readInstanceMatrix(narrowBatch, 4)).not.toEqual(readInstanceMatrix(narrowBatch, 3));
+      expect(readInstanceMatrix(narrowBatch, 5)).not.toEqual(readInstanceMatrix(narrowBatch, 6));
+      expect(readInstanceMatrix(narrowBatch, 7)).not.toEqual(readInstanceMatrix(narrowBatch, 6));
+      for (let index = 2; index < 8; index += 1) {
+        expect(readInstanceCenterline(wideBatch, index))
+          .toEqual(readInstanceCenterline(narrowBatch, index));
+      }
+    }
+
+    narrow.runtime.dispose();
+    wide.runtime.dispose();
   });
 
   it('keeps dynamic draw topology independent of slider-driven positions', () => {
@@ -585,6 +760,16 @@ describe('glass optics runtime contracts', () => {
     );
     expect(batches.map((batch) => batch.geometry.uuid)).toEqual(geometryIds);
 
+    runtime.updateSettings({
+      ...glassOpticsDefaults,
+      lightX: glassOpticsDefaults.lightX + 0.01,
+      dispersion: glassOpticsDefaults.dispersion + 0.01,
+    });
+    expect(batches.map((batch) => batch.instanceMatrix.version)).toEqual(
+      initialVersions.map((version) => version + 2),
+    );
+    expect(batches.map((batch) => batch.geometry.uuid)).toEqual(geometryIds);
+
     runtime.dispose();
   });
 
@@ -601,7 +786,7 @@ describe('glass optics runtime contracts', () => {
     runtime.updateSettings(invalidSettings);
 
     for (const batch of batches) {
-      expect(batch.count).toBe(4);
+      expect(batch.count).toBe(8);
       expect(batch.visible).toBe(true);
       for (let index = 0; index < batch.count; index += 1) {
         expect(isInstanceZeroScaled(batch, index)).toBe(true);

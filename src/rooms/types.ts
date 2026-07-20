@@ -37,6 +37,7 @@ export interface GlassOpticsSettings {
   lightZ: number;
   beamSpread: number;
   ior: number;
+  dispersion: number;
   roughness: number;
   thickness: number;
   autoRotate: boolean;
