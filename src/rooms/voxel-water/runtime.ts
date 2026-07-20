@@ -639,6 +639,7 @@ export function createRoomRuntime(
       renderer.render(scene, camera);
     },
     dispose() {
+      columns.dispose();
       disposeObject(root);
       sky.geometry.dispose();
       [waterMaterial, skyMaterial, columnMaterial, rainMaterial, sprayMaterial, cloudMaterial, gridLineMaterial].forEach((material: Material) =>
