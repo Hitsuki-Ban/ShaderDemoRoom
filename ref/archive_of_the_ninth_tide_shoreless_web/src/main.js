@@ -102,7 +102,7 @@ const onsetDetectorConfig = Object.freeze({
   thresholdStdDeviations: 1.5,
   lowpassLambda: 30,
   minFlux: 0.012,
-  minSamples: 12,
+  minSamples: 2,
 });
 const onsetBandFloorHz = 190;
 const onsetPathByChapter = Object.freeze([

@@ -17,7 +17,7 @@ auto-sonar の離散発火だけを、全帯域エネルギー差分から半波
 - 適応閾値: 過去 1.25 s の `mean + 1.5 * standardDeviation`
 - ODF low-pass: exponential lambda 30/s
 - noise floor: 0.012
-- warm-up: 1.0 s かつ 12 samples
+- warm-up: 1.0 s かつ 2 history samples。5 FPS の production timing でも warm-up / peak confirm を固定
 - peak picker: 1 frame look-ahead の局所極大。plateau は先頭だけを選択
 - auto-sonar cooldown: 既存の `1.15 + (1 - low) * 0.7` s を維持
 - reset: source change、play、pause、seek、replay、deterministic baseline restore
@@ -62,35 +62,37 @@ Raw candidate は dense 区間で 26 個、quiet 区間で 0 個。dense raw の
 を満たすものを選んだため、純粋な calibration optimum ではない。nominal held-out hard gate でも選別した
 gate-screened evidence であり、無偏な音楽 onset benchmark とは主張しない。
 
-再現用の一時コマンド:
+干净な checkout からの再現コマンド:
 
 ```powershell
-uv run --no-project --with librosa==0.11.0 --with mir_eval==0.8.2 output/nt03-audio-eval/evaluate.py
+uv run --script scripts/ninth-tide-onset-eval.py
 ```
 
-一時スクリプトと全 grid JSON は `output/` にのみ置き、製品・リポジトリへ出荷しない。
+PEP 723 dependency を固定した evaluator は `scripts/ninth-tide-onset-eval.py` で version control する。
+生成される全 grid JSON / report は `output/` にのみ置き、製品へ出荷しない。
 
 ## 視覚・runtime 回帰
 
 変更前 production build の `qa:ninth-tide` manifest SHA-256 は
 `9ee9de41f777f5427f945f0f94f2891e2b23f570f35a46631442830b27ab3f9f`。
 最終 build の manifest SHA-256 は
-`d4f3a0f9ef8f528dfa4de7138416d1d386b015fbf8d97e65b16c4975a19735b8`、app bundle SHA-256 は
-`7631ca8e9ddaba36c064182ffd92b883797d3b88880b5e3f704fc84ba9b7ba9d`。
+`36073389532a8fd5fc5c551f83fdb382a401b20ecb50fd872e00e768ac492c09`、app bundle SHA-256 は
+`4926d20ab019bc7769563798439ef763787db757674d964fcb43bb5c619f4aac`。
 
 app SHA だけを正規化すると、変更前後の manifest は完全一致した。したがって 3 fresh runs × 11 states ×
 3 same-page repeats の framebuffer hash、canvas hash、state digest、metrics、hit results、renderer audit は
 すべて不変。連続 `transient` 視覚に回帰はない。
 
-- `pnpm test`: 36 files / 289 tests pass
+- `pnpm test`: 36 files / 290 tests pass
 - `pnpm lint`: pass
 - `pnpm typecheck`: pass
 - `pnpm build`: pass
 - production `pnpm qa:ninth-tide`: pass
 - production `pnpm qa:exhibits`: pass。silent demand loading、autoplay retry、pause/visibility race、9章 bridge、console errors 0
 - production `pnpm qa:visual`: pass。desktop/mobile、overflow/overlap、dim chrome、console errors 0
-- 独立 verifier: targeted 10 tests、全量 gates、manifest と offline 数値を再検証し pass
-- 独立 reviewer: buffering 時の media-clock/RAF 二重計時を指摘。修正・回帰テスト・差量復審後 approve
+- 独立 verifier: targeted 11 tests、全量 gates、manifest と offline 数値を再検証し pass
+- 独立 reviewer: buffering 時の media-clock/RAF 二重計時、低 FPS warm-up、offline evaluator の
+  clean-checkout 再現性を指摘。修正・回帰テスト・差量復審後 approve
 
 `pnpm exhibits:check` は committed `public/exhibits` の clean 状態を検査するため、生成物を含む実装 commit 後に
 最終実行する。

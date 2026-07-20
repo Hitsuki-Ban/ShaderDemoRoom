@@ -58,13 +58,15 @@ research-audio-reactive.md §2.3 の実装要点(ライブラリ不要、JS 約3
   sample せず、負方向の時刻跳変は再アンカーする。
 - 既存 `transient` 連続包絡と 1.15–1.85 s cooldown は維持し、legacy auto-trigger、fallback、alias、
   Meyda / Essentia.js は残していない。silent synthetic spectrum も同一検出器を通るが発火しない。
-- 10 unit tests で steady、broadband / high-pass、path selection、warm-up、local maximum、plateau、
-  reset / spectrum resize、frame-rate independent window、media clock stall / backward jump、invalid input を固定した。
+- 11 unit tests で steady、broadband / high-pass、path selection、warm-up、local maximum、plateau、
+  reset / spectrum resize、5 FPS production timing、media clock stall / backward jump、invalid input を固定した。
 - 固定音源の gate-screened offline 比較では、quiet crescendo の誤発火 0、dense high-frequency 区間の
   TP は legacy 0 → spectral flux 4。aggregate precision / recall は `0 / 0` → `0.308 / 0.160`。
   詳細な時刻列、環境、方法、限界は [ninth-tide-onset-qa.md](../ninth-tide-onset-qa.md) に記録した。
 - 変更前後の公式 `qa:ninth-tide` manifest は app SHA を除き完全一致し、99 hook calls の
-  framebuffer/canvas/state/metrics/hits は不変。`pnpm test` (36 files / 289 tests)、`pnpm lint`、
+  framebuffer/canvas/state/metrics/hits は不変。`pnpm test` (36 files / 290 tests)、`pnpm lint`、
   `pnpm typecheck`、`pnpm build`、production `qa:ninth-tide`、`qa:exhibits`、`qa:visual` を通過した。
-- 独立 review が media clock stall 時の RAF fallback を検出し、fallback 削除と clock tracker の回帰テスト後に
-  差量 approve。独立 verifier も実装、全量 gates、manifest、offline 数値の整合を確認した。
+- clean checkout から `uv run --script scripts/ninth-tide-onset-eval.py` で同じ数値 gate を再生成でき、
+  JSON / report だけを ignored `output/` へ書く。
+- 独立 review が media clock stall 時の RAF fallback、低 FPS warm-up、offline evaluator の再現性を検出し、
+  修正と回帰テスト後に差量 approve。独立 verifier も実装、全量 gates、manifest、offline 数値の整合を確認した。

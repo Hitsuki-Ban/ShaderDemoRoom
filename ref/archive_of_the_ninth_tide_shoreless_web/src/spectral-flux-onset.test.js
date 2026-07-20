@@ -91,6 +91,23 @@ describe('spectral flux onset detector', () => {
     }).full.warmed).toBe(true);
   });
 
+  it('warms and confirms a peak with production timing at 5 FPS', () => {
+    const detector = createDetector({
+      historySeconds: 1.25,
+      warmupSeconds: 1,
+      lowpassLambda: 30,
+      minFlux: 0.012,
+      minSamples: 2,
+    });
+    let steady;
+    for (let index = 0; index < 20; index++) {
+      steady = update(detector, [20, 20, 20, 20], 0.2);
+    }
+    expect(steady.full.warmed).toBe(true);
+    expect(update(detector, [120, 120, 120, 120], 0.2).onset).toBe(false);
+    expect(update(detector, [20, 20, 20, 20], 0.2).onset).toBe(true);
+  });
+
   it('warms when the history and warmup durations are equal', () => {
     const detector = createDetector({ historySeconds: 0.3, warmupSeconds: 0.3, minSamples: 4 });
     let result;
