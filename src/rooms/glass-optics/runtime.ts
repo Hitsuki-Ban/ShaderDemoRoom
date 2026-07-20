@@ -2,14 +2,17 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import {
   AdditiveBlending,
   AmbientLight,
-  CatmullRomCurve3,
   Color,
+  CylinderGeometry,
   DirectionalLight,
   DoubleSide,
+  DynamicDrawUsage,
   Fog,
   GridHelper,
   Group,
   IcosahedronGeometry,
+  InstancedMesh,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
@@ -17,10 +20,10 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   PointLight,
+  Quaternion,
   Scene,
   ShaderMaterial,
   SphereGeometry,
-  TubeGeometry,
   Vector3,
   type Material,
   type Object3D,
@@ -35,6 +38,16 @@ import type {
 } from '../types';
 import causticsFragmentShader from './caustics.frag.glsl?raw';
 import causticsVertexShader from './caustics.vert.glsl?raw';
+import {
+  GLASS_SEGMENT_INCOMING,
+  GLASS_SEGMENT_INTERNAL,
+  GLASS_SEGMENT_OUTGOING,
+  GLASS_SEGMENT_REFLECTED,
+  calculateGlassAimDirectionInto,
+  createGlassLightPathResult,
+  createGlassLightPathWorkspace,
+  traceGlassRayInto,
+} from './light-path';
 
 function disposeObject(object: Object3D) {
   object.traverse((child) => {
@@ -49,20 +62,11 @@ function disposeObject(object: Object3D) {
   });
 }
 
-type BeamTube = {
-  core: Mesh<TubeGeometry, MeshBasicMaterial>;
-  glow: Mesh<TubeGeometry, MeshBasicMaterial>;
-};
-
-export function createTubeGeometry(points: Vector3[], radius: number) {
-  const curve = new CatmullRomCurve3(
-    points.map((point) => point.clone()),
-    false,
-    'centripetal',
-    0.2,
-  );
-  return new TubeGeometry(curve, Math.max(16, points.length * 12), radius, 8, false);
-}
+const BEAM_INSTANCE_COUNT = 4;
+const BEAM_INCOMING_INDEX = 0;
+const BEAM_REFLECTED_INDEX = 1;
+const BEAM_INTERNAL_INDEX = 2;
+const BEAM_OUTGOING_INDEX = 3;
 
 export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>) {
   const material = new MeshPhysicalMaterial({
@@ -88,44 +92,6 @@ export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>)
   return material;
 }
 
-export function calculateGlassLightPath(
-  settings: DeepReadonly<GlassOpticsSettings>,
-) {
-  const lightPosition = new Vector3(settings.lightX, settings.lightY, settings.lightZ);
-  const incomingEnd = new Vector3(0, 1.18, 0);
-  const direction = incomingEnd.clone().sub(lightPosition).normalize();
-  const reflected = incomingEnd.clone().add(
-    new Vector3(-direction.x, Math.abs(direction.y), -direction.z).multiplyScalar(3.6),
-  );
-  const refractedA = incomingEnd.clone().add(direction.multiplyScalar(1.4 / settings.ior));
-  const refractedB = new Vector3(
-    refractedA.x + settings.beamSpread * 2.4,
-    0.04,
-    refractedA.z - settings.beamSpread * 3.2,
-  );
-
-  return {
-    lightPosition,
-    incomingEnd,
-    reflected,
-    refractedA,
-    refractedB,
-    causticsPosition: new Vector3(
-      (refractedA.x + refractedB.x) * 0.5,
-      0.022,
-      (refractedA.z + refractedB.z) * 0.5,
-    ),
-    causticsScale: 0.78 + settings.beamSpread * 0.58 + (settings.ior - 1) * 0.16,
-  };
-}
-
-function updateBeamGeometry(beam: BeamTube, points: Vector3[], coreRadius: number, glowRadius: number) {
-  beam.core.geometry.dispose();
-  beam.core.geometry = createTubeGeometry(points, coreRadius);
-  beam.glow.geometry.dispose();
-  beam.glow.geometry = createTubeGeometry(points, glowRadius);
-}
-
 export function createRoomRuntime(
   {
     renderer,
@@ -140,10 +106,25 @@ export function createRoomRuntime(
   const scene = new Scene();
   const camera = new PerspectiveCamera(42, 1, 0.1, 100);
   const root = new Group();
-  const lightPosition = new Vector3();
-  const refractedA = new Vector3();
-  const refractedB = new Vector3();
-  const reflected = new Vector3();
+  const sourcePosition = new Vector3();
+  const aimCenterDirection = new Vector3();
+  const aimOffsetAxis = new Vector3();
+  const aimPoint = new Vector3();
+  const aimDirection = new Vector3();
+  const reflectedEnd = new Vector3();
+  const lightPath = createGlassLightPathResult();
+  const lightPathWorkspace = createGlassLightPathWorkspace();
+  const beamMidpoint = new Vector3();
+  const beamDirection = new Vector3();
+  const beamScale = new Vector3();
+  const beamQuaternion = new Quaternion();
+  const beamMatrix = new Matrix4();
+  const beamYAxis = new Vector3(0, 1, 0);
+  const incomingColor = new Color(0x8deeff);
+  const reflectedColor = new Color(0xffc067);
+  const internalColor = new Color(0xf8ffff);
+  const outgoingColor = new Color(0xb8f8ff);
+  const workingBeamColor = new Color();
 
   scene.background = new Color(0x071018);
   scene.fog = new Fog(0x071018, 16, 34);
@@ -261,36 +242,59 @@ export function createRoomRuntime(
   sourceHalo.renderOrder = 9;
   root.add(sourceHalo, source);
 
-  const createBeam = (color: number, coreOpacity: number, glowOpacity: number): BeamTube => {
-    const coreMaterial = new MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: coreOpacity,
-      blending: AdditiveBlending,
-      depthWrite: false,
-      toneMapped: false,
-    });
-    const glowMaterial = new MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity: glowOpacity,
-      blending: AdditiveBlending,
-      depthWrite: false,
-      depthTest: false,
-      toneMapped: false,
-    });
-    const placeholder = [new Vector3(0, 0, 0), new Vector3(0.01, 0, 0)];
-    const glow = new Mesh(createTubeGeometry(placeholder, 0.052), glowMaterial);
-    const core = new Mesh(createTubeGeometry(placeholder, 0.014), coreMaterial);
-    glow.renderOrder = 6;
-    core.renderOrder = 7;
-    root.add(glow, core);
-    return { core, glow };
-  };
-
-  const incoming = createBeam(0x8deeff, 0.95, 0.24);
-  const reflection = createBeam(0xffc067, 0.82, 0.18);
-  const refraction = createBeam(0xf8ffff, 0.9, 0.22);
+  const coreBeamMaterial = new MeshBasicMaterial({
+    color: 0xffffff,
+    // InstancedMesh.instanceColor is independent; vertexColors would also
+    // require a geometry color attribute and multiply these colors to black.
+    vertexColors: false,
+    transparent: true,
+    opacity: 0.95,
+    blending: AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const glowBeamMaterial = new MeshBasicMaterial({
+    color: 0xffffff,
+    vertexColors: false,
+    transparent: true,
+    opacity: 0.24,
+    blending: AdditiveBlending,
+    depthWrite: false,
+    depthTest: false,
+    toneMapped: false,
+  });
+  const coreBeams = new InstancedMesh(
+    new CylinderGeometry(1, 1, 1, 8, 1, false),
+    coreBeamMaterial,
+    BEAM_INSTANCE_COUNT,
+  );
+  const glowBeams = new InstancedMesh(
+    new CylinderGeometry(1, 1, 1, 8, 1, false),
+    glowBeamMaterial,
+    BEAM_INSTANCE_COUNT,
+  );
+  coreBeams.name = 'glass-optics-beam-core';
+  glowBeams.name = 'glass-optics-beam-glow';
+  coreBeams.instanceMatrix.setUsage(DynamicDrawUsage);
+  glowBeams.instanceMatrix.setUsage(DynamicDrawUsage);
+  coreBeams.frustumCulled = false;
+  glowBeams.frustumCulled = false;
+  coreBeams.renderOrder = 7;
+  glowBeams.renderOrder = 6;
+  beamMatrix.makeScale(0, 0, 0);
+  for (let index = 0; index < BEAM_INSTANCE_COUNT; index += 1) {
+    coreBeams.setMatrixAt(index, beamMatrix);
+    glowBeams.setMatrixAt(index, beamMatrix);
+  }
+  coreBeams.setColorAt(BEAM_INCOMING_INDEX, incomingColor);
+  coreBeams.setColorAt(BEAM_REFLECTED_INDEX, reflectedColor);
+  coreBeams.setColorAt(BEAM_INTERNAL_INDEX, internalColor);
+  coreBeams.setColorAt(BEAM_OUTGOING_INDEX, outgoingColor);
+  glowBeams.setColorAt(BEAM_INCOMING_INDEX, incomingColor);
+  glowBeams.setColorAt(BEAM_REFLECTED_INDEX, reflectedColor);
+  glowBeams.setColorAt(BEAM_INTERNAL_INDEX, internalColor);
+  glowBeams.setColorAt(BEAM_OUTGOING_INDEX, outgoingColor);
+  root.add(glowBeams, coreBeams);
 
   const markerMaterial = new MeshBasicMaterial({
     color: 0xffffff,
@@ -319,9 +323,13 @@ export function createRoomRuntime(
   const targetMarker = new Mesh(new SphereGeometry(0.055, 16, 10), markerMaterial);
   const reflectionMarker = new Mesh(new SphereGeometry(0.07, 16, 10), reflectionMarkerMaterial);
   const refractionMarker = new Mesh(new SphereGeometry(0.085, 16, 10), refractionMarkerMaterial);
+  targetMarker.name = 'glass-optics-entry-marker';
+  reflectionMarker.name = 'glass-optics-exit-marker';
+  refractionMarker.name = 'glass-optics-floor-marker';
   targetMarker.renderOrder = 8;
   reflectionMarker.renderOrder = 8;
   refractionMarker.renderOrder = 8;
+  refractionMarker.frustumCulled = false;
   root.add(targetMarker, reflectionMarker, refractionMarker);
 
   const causticsMaterial = new ShaderMaterial({
@@ -338,30 +346,141 @@ export function createRoomRuntime(
   });
   causticsMaterial.toneMapped = false;
   const caustics = new Mesh(new PlaneGeometry(5.6, 5.6), causticsMaterial);
+  caustics.name = 'glass-optics-caustics';
   caustics.rotation.x = -Math.PI / 2;
   caustics.position.set(0.8, 0.02, 0.4);
   caustics.renderOrder = 5;
   root.add(caustics);
 
+  const hideBeamSegment = (index: number) => {
+    beamMatrix.makeScale(0, 0, 0);
+    coreBeams.setMatrixAt(index, beamMatrix);
+    glowBeams.setMatrixAt(index, beamMatrix);
+  };
+
+  const updateBeamSegment = (
+    index: number,
+    start: Vector3,
+    end: Vector3,
+    coreRadius: number,
+    glowRadius: number,
+  ) => {
+    beamDirection.copy(end).sub(start);
+    const length = beamDirection.length();
+    if (!Number.isFinite(length) || length <= 1e-7) {
+      hideBeamSegment(index);
+      return;
+    }
+    beamDirection.multiplyScalar(1 / length);
+    beamMidpoint.copy(start).add(end).multiplyScalar(0.5);
+    beamQuaternion.setFromUnitVectors(beamYAxis, beamDirection);
+
+    beamScale.set(coreRadius, length, coreRadius);
+    beamMatrix.compose(beamMidpoint, beamQuaternion, beamScale);
+    coreBeams.setMatrixAt(index, beamMatrix);
+
+    beamScale.set(glowRadius, length, glowRadius);
+    beamMatrix.compose(beamMidpoint, beamQuaternion, beamScale);
+    glowBeams.setMatrixAt(index, beamMatrix);
+  };
+
+  const updateCausticsVisibility = () => {
+    caustics.visible = settings.showCaustics && lightPath.hasFloorHit;
+  };
+
   const updateLightPath = () => {
-    const lightPath = calculateGlassLightPath(settings);
-    lightPosition.copy(lightPath.lightPosition);
-    source.position.copy(lightPosition);
-    sourceHalo.position.copy(lightPosition);
-    pointLight.position.copy(lightPosition);
+    sourcePosition.set(settings.lightX, settings.lightY, settings.lightZ);
+    calculateGlassAimDirectionInto(
+      sourcePosition,
+      aimDirection,
+      aimCenterDirection,
+      aimOffsetAxis,
+      aimPoint,
+    );
+    traceGlassRayInto(
+      sourcePosition,
+      aimDirection,
+      settings.ior,
+      lightPath,
+      lightPathWorkspace,
+    );
 
-    reflected.copy(lightPath.reflected);
-    refractedA.copy(lightPath.refractedA);
-    refractedB.copy(lightPath.refractedB);
+    source.position.copy(sourcePosition);
+    sourceHalo.position.copy(sourcePosition);
+    pointLight.position.copy(sourcePosition);
 
-    updateBeamGeometry(incoming, [lightPosition, lightPath.incomingEnd], 0.017, 0.064);
-    updateBeamGeometry(reflection, [lightPath.incomingEnd, reflected], 0.014, 0.052);
-    updateBeamGeometry(refraction, [lightPath.incomingEnd, refractedA, refractedB], 0.018, 0.07);
-    targetMarker.position.copy(lightPath.incomingEnd);
-    reflectionMarker.position.copy(reflected);
-    refractionMarker.position.copy(refractedB);
-    caustics.position.copy(lightPath.causticsPosition);
-    caustics.scale.setScalar(lightPath.causticsScale);
+    const radiusScale = 0.82 + settings.beamSpread * 0.52;
+    reflectedEnd
+      .copy(lightPath.entryPoint)
+      .addScaledVector(lightPath.reflectedDirection, 3.6);
+
+    if ((lightPath.segmentMask & GLASS_SEGMENT_INCOMING) !== 0) {
+      updateBeamSegment(
+        BEAM_INCOMING_INDEX,
+        sourcePosition,
+        lightPath.entryPoint,
+        0.017 * radiusScale,
+        0.064 * radiusScale,
+      );
+    } else {
+      hideBeamSegment(BEAM_INCOMING_INDEX);
+    }
+    if ((lightPath.segmentMask & GLASS_SEGMENT_REFLECTED) !== 0) {
+      updateBeamSegment(
+        BEAM_REFLECTED_INDEX,
+        lightPath.entryPoint,
+        reflectedEnd,
+        0.014 * radiusScale,
+        0.052 * radiusScale,
+      );
+    } else {
+      hideBeamSegment(BEAM_REFLECTED_INDEX);
+    }
+    if ((lightPath.segmentMask & GLASS_SEGMENT_INTERNAL) !== 0) {
+      updateBeamSegment(
+        BEAM_INTERNAL_INDEX,
+        lightPath.entryPoint,
+        lightPath.exitPoint,
+        0.018 * radiusScale,
+        0.07 * radiusScale,
+      );
+    } else {
+      hideBeamSegment(BEAM_INTERNAL_INDEX);
+    }
+    if ((lightPath.segmentMask & GLASS_SEGMENT_OUTGOING) !== 0) {
+      updateBeamSegment(
+        BEAM_OUTGOING_INDEX,
+        lightPath.exitPoint,
+        lightPath.floorHit,
+        0.018 * radiusScale,
+        0.07 * radiusScale,
+      );
+    } else {
+      hideBeamSegment(BEAM_OUTGOING_INDEX);
+    }
+    coreBeams.instanceMatrix.needsUpdate = true;
+    glowBeams.instanceMatrix.needsUpdate = true;
+
+    workingBeamColor.copy(reflectedColor).multiplyScalar(lightPath.reflectance * 8);
+    coreBeams.setColorAt(BEAM_REFLECTED_INDEX, workingBeamColor);
+    glowBeams.setColorAt(BEAM_REFLECTED_INDEX, workingBeamColor);
+    if (coreBeams.instanceColor) coreBeams.instanceColor.needsUpdate = true;
+    if (glowBeams.instanceColor) glowBeams.instanceColor.needsUpdate = true;
+
+    targetMarker.visible = lightPath.hasEntry;
+    reflectionMarker.visible = lightPath.hasExit;
+    refractionMarker.visible = lightPath.hasFloorHit;
+    if (lightPath.hasEntry) targetMarker.position.copy(lightPath.entryPoint);
+    if (lightPath.hasExit) reflectionMarker.position.copy(lightPath.exitPoint);
+    if (lightPath.hasFloorHit) {
+      refractionMarker.position.copy(lightPath.floorHit);
+      caustics.position.copy(lightPath.floorHit);
+      caustics.position.y = 0.022;
+    }
+    caustics.scale.setScalar(
+      0.78 + settings.beamSpread * 0.58 + (settings.ior - 1) * 0.16,
+    );
+    updateCausticsVisibility();
   };
 
   const updateMaterial = () => {
@@ -370,26 +489,26 @@ export function createRoomRuntime(
     glassMaterial.thickness = settings.thickness;
     glassMaterial.envMapIntensity = 1.55 + settings.thickness * 0.42;
     glassShellMaterial.opacity = Math.min(0.14, 0.05 + (settings.ior - 1) * 0.05);
-    caustics.visible = settings.showCaustics;
     causticsMaterial.uniforms.uIntensity.value = settings.showCaustics ? 1.25 : 0;
     causticsMaterial.uniforms.uSpread.value = settings.beamSpread;
-    incoming.core.material.opacity = 0.86 + settings.beamSpread * 0.12;
-    incoming.glow.material.opacity = 0.18 + settings.beamSpread * 0.18;
-    reflection.core.material.opacity = 0.5 + (1 - settings.roughness) * 0.32;
-    reflection.glow.material.opacity = 0.12 + (1 - settings.roughness) * 0.08;
-    refraction.core.material.opacity = 0.72 + Math.min(0.18, settings.thickness * 0.05);
-    refraction.glow.material.opacity = 0.16 + Math.min(0.18, settings.ior * 0.05);
     source.scale.setScalar(0.92 + settings.beamSpread * 0.35);
     sourceHalo.scale.setScalar(0.72 + settings.beamSpread * 0.58);
-    updateLightPath();
+    updateCausticsVisibility();
   };
 
   updateMaterial();
+  updateLightPath();
 
   return {
     updateSettings(nextSettings) {
+      const pathChanged = nextSettings.lightX !== settings.lightX
+        || nextSettings.lightY !== settings.lightY
+        || nextSettings.lightZ !== settings.lightZ
+        || nextSettings.ior !== settings.ior
+        || nextSettings.beamSpread !== settings.beamSpread;
       settings = nextSettings;
       updateMaterial();
+      if (pathChanged) updateLightPath();
     },
     setMotionScale(scale) {
       motionScale = scale;
@@ -422,12 +541,8 @@ export function createRoomRuntime(
         markerMaterial,
         reflectionMarkerMaterial,
         refractionMarkerMaterial,
-        incoming.core.material,
-        incoming.glow.material,
-        reflection.core.material,
-        reflection.glow.material,
-        refraction.core.material,
-        refraction.glow.material,
+        coreBeamMaterial,
+        glowBeamMaterial,
         causticsMaterial,
       ].forEach((material: Material) => material.dispose());
       environment.texture.dispose();

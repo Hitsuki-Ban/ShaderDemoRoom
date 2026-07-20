@@ -1,0 +1,3514 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-20T04:24:31.367Z",
+  "browserVersion": "148.0.7778.96",
+  "baseUrl": "http://127.0.0.1:4175",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "captures": [
+    {
+      "name": "default",
+      "parameters": {
+        "autoRotate": "false",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/default.png",
+      "telemetry": {
+        "fps": 6.885020163273336,
+        "frameTimeMs": 145.2428571428571,
+        "frameTimeP95Ms": 583.276,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          68.17054545454545,
+          17.864285714285725,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          2766.5,
+          null,
+          null,
+          483.3499999999999,
+          133.30000000000018,
+          200,
+          125,
+          141.6500000000001,
+          125,
+          266.6999999999998,
+          125,
+          125,
+          166.60000000000036,
+          133.3499999999999,
+          149.95000000000027,
+          150.09999999999854
+        ],
+        "drawCalls": 15,
+        "drawCallsMax": 15,
+        "trianglesAvg": 5604,
+        "textures": 4,
+        "geometries": 26,
+        "programs": 16,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "focus",
+      "parameters": {
+        "autoRotate": "false",
+        "beamSpread": "0.18",
+        "lightX": "-0.28",
+        "lightY": "3.45",
+        "lightZ": "1.45",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/focus.png",
+      "telemetry": {
+        "fps": 8.307947936859602,
+        "frameTimeMs": 120.36666666666659,
+        "frameTimeP95Ms": 283.2999999999993,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          68.17054545454545,
+          17.864285714285725,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          2766.5,
+          null,
+          null,
+          483.3499999999999,
+          133.30000000000018,
+          200,
+          125,
+          141.6500000000001,
+          125,
+          266.6999999999998,
+          125,
+          125,
+          166.60000000000036,
+          133.3499999999999,
+          149.95000000000027,
+          150.09999999999854,
+          74.95000000000073,
+          233.29999999999927,
+          250.10000000000036,
+          216.64999999999964,
+          141.65000000000055,
+          150,
+          133.29999999999927,
+          116.65000000000055,
+          150,
+          141.69999999999982,
+          133.30000000000018,
+          133.34999999999945,
+          250,
+          33.30000000000109,
+          null,
+          216.66666666666666,
+          88.86666666666679,
+          283.2999999999993,
+          125,
+          125.05000000000018,
+          88.86666666666679,
+          125,
+          133.29999999999927,
+          125,
+          91.65000000000009,
+          116.69999999999891
+        ],
+        "drawCalls": 15,
+        "drawCallsMax": 15,
+        "trianglesAvg": 5604,
+        "textures": 4,
+        "geometries": 26,
+        "programs": 16,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "crystal",
+      "parameters": {
+        "autoRotate": "false",
+        "ior": "1.72",
+        "roughness": "0.01",
+        "thickness": "1.8",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/crystal.png",
+      "telemetry": {
+        "fps": 6.829601443972872,
+        "frameTimeMs": 146.42142857142866,
+        "frameTimeP95Ms": 283.2999999999993,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          125,
+          266.6999999999998,
+          125,
+          125,
+          166.60000000000036,
+          133.3499999999999,
+          149.95000000000027,
+          150.09999999999854,
+          74.95000000000073,
+          233.29999999999927,
+          250.10000000000036,
+          216.64999999999964,
+          141.65000000000055,
+          150,
+          133.29999999999927,
+          116.65000000000055,
+          150,
+          141.69999999999982,
+          133.30000000000018,
+          133.34999999999945,
+          250,
+          33.30000000000109,
+          null,
+          216.66666666666666,
+          88.86666666666679,
+          283.2999999999993,
+          125,
+          125.05000000000018,
+          88.86666666666679,
+          125,
+          133.29999999999927,
+          125,
+          91.65000000000009,
+          125.05000000000018,
+          83.29999999999988,
+          null,
+          241.64999999999964,
+          66.70000000000073,
+          174.9999999999991,
+          133.3000000000011,
+          141.6999999999989,
+          141.65000000000146,
+          149.89999999999782,
+          158.39999999999964,
+          166.60000000000218,
+          283.2999999999993,
+          141.70000000000073,
+          133.29999999999927,
+          150,
+          141.70000000000073,
+          166.59999999999854,
+          166.70000000000073,
+          166.64999999999964,
+          null,
+          233.35000000000036,
+          83.35000000000036,
+          283.2000000000007,
+          141.64999999999964,
+          133.35000000000036,
+          83.33333333333333
+        ],
+        "drawCalls": 15,
+        "drawCallsMax": 15,
+        "trianglesAvg": 5604,
+        "textures": 4,
+        "geometries": 26,
+        "programs": 16,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "extreme",
+      "parameters": {
+        "autoRotate": "false",
+        "lightX": "-6",
+        "lightY": "2.61",
+        "lightZ": "-6",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/extreme.png",
+      "telemetry": {
+        "fps": 8.372093023255815,
+        "frameTimeMs": 119.44444444444444,
+        "frameTimeP95Ms": 283.2000000000007,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          283.2999999999993,
+          125,
+          125.05000000000018,
+          88.86666666666679,
+          125,
+          133.29999999999927,
+          125,
+          91.65000000000009,
+          125.05000000000018,
+          83.29999999999988,
+          null,
+          241.64999999999964,
+          66.70000000000073,
+          174.9999999999991,
+          133.3000000000011,
+          141.6999999999989,
+          141.65000000000146,
+          149.89999999999782,
+          158.39999999999964,
+          166.60000000000218,
+          283.2999999999993,
+          141.70000000000073,
+          133.29999999999927,
+          150,
+          141.70000000000073,
+          166.59999999999854,
+          166.70000000000073,
+          166.64999999999964,
+          null,
+          233.35000000000036,
+          83.35000000000036,
+          283.2000000000007,
+          141.64999999999964,
+          133.35000000000036,
+          83.33333333333333,
+          116.64999999999964,
+          150.09999999999854,
+          266.6000000000022,
+          138.90000000000023,
+          133.29999999999927,
+          88.90000000000025,
+          149.9499999999989,
+          150,
+          133.29999999999927,
+          133.35000000000036,
+          249.90000000000146,
+          133.39999999999782,
+          133.33333333333334,
+          88.90000000000025,
+          100,
+          133.20000000000073,
+          150,
+          191.70000000000073,
+          125,
+          100,
+          141.64999999999964,
+          149.89999999999782,
+          88.90000000000025,
+          77.76666666666642,
+          133.40000000000146
+        ],
+        "drawCalls": 15,
+        "drawCallsMax": 15,
+        "trianglesAvg": 5604,
+        "textures": 4,
+        "geometries": 26,
+        "programs": 16,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "ior-1",
+      "parameters": {
+        "autoRotate": "false",
+        "ior": "1",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/ior-1.png",
+      "telemetry": {
+        "fps": 7.0868373807049085,
+        "frameTimeMs": 141.10666666666657,
+        "frameTimeP95Ms": 250,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          141.70000000000073,
+          166.59999999999854,
+          166.70000000000073,
+          166.64999999999964,
+          null,
+          233.35000000000036,
+          83.35000000000036,
+          283.2000000000007,
+          141.64999999999964,
+          133.35000000000036,
+          83.33333333333333,
+          116.64999999999964,
+          150.09999999999854,
+          266.6000000000022,
+          138.90000000000023,
+          133.29999999999927,
+          88.90000000000025,
+          149.9499999999989,
+          150,
+          133.29999999999927,
+          133.35000000000036,
+          249.90000000000146,
+          133.39999999999782,
+          133.33333333333334,
+          88.90000000000025,
+          100,
+          133.20000000000073,
+          150,
+          191.70000000000073,
+          125,
+          100,
+          141.64999999999964,
+          149.89999999999782,
+          88.90000000000025,
+          77.76666666666642,
+          133.35000000000036,
+          70.82499999999982,
+          null,
+          366.7000000000007,
+          191.64999999999964,
+          116.65000000000146,
+          116.69999999999891,
+          166.60000000000036,
+          108.35000000000036,
+          116.69999999999891,
+          124.95000000000073,
+          116.64999999999964,
+          125,
+          116.70000000000073,
+          250,
+          83.33333333333333,
+          133.29999999999927,
+          250,
+          125,
+          100,
+          133.3000000000011,
+          150,
+          250,
+          133.34999999999854,
+          125
+        ],
+        "drawCalls": 15,
+        "drawCallsMax": 15,
+        "trianglesAvg": 5604,
+        "textures": 4,
+        "geometries": 26,
+        "programs": 16,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "ior-2-4",
+      "parameters": {
+        "autoRotate": "false",
+        "ior": "2.4",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/ior-2-4.png",
+      "telemetry": {
+        "fps": 8.095623601123858,
+        "frameTimeMs": 123.5235294117648,
+        "frameTimeP95Ms": 250,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          88.90000000000025,
+          100,
+          133.20000000000073,
+          150,
+          191.70000000000073,
+          125,
+          100,
+          141.64999999999964,
+          149.89999999999782,
+          88.90000000000025,
+          77.76666666666642,
+          133.35000000000036,
+          70.82499999999982,
+          null,
+          366.7000000000007,
+          191.64999999999964,
+          116.65000000000146,
+          116.69999999999891,
+          166.60000000000036,
+          108.35000000000036,
+          116.69999999999891,
+          124.95000000000073,
+          116.64999999999964,
+          125,
+          116.70000000000073,
+          250,
+          83.33333333333333,
+          133.29999999999927,
+          250,
+          125,
+          100,
+          133.3000000000011,
+          150,
+          250,
+          133.34999999999854,
+          125,
+          133.29999999999927,
+          83.33333333333333,
+          250,
+          125,
+          88.8666666666686,
+          125.04999999999927,
+          133.29999999999927,
+          125,
+          72.19999999999952,
+          116.70000000000437,
+          175,
+          149.89999999999418,
+          283.40000000000146,
+          133.33333333333334,
+          133.29999999999927,
+          116.70000000000437,
+          266.6999999999971,
+          133.29999999999927,
+          125,
+          116.60000000000582,
+          161.09999999999854,
+          83.36666666666618,
+          83.30000000000048,
+          108.35000000000218
+        ],
+        "drawCalls": 15,
+        "drawCallsMax": 15,
+        "trianglesAvg": 5604,
+        "textures": 4,
+        "geometries": 26,
+        "programs": 16,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    }
+  ],
+  "continuousLightDrag": {
+    "allocationGate": {
+      "build": "unminified",
+      "forbiddenAllocationNames": [
+        "BufferAttribute",
+        "Geometry",
+        "Vector3"
+      ],
+      "positiveControlMatches": [
+        {
+          "functionName": "Vector3AllocationPositiveControl",
+          "scriptId": "43",
+          "url": "",
+          "lineNumber": 2,
+          "columnNumber": 17,
+          "selfSize": 26832
+        }
+      ]
+    },
+    "durationFrames": 180,
+    "drawCallsBefore": 15,
+    "drawCallsAfter": 15,
+    "geometriesBefore": 26,
+    "geometriesAfter": 26,
+    "sampledAllocationNodes": [
+      {
+        "functionName": "performWorkUntilDeadline",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 495,
+        "columnNumber": 34,
+        "selfSize": 420
+      },
+      {
+        "functionName": "pop",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 443,
+        "columnNumber": 13,
+        "selfSize": 132
+      },
+      {
+        "functionName": "recursivelyTraversePassiveUnmountEffects",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6707,
+        "columnNumber": 50,
+        "selfSize": 444
+      },
+      {
+        "functionName": "detachAlternateSiblings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6698,
+        "columnNumber": 33,
+        "selfSize": 144
+      },
+      {
+        "functionName": "commitPassiveUnmountEffectsInsideOfDeletedTree_begin",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6768,
+        "columnNumber": 62,
+        "selfSize": 168
+      },
+      {
+        "functionName": "detachDeletedInstance",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1371,
+        "columnNumber": 31,
+        "selfSize": 140
+      },
+      {
+        "functionName": "performWorkOnRoot",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6834,
+        "columnNumber": 27,
+        "selfSize": 8472
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46673,
+        "columnNumber": 9,
+        "selfSize": 280
+      },
+      {
+        "functionName": "updateProperties",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8483,
+        "columnNumber": 26,
+        "selfSize": 144
+      },
+      {
+        "functionName": "commitMutationEffectsOnFiber",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6207,
+        "columnNumber": 38,
+        "selfSize": 1212
+      },
+      {
+        "functionName": "commitDeletionEffectsOnFiber",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6059,
+        "columnNumber": 38,
+        "selfSize": 580
+      },
+      {
+        "functionName": "updateProperties",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8483,
+        "columnNumber": 26,
+        "selfSize": 224
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46671,
+        "columnNumber": 35,
+        "selfSize": 140
+      },
+      {
+        "functionName": "isRenderConsistentWithExternalStores",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6939,
+        "columnNumber": 46,
+        "selfSize": 180
+      },
+      {
+        "functionName": "LinkWithRef",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11550,
+        "columnNumber": 55,
+        "selfSize": 280
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 288
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 616
+      },
+      {
+        "functionName": "createHashHref",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10002,
+        "columnNumber": 24,
+        "selfSize": 140
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "usePrefetchBehavior",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11294,
+        "columnNumber": 28,
+        "selfSize": 844
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 448
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 448
+      },
+      {
+        "functionName": "createFunctionComponentUpdateQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3556,
+        "columnNumber": 44,
+        "selfSize": 140
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "mergeRefs",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11491,
+        "columnNumber": 18,
+        "selfSize": 140
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "useNavigateUnstable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10566,
+        "columnNumber": 28,
+        "selfSize": 444
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 288
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "is",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12420,
+        "columnNumber": 40,
+        "selfSize": 1344
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 580
+      },
+      {
+        "functionName": "join",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 564
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 1872
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 280
+      },
+      {
+        "functionName": "trim",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 284
+      },
+      {
+        "functionName": "TelemetrySparkline",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13168,
+        "columnNumber": 27,
+        "selfSize": 140
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "createFunctionComponentUpdateQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3556,
+        "columnNumber": 44,
+        "selfSize": 140
+      },
+      {
+        "functionName": "TelemetryPanel",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13218,
+        "columnNumber": 23,
+        "selfSize": 2552
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 576
+      },
+      {
+        "functionName": "ShaderCanvas",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46277,
+        "columnNumber": 21,
+        "selfSize": 156
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 160
+      },
+      {
+        "functionName": "createFunctionComponentUpdateQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3556,
+        "columnNumber": 44,
+        "selfSize": 140
+      },
+      {
+        "functionName": "bind",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "Button",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46414,
+        "columnNumber": 15,
+        "selfSize": 472
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 160
+      },
+      {
+        "functionName": "trim",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 140
+      },
+      {
+        "functionName": "RoomRail",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46607,
+        "columnNumber": 17,
+        "selfSize": 140
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46618,
+        "columnNumber": 24,
+        "selfSize": 288
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 576
+      },
+      {
+        "functionName": "ShowroomPage",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46640,
+        "columnNumber": 21,
+        "selfSize": 1732
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "useNavigateUnstable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10566,
+        "columnNumber": 28,
+        "selfSize": 144
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 576
+      },
+      {
+        "functionName": "map",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46768,
+        "columnNumber": 37,
+        "selfSize": 140
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 288
+      },
+      {
+        "functionName": "GlassOpticsControls",
+        "scriptId": "5",
+        "url": "http://127.0.0.1:4175/assets/Controls-I_ANvgdR.js",
+        "lineNumber": 51,
+        "columnNumber": 28,
+        "selfSize": 2508
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 1152
+      },
+      {
+        "functionName": "ControlGroup",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 18,
+        "columnNumber": 21,
+        "selfSize": 136
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 160
+      },
+      {
+        "functionName": "SliderControl",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 27,
+        "columnNumber": 22,
+        "selfSize": 3148
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 864
+      },
+      {
+        "functionName": "ToggleControl",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 47,
+        "columnNumber": 22,
+        "selfSize": 144
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 448
+      },
+      {
+        "functionName": "renderRootConcurrent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7096,
+        "columnNumber": 30,
+        "selfSize": 132
+      },
+      {
+        "functionName": "deleteChild",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2943,
+        "columnNumber": 22,
+        "selfSize": 184
+      },
+      {
+        "functionName": "updateFromMap",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3034,
+        "columnNumber": 24,
+        "selfSize": 200
+      },
+      {
+        "functionName": "useLinkClickHandler",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11720,
+        "columnNumber": 28,
+        "selfSize": 1412
+      },
+      {
+        "functionName": "updateCallback",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 4035,
+        "columnNumber": 24,
+        "selfSize": 160
+      },
+      {
+        "functionName": "is",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 288
+      },
+      {
+        "functionName": "ShowroomPage",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46640,
+        "columnNumber": 21,
+        "selfSize": 152
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13,
+        "columnNumber": 9,
+        "selfSize": 280
+      },
+      {
+        "functionName": "RenderedRoute",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10749,
+        "columnNumber": 22,
+        "selfSize": 140
+      },
+      {
+        "functionName": "Router",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10955,
+        "columnNumber": 15,
+        "selfSize": 276
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10972,
+        "columnNumber": 44,
+        "selfSize": 424
+      },
+      {
+        "functionName": "computeScore",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10267,
+        "columnNumber": 21,
+        "selfSize": 288
+      },
+      {
+        "functionName": "matchPath",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10309,
+        "columnNumber": 18,
+        "selfSize": 140
+      },
+      {
+        "functionName": "match",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "stripBasename",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10367,
+        "columnNumber": 22,
+        "selfSize": 272
+      },
+      {
+        "functionName": "getChildren",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10817,
+        "columnNumber": 20,
+        "selfSize": 160
+      },
+      {
+        "functionName": "concat",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10645,
+        "columnNumber": 61,
+        "selfSize": 272
+      },
+      {
+        "functionName": "HashRouter",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11504,
+        "columnNumber": 19,
+        "selfSize": 428
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "useSearchParams",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11756,
+        "columnNumber": 24,
+        "selfSize": 288
+      },
+      {
+        "functionName": "useNavigateUnstable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10566,
+        "columnNumber": 28,
+        "selfSize": 160
+      },
+      {
+        "functionName": "reconcileChildrenArray",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3049,
+        "columnNumber": 33,
+        "selfSize": 752
+      },
+      {
+        "functionName": "mapRemainingChildren",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2954,
+        "columnNumber": 31,
+        "selfSize": 192
+      },
+      {
+        "functionName": "renderWithHooksAgain",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3467,
+        "columnNumber": 30,
+        "selfSize": 248
+      },
+      {
+        "functionName": "RenderedRoute",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10749,
+        "columnNumber": 22,
+        "selfSize": 160
+      },
+      {
+        "functionName": "Router",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10955,
+        "columnNumber": 15,
+        "selfSize": 604
+      },
+      {
+        "functionName": "useRoutes",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10611,
+        "columnNumber": 18,
+        "selfSize": 144
+      },
+      {
+        "functionName": "useRoutesImpl",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10614,
+        "columnNumber": 22,
+        "selfSize": 804
+      },
+      {
+        "functionName": "flattenRoutes",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10212,
+        "columnNumber": 22,
+        "selfSize": 296
+      },
+      {
+        "functionName": "matchPath",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10309,
+        "columnNumber": 18,
+        "selfSize": 596
+      },
+      {
+        "functionName": "compilePath",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10337,
+        "columnNumber": 20,
+        "selfSize": 684
+      },
+      {
+        "functionName": "replace",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 7572
+      },
+      {
+        "functionName": "RegExp",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 280
+      },
+      {
+        "functionName": "replace",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 960
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10322,
+        "columnNumber": 32,
+        "selfSize": 152
+      },
+      {
+        "functionName": "match",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1292
+      },
+      {
+        "functionName": "_renderMatches",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10754,
+        "columnNumber": 23,
+        "selfSize": 392
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10797,
+        "columnNumber": 36,
+        "selfSize": 256
+      },
+      {
+        "functionName": "getChildren",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10817,
+        "columnNumber": 20,
+        "selfSize": 160
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10645,
+        "columnNumber": 61,
+        "selfSize": 1324
+      },
+      {
+        "functionName": "createRoutesFromChildren",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11007,
+        "columnNumber": 33,
+        "selfSize": 280
+      },
+      {
+        "functionName": "forEach",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 229,
+        "columnNumber": 19,
+        "selfSize": 144
+      },
+      {
+        "functionName": "getElementKey",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 140,
+        "columnNumber": 23,
+        "selfSize": 252
+      },
+      {
+        "functionName": "HashRouter",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11504,
+        "columnNumber": 19,
+        "selfSize": 1432
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 160
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7647,
+        "columnNumber": 28,
+        "selfSize": 2264
+      },
+      {
+        "functionName": "exports.unstable_scheduleCallback",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 616,
+        "columnNumber": 45,
+        "selfSize": 152
+      },
+      {
+        "functionName": "onAnimationFrame",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 35379,
+        "columnNumber": 26,
+        "selfSize": 65376
+      },
+      {
+        "functionName": "push",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13476,
+        "columnNumber": 5,
+        "selfSize": 4492
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13465,
+        "columnNumber": 33,
+        "selfSize": 512
+      },
+      {
+        "functionName": "recordHistorySample",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13523,
+        "columnNumber": 20,
+        "selfSize": 2592
+      },
+      {
+        "functionName": "next",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 860
+      },
+      {
+        "functionName": "set",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1812
+      },
+      {
+        "functionName": "from",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1504
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13537,
+        "columnNumber": 36,
+        "selfSize": 2736
+      },
+      {
+        "functionName": "filter",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 336
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13499,
+        "columnNumber": 48,
+        "selfSize": 2524
+      },
+      {
+        "functionName": "WebGLRenderer.render",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 45270,
+        "columnNumber": 24,
+        "selfSize": 152
+      },
+      {
+        "functionName": "push",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 39979,
+        "columnNumber": 14,
+        "selfSize": 152
+      },
+      {
+        "functionName": "push",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 39979,
+        "columnNumber": 14,
+        "selfSize": 152
+      },
+      {
+        "functionName": "update",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 37905,
+        "columnNumber": 16,
+        "selfSize": 168
+      },
+      {
+        "functionName": "setValueV3f",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38358,
+        "columnNumber": 20,
+        "selfSize": 132
+      },
+      {
+        "functionName": "setValueM3",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38410,
+        "columnNumber": 19,
+        "selfSize": 140
+      },
+      {
+        "functionName": "copyArray",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38326,
+        "columnNumber": 18,
+        "selfSize": 132
+      },
+      {
+        "functionName": "copyArray",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38326,
+        "columnNumber": 18,
+        "selfSize": 1344
+      },
+      {
+        "functionName": "setValueV3f",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38358,
+        "columnNumber": 20,
+        "selfSize": 132
+      },
+      {
+        "functionName": "seqWithValue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38841,
+        "columnNumber": 20,
+        "selfSize": 144
+      },
+      {
+        "functionName": "refreshMaterialUniforms",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 43357,
+        "columnNumber": 33,
+        "selfSize": 984
+      },
+      {
+        "functionName": "refreshUniformsLine",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 43453,
+        "columnNumber": 29,
+        "selfSize": 132
+      },
+      {
+        "functionName": "refreshUniformsPhysical",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 43515,
+        "columnNumber": 33,
+        "selfSize": 132
+      },
+      {
+        "functionName": "getParameters",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 39509,
+        "columnNumber": 23,
+        "selfSize": 180
+      },
+      {
+        "functionName": "has",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "update",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 37905,
+        "columnNumber": 16,
+        "selfSize": 144
+      },
+      {
+        "functionName": "copyArray",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38326,
+        "columnNumber": 18,
+        "selfSize": 132
+      },
+      {
+        "functionName": "copyArray",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38326,
+        "columnNumber": 18,
+        "selfSize": 264
+      },
+      {
+        "functionName": "setValue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38778,
+        "columnNumber": 9,
+        "selfSize": 288
+      },
+      {
+        "functionName": "setValueV3f",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 38358,
+        "columnNumber": 20,
+        "selfSize": 300
+      },
+      {
+        "functionName": "getPMREM",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 37686,
+        "columnNumber": 18,
+        "selfSize": 252
+      },
+      {
+        "functionName": "has",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 420
+      },
+      {
+        "functionName": "enable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 21201,
+        "columnNumber": 7,
+        "selfSize": 168
+      },
+      {
+        "functionName": "get",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 740
+      },
+      {
+        "functionName": "drawBuffers",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 41039,
+        "columnNumber": 21,
+        "selfSize": 644
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46698,
+        "columnNumber": 46,
+        "selfSize": 3056
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11763,
+        "columnNumber": 48,
+        "selfSize": 772
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10577,
+        "columnNumber": 33,
+        "selfSize": 572
+      },
+      {
+        "functionName": "replace2",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10122,
+        "columnNumber": 18,
+        "selfSize": 1356
+      },
+      {
+        "functionName": "isLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9989,
+        "columnNumber": 19,
+        "selfSize": 144
+      },
+      {
+        "functionName": "validateHashLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10012,
+        "columnNumber": 30,
+        "selfSize": 176
+      },
+      {
+        "functionName": "getHistoryState",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10031,
+        "columnNumber": 24,
+        "selfSize": 696
+      },
+      {
+        "functionName": "createLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10043,
+        "columnNumber": 23,
+        "selfSize": 308
+      },
+      {
+        "functionName": "getIndex",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10089,
+        "columnNumber": 18,
+        "selfSize": 284
+      },
+      {
+        "functionName": "createHashLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9993,
+        "columnNumber": 28,
+        "selfSize": 140
+      },
+      {
+        "functionName": "createLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10043,
+        "columnNumber": 23,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11515,
+        "columnNumber": 41,
+        "selfSize": 156
+      },
+      {
+        "functionName": "exports.startTransition",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 341,
+        "columnNumber": 35,
+        "selfSize": 216
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11517,
+        "columnNumber": 36,
+        "selfSize": 144
+      },
+      {
+        "functionName": "resolveTo",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10409,
+        "columnNumber": 18,
+        "selfSize": 144
+      },
+      {
+        "functionName": "createSearchParams",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11062,
+        "columnNumber": 27,
+        "selfSize": 1184
+      },
+      {
+        "functionName": "",
+        "scriptId": "14",
+        "url": "",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "selfSize": 152
+      },
+      {
+        "functionName": "evaluate",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 295,
+        "columnNumber": 10,
+        "selfSize": 1300
+      },
+      {
+        "functionName": "parseEvaluationResultValue",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 102,
+        "columnNumber": 35,
+        "selfSize": 456
+      },
+      {
+        "functionName": "parseEvaluationResultValue",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 102,
+        "columnNumber": 35,
+        "selfSize": 288
+      },
+      {
+        "functionName": "computeBox",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 2748,
+        "columnNumber": 19,
+        "selfSize": 132
+      },
+      {
+        "functionName": "querySelectorAll",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 6680,
+        "columnNumber": 18,
+        "selfSize": 332
+      },
+      {
+        "functionName": "end",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 5099,
+        "columnNumber": 5,
+        "selfSize": 304
+      },
+      {
+        "functionName": "oneLine",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 7946,
+        "columnNumber": 16,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "26",
+        "url": "",
+        "lineNumber": 7469,
+        "columnNumber": 15,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "48",
+        "url": "",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "selfSize": 160
+      },
+      {
+        "functionName": "dispatchDiscreteEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9461,
+        "columnNumber": 31,
+        "selfSize": 704
+      },
+      {
+        "functionName": "dispatchEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9481,
+        "columnNumber": 23,
+        "selfSize": 1156
+      },
+      {
+        "functionName": "dispatchEventForPluginEventSystem",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7814,
+        "columnNumber": 43,
+        "selfSize": 724
+      },
+      {
+        "functionName": "batchedUpdates$1",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1795,
+        "columnNumber": 26,
+        "selfSize": 5428
+      },
+      {
+        "functionName": "restoreStateOfTarget",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1765,
+        "columnNumber": 30,
+        "selfSize": 144
+      },
+      {
+        "functionName": "basicStateReducer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3603,
+        "columnNumber": 27,
+        "selfSize": 168
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7840,
+        "columnNumber": 27,
+        "selfSize": 3312
+      },
+      {
+        "functionName": "getListener",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1806,
+        "columnNumber": 21,
+        "selfSize": 192
+      },
+      {
+        "functionName": "createAndAccumulateChangeEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2130,
+        "columnNumber": 40,
+        "selfSize": 1296
+      },
+      {
+        "functionName": "SyntheticBaseEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1866,
+        "columnNumber": 29,
+        "selfSize": 296
+      },
+      {
+        "functionName": "accumulateTwoPhaseListeners",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8064,
+        "columnNumber": 37,
+        "selfSize": 560
+      },
+      {
+        "functionName": "createDispatchListener",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8057,
+        "columnNumber": 32,
+        "selfSize": 996
+      },
+      {
+        "functionName": "getTargetInstForInputOrChangeEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2181,
+        "columnNumber": 44,
+        "selfSize": 132
+      },
+      {
+        "functionName": "getInstIfValueChanged",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2142,
+        "columnNumber": 31,
+        "selfSize": 532
+      },
+      {
+        "functionName": "updateValueIfChanged",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1532,
+        "columnNumber": 30,
+        "selfSize": 268
+      },
+      {
+        "functionName": "isCheckable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1493,
+        "columnNumber": 21,
+        "selfSize": 140
+      },
+      {
+        "functionName": "processDispatchQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7734,
+        "columnNumber": 30,
+        "selfSize": 276
+      },
+      {
+        "functionName": "onChange",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 43,
+        "columnNumber": 13,
+        "selfSize": 192
+      },
+      {
+        "functionName": "patchSettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46717,
+        "columnNumber": 23,
+        "selfSize": 168
+      },
+      {
+        "functionName": "applySettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46704,
+        "columnNumber": 23,
+        "selfSize": 512
+      },
+      {
+        "functionName": "scheduleUrlWrite",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46690,
+        "columnNumber": 26,
+        "selfSize": 804
+      },
+      {
+        "functionName": "findInstanceBlockingEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9519,
+        "columnNumber": 35,
+        "selfSize": 696
+      },
+      {
+        "functionName": "findInstanceBlockingTarget",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9524,
+        "columnNumber": 36,
+        "selfSize": 432
+      },
+      {
+        "functionName": "Promise",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 316
+      },
+      {
+        "functionName": "",
+        "scriptId": "46",
+        "url": "",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "selfSize": 232
+      },
+      {
+        "functionName": "dispatchEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9481,
+        "columnNumber": 23,
+        "selfSize": 364
+      },
+      {
+        "functionName": "batchedUpdates$1",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1795,
+        "columnNumber": 26,
+        "selfSize": 184
+      },
+      {
+        "functionName": "restoreStateOfTarget",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1765,
+        "columnNumber": 30,
+        "selfSize": 484
+      },
+      {
+        "functionName": "updateProperties",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8483,
+        "columnNumber": 26,
+        "selfSize": 300
+      },
+      {
+        "functionName": "updateProperties",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8483,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "setProp",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8102,
+        "columnNumber": 17,
+        "selfSize": 10664
+      },
+      {
+        "functionName": "setProp",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8102,
+        "columnNumber": 17,
+        "selfSize": 432
+      },
+      {
+        "functionName": "commitMutationEffectsOnFiber",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6207,
+        "columnNumber": 38,
+        "selfSize": 688
+      },
+      {
+        "functionName": "insertOrAppendPlacementNode",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 5826,
+        "columnNumber": 37,
+        "selfSize": 256
+      },
+      {
+        "functionName": "insertOrAppendPlacementNode",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 5826,
+        "columnNumber": 37,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46318,
+        "columnNumber": 29,
+        "selfSize": 136
+      },
+      {
+        "functionName": "updateSettings",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-Br8EaXpz.js",
+        "lineNumber": 603,
+        "columnNumber": 16,
+        "selfSize": 248
+      },
+      {
+        "functionName": "updateLightPath",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-Br8EaXpz.js",
+        "lineNumber": 551,
+        "columnNumber": 25,
+        "selfSize": 852
+      },
+      {
+        "functionName": "setColorAt",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 28173,
+        "columnNumber": 11,
+        "selfSize": 216
+      },
+      {
+        "functionName": "calculateGlassAimDirectionInto",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-Br8EaXpz.js",
+        "lineNumber": 196,
+        "columnNumber": 39,
+        "selfSize": 544
+      },
+      {
+        "functionName": "traceGlassRayInto",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-Br8EaXpz.js",
+        "lineNumber": 219,
+        "columnNumber": 26,
+        "selfSize": 1456
+      },
+      {
+        "functionName": "negate",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 16843,
+        "columnNumber": 7,
+        "selfSize": 176
+      },
+      {
+        "functionName": "dot",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 16855,
+        "columnNumber": 4,
+        "selfSize": 3704
+      },
+      {
+        "functionName": "reflect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 16988,
+        "columnNumber": 8,
+        "selfSize": 192
+      },
+      {
+        "functionName": "resetResult",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-Br8EaXpz.js",
+        "lineNumber": 133,
+        "columnNumber": 20,
+        "selfSize": 236
+      },
+      {
+        "functionName": "refractVectorInto",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-Br8EaXpz.js",
+        "lineNumber": 154,
+        "columnNumber": 26,
+        "selfSize": 576
+      },
+      {
+        "functionName": "updateMaterial",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-Br8EaXpz.js",
+        "lineNumber": 588,
+        "columnNumber": 24,
+        "selfSize": 536
+      },
+      {
+        "functionName": "min",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 140
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13190,
+        "columnNumber": 18,
+        "selfSize": 816
+      },
+      {
+        "functionName": "resetWorkInProgressStack",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 6982,
+        "columnNumber": 34,
+        "selfSize": 660
+      },
+      {
+        "functionName": "unwindInterruptedWork",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 5637,
+        "columnNumber": 31,
+        "selfSize": 160
+      },
+      {
+        "functionName": "beginWork",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 5183,
+        "columnNumber": 19,
+        "selfSize": 5600
+      },
+      {
+        "functionName": "createFiberImplClass",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2373,
+        "columnNumber": 30,
+        "selfSize": 520
+      },
+      {
+        "functionName": "updateSlot",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3018,
+        "columnNumber": 21,
+        "selfSize": 520
+      },
+      {
+        "functionName": "createFiberImplClass",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2373,
+        "columnNumber": 30,
+        "selfSize": 208
+      },
+      {
+        "functionName": "updateForwardRef",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 4653,
+        "columnNumber": 26,
+        "selfSize": 184
+      },
+      {
+        "functionName": "LinkWithRef",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11550,
+        "columnNumber": 55,
+        "selfSize": 584
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 288
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "usePrefetchBehavior",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11294,
+        "columnNumber": 28,
+        "selfSize": 844
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 448
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 448
+      },
+      {
+        "functionName": "createFunctionComponentUpdateQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3556,
+        "columnNumber": 44,
+        "selfSize": 140
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "mergeRefs",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 11491,
+        "columnNumber": 18,
+        "selfSize": 284
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "useNavigateUnstable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10566,
+        "columnNumber": 28,
+        "selfSize": 144
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 448
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13,
+        "columnNumber": 9,
+        "selfSize": 396
+      },
+      {
+        "functionName": "map",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 848
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 280
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "is",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12420,
+        "columnNumber": 40,
+        "selfSize": 1144
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 720
+      },
+      {
+        "functionName": "join",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 420
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 2012
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12444,
+        "columnNumber": 48,
+        "selfSize": 836
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 280
+      },
+      {
+        "functionName": "trim",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 160
+      },
+      {
+        "functionName": "reconcileChildFibersImpl",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3104,
+        "columnNumber": 35,
+        "selfSize": 208
+      },
+      {
+        "functionName": "TelemetrySparkline",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13168,
+        "columnNumber": 27,
+        "selfSize": 300
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "TelemetryPanel",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13218,
+        "columnNumber": 23,
+        "selfSize": 3268
+      },
+      {
+        "functionName": "matchAll",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 2764
+      },
+      {
+        "functionName": "from",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 12352
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 448
+      },
+      {
+        "functionName": "ShaderCanvas",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46277,
+        "columnNumber": 21,
+        "selfSize": 1128
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateSyncExternalStore",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3696,
+        "columnNumber": 33,
+        "selfSize": 144
+      },
+      {
+        "functionName": "bind",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "Button",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46414,
+        "columnNumber": 15,
+        "selfSize": 140
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 708
+      },
+      {
+        "functionName": "RoomRail",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46607,
+        "columnNumber": 17,
+        "selfSize": 448
+      },
+      {
+        "functionName": "keys",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 4928
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46618,
+        "columnNumber": 24,
+        "selfSize": 2400
+      },
+      {
+        "functionName": "keys",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 2484
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 448
+      },
+      {
+        "functionName": "ShowroomPage",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46640,
+        "columnNumber": 21,
+        "selfSize": 2056
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 13,
+        "columnNumber": 9,
+        "selfSize": 2952
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "useNavigateUnstable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 10566,
+        "columnNumber": 28,
+        "selfSize": 140
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "filter",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 6124
+      },
+      {
+        "functionName": "replace",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 168
+      },
+      {
+        "functionName": "matchAll",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1556
+      },
+      {
+        "functionName": "from",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 140
+      },
+      {
+        "functionName": "next",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 640
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 1152
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 160
+      },
+      {
+        "functionName": "GlassOpticsControls",
+        "scriptId": "5",
+        "url": "http://127.0.0.1:4175/assets/Controls-I_ANvgdR.js",
+        "lineNumber": 51,
+        "columnNumber": 28,
+        "selfSize": 988
+      },
+      {
+        "functionName": "hasOwn",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 564
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 288
+      },
+      {
+        "functionName": "ControlGroup",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 18,
+        "columnNumber": 21,
+        "selfSize": 136
+      },
+      {
+        "functionName": "SliderControl",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 27,
+        "columnNumber": 22,
+        "selfSize": 1860
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 448
+      },
+      {
+        "functionName": "is",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 140
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 736
+      },
+      {
+        "functionName": "ToggleControl",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 47,
+        "columnNumber": 22,
+        "selfSize": 284
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 160
+      },
+      {
+        "functionName": "completeWork",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 5360,
+        "columnNumber": 22,
+        "selfSize": 1124
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7840,
+        "columnNumber": 27,
+        "selfSize": 1040
+      },
+      {
+        "functionName": "getEventTarget",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1759,
+        "columnNumber": 24,
+        "selfSize": 144
+      },
+      {
+        "functionName": "createAndAccumulateChangeEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2130,
+        "columnNumber": 40,
+        "selfSize": 232
+      },
+      {
+        "functionName": "SyntheticBaseEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1866,
+        "columnNumber": 29,
+        "selfSize": 308
+      },
+      {
+        "functionName": "timeStamp",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1897,
+        "columnNumber": 21,
+        "selfSize": 140
+      },
+      {
+        "functionName": "accumulateTwoPhaseListeners",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 8064,
+        "columnNumber": 37,
+        "selfSize": 140
+      },
+      {
+        "functionName": "getInstIfValueChanged",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 2142,
+        "columnNumber": 31,
+        "selfSize": 132
+      },
+      {
+        "functionName": "getNodeFromInstance",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1402,
+        "columnNumber": 29,
+        "selfSize": 136
+      },
+      {
+        "functionName": "updateValueIfChanged",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1532,
+        "columnNumber": 30,
+        "selfSize": 184
+      },
+      {
+        "functionName": "isCheckable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 1493,
+        "columnNumber": 21,
+        "selfSize": 144
+      },
+      {
+        "functionName": "extractEvents$1",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7672,
+        "columnNumber": 25,
+        "selfSize": 184
+      },
+      {
+        "functionName": "processDispatchQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 7734,
+        "columnNumber": 30,
+        "selfSize": 204
+      },
+      {
+        "functionName": "onChange",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-BJlvtnUb.js",
+        "lineNumber": 43,
+        "columnNumber": 13,
+        "selfSize": 136
+      },
+      {
+        "functionName": "onChange",
+        "scriptId": "5",
+        "url": "http://127.0.0.1:4175/assets/Controls-I_ANvgdR.js",
+        "lineNumber": 63,
+        "columnNumber": 16,
+        "selfSize": 144
+      },
+      {
+        "functionName": "patchSettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46717,
+        "columnNumber": 23,
+        "selfSize": 132
+      },
+      {
+        "functionName": "dispatchSetState",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 4185,
+        "columnNumber": 26,
+        "selfSize": 916
+      },
+      {
+        "functionName": "entangleTransitionUpdate",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 4236,
+        "columnNumber": 34,
+        "selfSize": 140
+      },
+      {
+        "functionName": "serializeRoomUrlSettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 46584,
+        "columnNumber": 33,
+        "selfSize": 480
+      },
+      {
+        "functionName": "findInstanceBlockingTarget",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9524,
+        "columnNumber": 36,
+        "selfSize": 216
+      },
+      {
+        "functionName": "clearIfContinuousEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-KDUSxS4l.js",
+        "lineNumber": 9634,
+        "columnNumber": 32,
+        "selfSize": 136
+      },
+      {
+        "functionName": "(V8 API)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1176
+      },
+      {
+        "functionName": "(PARSER)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 396
+      },
+      {
+        "functionName": "(BYTECODE_COMPILER)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1556
+      },
+      {
+        "functionName": "(IDLE_EXTERNAL)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 65728
+      }
+    ],
+    "forbiddenAllocations": []
+  },
+  "errors": []
+}

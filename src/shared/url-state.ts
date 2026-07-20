@@ -9,7 +9,7 @@ import type {
 } from '../rooms/types';
 import { voxelWaterDefaults, voxelWaterDomains } from '../rooms/voxel-water/state';
 
-export const URL_STATE_VERSION = '1';
+export const URL_STATE_VERSION = '2';
 export const URL_STATE_DEBOUNCE_MS = 150;
 export const URL_STATE_RESERVED_KEYS = ['qaTime'] as const;
 

@@ -258,8 +258,8 @@ async function runScenario(firstRoom) {
     );
     assert(voxelMean >= 14.9, `Voxel FPS regressed below the 10% budget: ${voxelMean}.`);
     assert(
-      glassCalls.every((calls) => calls === 19),
-      `Glass logical-frame calls changed from the calibrated 19-call baseline: ${glassCalls.join(', ')}.`,
+      glassCalls.every((calls) => calls === 15),
+      `Glass logical-frame calls changed from the calibrated 15-call topology: ${glassCalls.join(', ')}.`,
     );
   }
 

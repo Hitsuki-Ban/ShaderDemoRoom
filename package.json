@@ -13,6 +13,7 @@
     "qa:visual": "node scripts/visual-smoke.mjs",
     "qa:exhibits": "node scripts/exhibit-smoke.mjs",
     "qa:water": "node scripts/water-qa.mjs",
+    "qa:glass": "node scripts/glass-optics-qa-runner.mjs",
     "qa:ninth-tide": "node scripts/ninth-tide-capture.mjs",
     "qa:orb": "node scripts/orb-deterministic-capture.mjs",
     "qa:orb-profile": "node scripts/orb-profile.mjs",
