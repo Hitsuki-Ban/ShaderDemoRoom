@@ -23,6 +23,7 @@ import {
   Texture,
   Vector2,
   Vector3,
+  type Material,
   type Object3D,
 } from 'three';
 import type { GlassOpticsSettings, RoomRuntimeContext } from '../types';
@@ -62,7 +63,10 @@ function expectPresetWithinDomains(preset: Partial<typeof glassOpticsDefaults>) 
   }
 }
 
-function createRuntimeHarness(settings: GlassOpticsSettings = { ...glassOpticsDefaults }) {
+function createRuntimeHarness(
+  settings: GlassOpticsSettings = { ...glassOpticsDefaults },
+  canvas = document.createElement('canvas'),
+) {
   let scene: Scene | undefined;
   let camera: PerspectiveCamera | undefined;
   const environmentTexture = new Texture();
@@ -91,7 +95,7 @@ function createRuntimeHarness(settings: GlassOpticsSettings = { ...glassOpticsDe
     },
   };
   const context: RoomRuntimeContext = {
-    canvas: document.createElement('canvas'),
+    canvas,
     renderer,
     createPmremGenerator: vi.fn(() => ({
       fromScene,
@@ -188,6 +192,58 @@ function findCaustics(objects: Object3D[]) {
 }
 
 describe('glass optics runtime contracts', () => {
+  it('leases one stable scene and camera identity per canvas across sequential sessions', () => {
+    const canvas = document.createElement('canvas');
+    const first = createRuntimeHarness({ ...glassOpticsDefaults }, canvas);
+    const firstRoot = first.objects.find((object) =>
+      object.name === 'glass-optics-stage-root');
+
+    first.runtime.dispose();
+    expect(first.scene.children).toHaveLength(0);
+    expect(first.scene.background).toBeNull();
+    expect(first.scene.environment).toBeNull();
+    expect(first.scene.fog).toBeNull();
+
+    const second = createRuntimeHarness({ ...glassOpticsDefaults }, canvas);
+    expect(second.scene).toBe(first.scene);
+    expect(second.camera).toBe(first.camera);
+    expect(second.objects).not.toContain(firstRoot);
+    second.runtime.dispose();
+  });
+
+  it('rejects concurrent Glass runtimes on the same canvas', () => {
+    const canvas = document.createElement('canvas');
+    const active = createRuntimeHarness({ ...glassOpticsDefaults }, canvas);
+
+    expect(() => createRuntimeHarness({ ...glassOpticsDefaults }, canvas)).toThrow(
+      'Glass Optics already has an active runtime for this canvas.',
+    );
+    active.runtime.dispose();
+  });
+
+  it('releases the canvas lease when runtime construction fails', () => {
+    const canvas = document.createElement('canvas');
+    const constructionError = new Error('PMREM construction failed');
+    const pmremDispose = vi.fn();
+    const context: RoomRuntimeContext = {
+      canvas,
+      renderer: { render: vi.fn() },
+      createPmremGenerator: () => ({
+        fromScene: () => {
+          throw constructionError;
+        },
+        dispose: pmremDispose,
+      }) as never,
+      motionScale: 1,
+    };
+
+    expect(() => createRoomRuntime(context, glassOpticsDefaults)).toThrow(constructionError);
+    expect(pmremDispose).toHaveBeenCalledOnce();
+
+    const recovered = createRuntimeHarness({ ...glassOpticsDefaults }, canvas);
+    recovered.runtime.dispose();
+  });
+
   it('uses one bounded caustics intensity for creation and updates', () => {
     const { objects, runtime } = createRuntimeHarness();
     const caustics = findCaustics(objects);
@@ -487,7 +543,7 @@ describe('glass optics runtime contracts', () => {
   });
 
   it('bakes a three-strip dark-field environment exactly once', () => {
-    const { environmentTarget, fromScene, runtime } = createRuntimeHarness();
+    const { environmentTarget, fromScene, pmremDispose, runtime } = createRuntimeHarness();
 
     expect(fromScene).toHaveBeenCalledTimes(1);
     const [environmentScene, sigma, near, far, options] = fromScene.mock.calls[0]!;
@@ -509,6 +565,73 @@ describe('glass optics runtime contracts', () => {
 
     runtime.dispose();
     expect(environmentTarget.dispose).toHaveBeenCalledTimes(1);
+    expect(pmremDispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('disposes each root resource and instanced beam batch exactly once', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const geometries = new Set<{ dispose: () => void }>();
+    const materials = new Set<Material>();
+    for (const object of objects) {
+      const renderable = object as Object3D & {
+        geometry?: { dispose: () => void };
+        material?: Material | Material[];
+      };
+      if (renderable.geometry) geometries.add(renderable.geometry);
+      if (renderable.material) {
+        const objectMaterials = Array.isArray(renderable.material)
+          ? renderable.material
+          : [renderable.material];
+        objectMaterials.forEach((material) => materials.add(material));
+      }
+    }
+    const geometryDisposeSpies = [...geometries]
+      .map((geometry) => vi.spyOn(geometry, 'dispose'));
+    const materialDisposeSpies = [...materials]
+      .map((material) => vi.spyOn(material, 'dispose'));
+    const instancedMeshDisposeSpies = findBeamBatches(objects)
+      .map((mesh) => vi.spyOn(mesh, 'dispose'));
+
+    runtime.dispose();
+
+    geometryDisposeSpies.forEach((dispose) => expect(dispose).toHaveBeenCalledOnce());
+    materialDisposeSpies.forEach((dispose) => expect(dispose).toHaveBeenCalledOnce());
+    instancedMeshDisposeSpies.forEach((dispose) => expect(dispose).toHaveBeenCalledOnce());
+  });
+
+  it('attempts every cleanup and releases the lease when a root dispose fails', () => {
+    const canvas = document.createElement('canvas');
+    const {
+      environmentTarget,
+      objects,
+      pmremDispose,
+      runtime,
+    } = createRuntimeHarness({ ...glassOpticsDefaults }, canvas);
+    const meshes = objects.filter((object): object is Mesh => object instanceof Mesh);
+    const firstGeometry = meshes[0]!.geometry;
+    const lastMaterial = meshes.at(-1)!.material as Material;
+    const rootDisposeError = new Error('root geometry dispose failed');
+    vi.spyOn(firstGeometry, 'dispose').mockImplementation(() => {
+      throw rootDisposeError;
+    });
+    const lastMaterialDispose = vi.spyOn(lastMaterial, 'dispose');
+    const referenceMaterial = meshes
+      .map((mesh) => mesh.material)
+      .find((material): material is ShaderMaterial =>
+        material instanceof ShaderMaterial && 'uReferencePanel' in material.uniforms)!;
+    const referenceTextureDispose = vi.spyOn(
+      referenceMaterial.uniforms.uReferencePanel.value as DataTexture,
+      'dispose',
+    );
+
+    expect(() => runtime.dispose()).toThrow(rootDisposeError);
+    expect(lastMaterialDispose).toHaveBeenCalledOnce();
+    expect(referenceTextureDispose).toHaveBeenCalledOnce();
+    expect(environmentTarget.dispose).toHaveBeenCalledOnce();
+    expect(pmremDispose).toHaveBeenCalledOnce();
+
+    const recovered = createRuntimeHarness({ ...glassOpticsDefaults }, canvas);
+    recovered.runtime.dispose();
   });
 
   it('builds one opaque asymmetrical calibration target over a subdued reflective floor', () => {

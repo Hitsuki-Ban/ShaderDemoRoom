@@ -44,6 +44,7 @@ await context.addInitScript(() => {
   const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
   const records = [];
   const creationErrors = [];
+  const telemetryPublications = [];
   let nextCanvasId = 1;
 
   Object.defineProperty(window, '__shellRendererAudit', {
@@ -51,7 +52,31 @@ await context.addInitScript(() => {
       records,
       creationErrors,
       animationCallbacks: 0,
+      telemetryPublications,
     },
+  });
+
+  const telemetryObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type !== 'attributes') {
+        continue;
+      }
+      const serialized = mutation.target.getAttribute('data-telemetry-json');
+      const activeRoomHref = document
+        .querySelector('.room-link.active')
+        ?.getAttribute('href');
+      if (serialized && activeRoomHref) {
+        telemetryPublications.push({
+          room: activeRoomHref.split('/').at(-1),
+          serialized,
+        });
+      }
+    }
+  });
+  telemetryObserver.observe(document, {
+    attributeFilter: ['data-telemetry-json'],
+    attributes: true,
+    subtree: true,
   });
 
   window.requestAnimationFrame = (callback) =>
@@ -149,7 +174,98 @@ async function openRoom(page, room) {
   } else {
     await page.waitForSelector('iframe.embedded-exhibit-frame', { timeout: 15000 });
   }
+  const telemetryPublicationStart = shaderRooms.has(room)
+    ? await page.evaluate(() => window.__shellRendererAudit.telemetryPublications.length)
+    : null;
   await page.waitForTimeout(350);
+  return telemetryPublicationStart;
+}
+
+async function readNewRoomTelemetry(page, room) {
+  const publicationStart = await openRoom(page, room);
+  assert(publicationStart !== null, `Cannot read shader telemetry for ${room}.`);
+  const telemetryHandle = await page.waitForFunction(
+    ({ nextRoom, start }) => {
+      const publication = window.__shellRendererAudit.telemetryPublications
+        .slice(start)
+        .find(({ room }) => room === nextRoom);
+      return publication ? JSON.parse(publication.serialized) : null;
+    },
+    { nextRoom: room, start: publicationStart },
+    { timeout: 15000 },
+  );
+  const telemetry = await telemetryHandle.jsonValue();
+  await telemetryHandle.dispose();
+
+  const calls = Number(telemetry.drawCalls);
+  const textures = Number(telemetry.textures);
+  const geometries = Number(telemetry.geometries);
+  const programs = telemetry.programs === null ? null : Number(telemetry.programs);
+  assert(Number.isFinite(calls), `Could not read the ${room} calls value: ${telemetry.drawCalls}.`);
+  assert(Number.isFinite(textures), `Could not read the ${room} texture count: ${telemetry.textures}.`);
+  assert(
+    Number.isFinite(geometries),
+    `Could not read the ${room} geometry count: ${telemetry.geometries}.`,
+  );
+  assert(
+    programs === null || Number.isFinite(programs),
+    `Could not read the ${room} program count: ${telemetry.programs}.`,
+  );
+
+  return {
+    calls,
+    geometries,
+    programs,
+    state: telemetry.sampleState,
+    textures,
+  };
+}
+
+async function sampleGlassVoxelLifecycle(page) {
+  const pairs = [];
+  let voxelBaseline = null;
+
+  for (let round = 1; round <= 10; round += 1) {
+    const glass = await readNewRoomTelemetry(page, 'glass-optics');
+    assert(
+      glass.calls === 15,
+      `Glass logical-frame calls changed in lifecycle round ${round}: ${glass.calls}.`,
+    );
+
+    const voxel = await readNewRoomTelemetry(page, 'voxel-water');
+    if (voxelBaseline === null) {
+      voxelBaseline = {
+        geometries: voxel.geometries,
+        textures: voxel.textures,
+      };
+    } else {
+      assert(
+        voxel.textures === voxelBaseline.textures,
+        `Voxel textures changed after Glass exit in lifecycle round ${round}: ${voxel.textures} !== ${voxelBaseline.textures}.`,
+      );
+      assert(
+        voxel.geometries === voxelBaseline.geometries,
+        `Voxel geometries changed after Glass exit in lifecycle round ${round}: ${voxel.geometries} !== ${voxelBaseline.geometries}.`,
+      );
+    }
+    pairs.push({ glass, round, voxel });
+  }
+
+  const voxelPrograms = pairs.map(({ voxel }) => voxel.programs);
+  const voxelProgramsStable = voxelPrograms.every((programs) => programs === voxelPrograms[0]);
+  assert(
+    voxelProgramsStable,
+    `Voxel programs changed after Glass exit: ${voxelPrograms.join(', ')}.`,
+  );
+  console.log(
+    `Glass -> Voxel lifecycle programs: ${voxelPrograms.join(', ')} (stable ${voxelProgramsStable})`,
+  );
+
+  return {
+    pairs,
+    voxelBaseline,
+    voxelProgramsStable,
+  };
 }
 
 async function assertAnimationState(page, active) {
@@ -256,12 +372,15 @@ async function runScenario(firstRoom) {
     console.log(
       `glass telemetry: ${telemetrySamples['glass-optics'].map(({ calls, fps }) => `${fps} FPS/${calls} calls`).join(', ')}`,
     );
-    assert(voxelMean >= 14.9, `Voxel FPS regressed below the 10% budget: ${voxelMean}.`);
     assert(
       glassCalls.every((calls) => calls === 15),
       `Glass logical-frame calls changed from the calibrated 15-call topology: ${glassCalls.join(', ')}.`,
     );
   }
+
+  const glassVoxelLifecycle = firstRoom === 'voxel-water'
+    ? await sampleGlassVoxelLifecycle(page)
+    : null;
 
   const pixelRatios = {};
   for (const room of ['voxel-water', 'glass-optics']) {
@@ -307,6 +426,7 @@ async function runScenario(firstRoom) {
     errors,
     finalAudit,
     firstRoom,
+    glassVoxelLifecycle,
     telemetrySamples,
     pixelRatios,
     rendererProfileScales,

@@ -53,17 +53,126 @@ import {
 import { glassOpticsDefaults, glassOpticsDomains } from './state';
 import { createReferencePanelTexture } from './reference-panel';
 
+interface GlassRenderIdentity {
+  camera: PerspectiveCamera;
+  owner: symbol | null;
+  scene: Scene;
+}
+
+const glassRenderIdentities = new WeakMap<HTMLCanvasElement, GlassRenderIdentity>();
+
+function resetGlassCamera(camera: PerspectiveCamera) {
+  camera.fov = 42;
+  camera.aspect = 1;
+  camera.near = 0.1;
+  camera.far = 100;
+  camera.focus = 10;
+  camera.zoom = 1;
+  camera.filmGauge = 35;
+  camera.filmOffset = 0;
+  camera.view = null;
+  camera.viewport = undefined;
+  camera.layers.mask = 1;
+  camera.position.set(0, 0, 0);
+  camera.quaternion.identity();
+  camera.scale.set(1, 1, 1);
+  camera.up.set(0, 1, 0);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld(true);
+}
+
+function acquireGlassRenderIdentity(canvas: HTMLCanvasElement) {
+  let identity = glassRenderIdentities.get(canvas);
+  if (!identity) {
+    identity = {
+      camera: new PerspectiveCamera(42, 1, 0.1, 100),
+      owner: null,
+      scene: new Scene(),
+    };
+    glassRenderIdentities.set(canvas, identity);
+  }
+  if (identity.owner !== null) {
+    throw new Error('Glass Optics already has an active runtime for this canvas.');
+  }
+  if (
+    identity.scene.children.length !== 0
+    || identity.scene.background !== null
+    || identity.scene.environment !== null
+    || identity.scene.fog !== null
+    || identity.scene.overrideMaterial !== null
+  ) {
+    throw new Error('Glass Optics render identity retained resources after its previous session.');
+  }
+  const owner = Symbol('glass-optics-runtime-owner');
+  identity.owner = owner;
+  resetGlassCamera(identity.camera);
+  return { identity, owner };
+}
+
+function detachGlassRenderIdentity(
+  identity: GlassRenderIdentity,
+  owner: symbol,
+  root: Group,
+) {
+  if (identity.owner !== owner) {
+    throw new Error('Glass Optics runtime does not own this render identity.');
+  }
+  if (root.parent !== identity.scene) {
+    throw new Error('Glass Optics session root is not attached to its render identity.');
+  }
+  identity.scene.remove(root);
+  identity.scene.environment = null;
+  identity.scene.background = null;
+  identity.scene.fog = null;
+  identity.scene.overrideMaterial = null;
+  if (identity.scene.children.length !== 0) {
+    throw new Error('Glass Optics render identity contains assets outside the session root.');
+  }
+}
+
+function releaseGlassRenderIdentity(identity: GlassRenderIdentity, owner: symbol) {
+  if (identity.owner !== owner) {
+    throw new Error('Glass Optics runtime cannot release an identity it does not own.');
+  }
+  identity.owner = null;
+}
+
+function runCleanupSteps(steps: Iterable<() => void>) {
+  let firstError: unknown;
+  let failed = false;
+  for (const step of steps) {
+    try {
+      step();
+    } catch (error) {
+      if (!failed) firstError = error;
+      failed = true;
+    }
+  }
+  if (failed) throw firstError;
+}
+
 function disposeObject(object: Object3D) {
+  const geometries = new Set<Mesh['geometry']>();
+  const materials = new Set<Material>();
+  const instancedMeshes = new Set<InstancedMesh>();
   object.traverse((child) => {
     const mesh = child as Mesh;
+    if (child instanceof InstancedMesh) {
+      instancedMeshes.add(child);
+    }
     if ('geometry' in mesh && mesh.geometry) {
-      mesh.geometry.dispose();
+      geometries.add(mesh.geometry);
     }
     if ('material' in mesh && mesh.material) {
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      materials.forEach((material) => material.dispose());
+      const meshMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      meshMaterials.forEach((material) => materials.add(material));
     }
   });
+  runCleanupSteps([
+    ...[...instancedMeshes].map((mesh) => () => mesh.dispose()),
+    ...[...geometries].map((geometry) => () => geometry.dispose()),
+    ...[...materials].map((material) => () => material.dispose()),
+  ]);
 }
 
 const BEAM_INSTANCE_COUNT = 8;
@@ -271,6 +380,7 @@ export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>)
 
 export function createRoomRuntime(
   {
+    canvas,
     renderer,
     createPmremGenerator,
     motionScale: initialMotionScale,
@@ -280,9 +390,11 @@ export function createRoomRuntime(
   let settings: DeepReadonly<GlassOpticsSettings> = initialSettings;
   let motionScale = initialMotionScale;
   let motionElapsed = 0;
-  const scene = new Scene();
-  const camera = new PerspectiveCamera(42, 1, 0.1, 100);
+  const { identity, owner } = acquireGlassRenderIdentity(canvas);
+  const { scene, camera } = identity;
   const root = new Group();
+  const externalDisposers: Array<() => void> = [];
+  try {
   const sourcePosition = new Vector3();
   const aimCenterDirection = new Vector3();
   const aimOffsetAxis = new Vector3();
@@ -334,15 +446,22 @@ export function createRoomRuntime(
   scene.add(root);
 
   const pmrem = createPmremGenerator();
+  externalDisposers.push(() => pmrem.dispose());
   const darkFieldEnvironment = createDarkFieldEnvironment();
-  const environment = pmrem.fromScene(
-    darkFieldEnvironment,
-    0.025,
-    0.1,
-    20,
-    { size: 128 },
-  );
-  disposeObject(darkFieldEnvironment);
+  const environment = (() => {
+    try {
+      return pmrem.fromScene(
+        darkFieldEnvironment,
+        0.025,
+        0.1,
+        20,
+        { size: 128 },
+      );
+    } finally {
+      disposeObject(darkFieldEnvironment);
+    }
+  })();
+  externalDisposers.unshift(() => environment.dispose());
   scene.environment = environment.texture;
 
   const ambient = new AmbientLight(0x8fb8ff, 0.62);
@@ -376,6 +495,7 @@ export function createRoomRuntime(
   root.add(grid);
 
   const referenceTexture = createReferencePanelTexture();
+  externalDisposers.unshift(() => referenceTexture.dispose());
   const referenceMaterial = new ShaderMaterial({
     uniforms: {
       uReferencePanel: { value: referenceTexture },
@@ -802,21 +922,43 @@ export function createRoomRuntime(
       renderer.render(scene, camera);
     },
     dispose() {
-      disposeObject(root);
-      [
-        glassMaterial,
-        sourceMaterial,
-        sourceHaloMaterial,
-        markerMaterial,
-        reflectionMarkerMaterial,
-        refractionMarkerMaterial,
-        coreBeamMaterial,
-        glowBeamMaterial,
-        causticsMaterial,
-      ].forEach((material: Material) => material.dispose());
-      referenceTexture.dispose();
-      environment.dispose();
-      pmrem.dispose();
+      try {
+        runCleanupSteps([
+          () => detachGlassRenderIdentity(identity, owner, root),
+          () => disposeObject(root),
+          ...externalDisposers,
+        ]);
+      } finally {
+        releaseGlassRenderIdentity(identity, owner);
+      }
     },
   };
+  } catch (error) {
+    let cleanupError: unknown;
+    let cleanupFailed = false;
+    try {
+      try {
+        runCleanupSteps([
+          ...(root.parent === scene
+            ? [() => detachGlassRenderIdentity(identity, owner, root)]
+            : []),
+          () => disposeObject(root),
+          ...externalDisposers,
+        ]);
+      } catch (caughtCleanupError) {
+        cleanupError = caughtCleanupError;
+        cleanupFailed = true;
+      }
+    } finally {
+      releaseGlassRenderIdentity(identity, owner);
+    }
+    if (cleanupFailed) {
+      throw new AggregateError(
+        [error, cleanupError],
+        'Glass Optics runtime construction and cleanup both failed.',
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 }

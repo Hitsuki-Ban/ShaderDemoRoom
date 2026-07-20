@@ -446,4 +446,18 @@ describe('voxel water runtime contracts', () => {
     runtime.dispose();
   });
 
+  it('disposes the instanced columns object exactly once', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const columns = findObject(
+      objects,
+      (object): object is InstancedMesh =>
+        object.name === 'voxel-water-columns' && object instanceof InstancedMesh,
+    );
+    const disposeSpy = vi.spyOn(columns, 'dispose');
+
+    runtime.dispose();
+
+    expect(disposeSpy).toHaveBeenCalledTimes(1);
+  });
+
 });
