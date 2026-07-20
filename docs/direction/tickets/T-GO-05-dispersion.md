@@ -43,3 +43,13 @@ research-glass-optics.md §2.1(マテリアル)と §2.3(ビーム)の 2 段階�
 - **draw calls gate**: T-GO-04 で導入した core/glow の2 batchを維持し、instance 増加によって production hard gate **16** を変更しない。
 - **カラーパイプライン**: ビームは `toneMapped = false` の加算 FX、ガラス本体はトーンマップされる混合パイプラインである。この差は本展示の確定構成として受け入れ、別の統一パスや将来 ticket を設けない。採用色は同一キャプチャ内で視覚的に同系のスペクトルとして読めることを本票で検収する。
 - **renderOrder 連鎖**: サブチューブは既存 beam core(renderOrder 7)と同順位に置き、連鎖(1,3,4,5,6,7,8,9,10)へ新しい順位を増やさない。
+
+## 作業報告 (2026-07-20)
+
+- 実装 revision: `426f2e47b1b90a04d39b5d32be0b44579e83b4aa`。`dispersion` を必須設定として domain `0..1 / 0.01`、default `0.45`、Crystal `0.55`、Focus 継承で型・control・en/zh-CN・preset・material へ一括接続した。URL は v3 へ置換し、v1/v2、範囲外、off-step を migration / clamp / alias なしで拒否する。
+- 物理/描画: three r184 と同じ `δ=(ior-1)*0.025*dispersion` で R/G/B の3経路を起動時確保した buffer へ追跡し、入射/反射1本 + 内部/出射RGBを core/glow 各8 slot の2 batchに固定した。RGB は純色のため `dispersion=0` / `ior=1` で行列が完全一致して白へ合成される。marker、反射率、caustics は G 経路だけを使用し、beamSpread は中心線へ混入しない。
+- 視覚: `MeshPhysicalMaterial.dispersion` を直接設定し、透過対象を細い白線/黒地の静的 calibration target へ整理した。採用値の材質 fringe は default/high IOR の双方で差分画像なしに判読でき、zero は中性、roughness `0.55` は彩色ノイズ/clip なし。三角断面の roll は採用値でのみ読み取り補助となり、経路中心線・端点は誇張しない。独立 visual review は同サイズ T-GO-03 baseline との delta を含め `APPROVE`。
+- QA: `qa:glass` を16状態へ拡張し、4材質比較、IOR=1 pixel identity、roughness、16/15 calls、spread/IOR caustics、静止/運動、180-frame allocation を恒常 gate にした。IORごとにRGB beam底色も変わるため、caustics の cross-IOR 強度は最終 half-max linear luminanceで判定し、ON/OFF差分はpresence/shape/coverage/position/clippingを引き続き所有する。最終値は材質 chroma gain **1.898 → 2.508**、`>5` coverage **11.25% → 16.66%**、IOR=1差分0、IOR焦点 **0.88 → 0.89 → 0.96**、all-channel clip 0、drag calls `16→16` / geometries `24→24` / 禁止allocation 0、browser error 0。
+- 性能: 同一 RTX 4070 Ti / Chrome D3D11、T-GO-03 merge `73abd13` と revision `426f2e4` の5組 interleaved/alternating production比較は paired median regression **-1.89%** (上限 `+5%`)。hardware reference **195.53 FPS**、16 calls / 5,542 triangles、5組すべて候補がbaseline以上だった。
+- 証拠: `captures/t-go-05-default-zero.png`、`t-go-05-default-adopted.png`、`t-go-05-high-ior-zero.png`、`t-go-05-high-ior-adopted.png`、`t-go-05-roughness-0-55.png`、`t-go-05-glass-qa-2026-07-20.json`、`t-go-05-telemetry-2026-07-20.json`。
+- 検証: `pnpm test` (34 files / 267 tests)、`pnpm lint`、`pnpm typecheck`、`pnpm build`、`pnpm exhibits:check`、`pnpm qa:visual`、`pnpm qa:glass` を通過。`pnpm qa:renderer` は未変更の Voxel Water software FPS が本機の歴史的 gate を下回り2回失敗(mean `13.96` / `13.42`)したが、同じrunの Glassは16 callsを維持し、本票の独立hardware paired gateは上記のとおり通過した。
