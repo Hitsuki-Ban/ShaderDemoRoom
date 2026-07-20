@@ -40,3 +40,30 @@ research-stylized-water.md §2.10 選択肢1(本命・ほぼ無料)を実施す�
 - **renderOrder 網の再監査**: review-framework.md 横断注意5のとおり、透明要素の順序変更は T-VW-03 完了後の scene graph に実在する連鎖全体(sky / spray / rain / 残存 grid)を再監査する。削除済み要素を前提にした契約や順位は残さない。
 - **T-VW-05 との境界**: T-VW-05 の波モデル変更を先に独立検収し、本票は透明合成と `transparent:false` の視覚差分だけを所有する。
 - 柱が不透明化すると柱の描画は early-z が効く順序依存になる — 描画順そのものに視覚依存はなくなるため、将来の柱追加(T-VW-01 のランドマーク)にも安全側。
+
+## 完了レポート (2026-07-20)
+
+### 実装と描画契約
+
+- 実装コミットは `409c82c4e59e8ec5a02f527af33759fd686a051f`。`columnOpacity` を `WeatherLook`、3 weather look、更新処理から完全に削除し、column は `transparent:false / depthTest:true / depthWrite:true`、water plane は `transparent:true / depthTest:true / depthWrite:false` に固定した。
+- semantic order は sky `0` / columns `1` / plane `2` / spray `3` / rain `4` / grid `5`。Three r184 は material の transparent 分類後に opaque → transmissive → transparent の順で描画するため、column が先に depth を書く根拠は queue 分類であり、opaque/transparent 間の renderOrder 数値比較ではない。sky と columns の `0 < 1`、および transparent queue 内の `2 < 3 < 4 < 5` を実 object の contract test で固定した。
+- 4096 column は1個の `InstancedMesh`、すなわち render-list item は1個である。成果は「4096 sorting item の削除」ではなく、不要な blending の無効化、opaque depth 書き込み、後続 water fragment の depth reject である。既存の transparent cloud 14 mesh は本票の範囲外で変更していない。
+
+### 合成と三態 QA
+
+- before/after crop は `docs/direction/captures/t-vw-09-clear-before.png` / `t-vw-09-clear-after.png`。前者は T-VW-05 live serial clear、後者は候補 clear の canvas からともに `700x430+80+240` を切り出した非 time-lock 比較である。before では column 色だけだった低い上面に、after では water sheet の tint / highlight / shadow が乗り、水面上の column edge は crisp なまま残ることを目視確認した。
+- 正式16-frame記録は `output/water-qa/vw09-final4-{clear,rain,storm}/`。全状態で `waterCoverage=1`、console error 0。`surfaceAlpha` は変更せず、正しい合成だけで toon band が T-VW-05 の `7.629 / 6.416 / 3.140` から `10.778 / 7.437 / 12.291` へ改善したため、追加調整は不要と判断した。
+
+| preset | waterLuma | toonBandSeparation | hueMean | seam score / gate |
+|---|---:|---:|---:|---:|
+| clear | 155.73 | 10.778 | 181.43 | 1.167 / <=1.5 |
+| rain | 114.94 | 7.437 | 198.30 | 0.667 / <=1.5 |
+| storm | 104.20 | 12.291 | 186.97 | 0.667 / <=1.0 |
+
+- 初回の seam detector は左右5px平均との差の全行平均だったため、新しく露出した合法な column edge を clear/rain/storm で `3.642 / 2.008 / 2.344` と誤検出した。threshold は変更せず、各channelで center から左右どちらか近い実 neighborhood への距離を使い、path の昇順p40を採用して「少なくとも約60%の行で続く薄い異常線」だけを評価するよう修正した。直線、斜線、storm低contrast、通常の広いedge、広いedge上の中間色1px seam、間欠点列、時間的な transient/persistent の12 testで旧gate能力と誤検出除外を固定した。
+
+### 性能・回帰・独立確認
+
+- raw paired record は `docs/direction/captures/t-vw-09-software-pairs-2026-07-20.json`。Pages の `af9ba06584a5aea4edc909e385df5ce668d67fe2` と local candidate implementation commit を同一 SwiftShader / 1440x900 / DPR1、5秒warmup + 15秒計測、5組交互順序で比較した。
+- baseline / candidate の個別 fps median は `16.1647 / 16.1160`、paired speedup median は **1.0125x**、範囲は `0.9649x–1.0134x`。本票の non-regression gate `>=0.95x` を満たす。共用 script の別票向け `1.7x` gate は失敗するが、raw record を先に保存する設計であり、本票判定には使用していない。
+- `pnpm build`、`pnpm lint`、`pnpm test` (`32 files / 199 tests`)、`pnpm qa:visual`、`pnpm qa:exhibits`、三態 `pnpm qa:water` を通過。独立 reviewer は一度 seam metric の弱化を blocker として差し戻し、edge+seamを保持する上記指標へ修正後に `APPROVE`。独立 verifier も定向23 tests、最終三態、diff-checkを `PASS` とした。
