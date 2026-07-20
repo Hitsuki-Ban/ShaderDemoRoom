@@ -46,6 +46,7 @@ research-glass-optics.md §2.4(a)「現行シェーダを物理経路に接続�
 ## 作業報告 (2026-07-20)
 
 - 実装 revision: `3ae0ffd0223cea5050c3957b337014d98a1736c9`。
+- PR: [#33 `[T-GO-03] Strengthen caustics payoff`](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/33)。
 - シェーダ: 旧 rings/spokes/streaks ノイズを撤去し、暖色ガウシアン焦点・出射方向に沿う冷色 cusp・弱い減衰 ring の bounded union へ置換した。alpha 上限は `1.0 × 0.70 = 0.70`。焦点の IOR 応答を shader/profile の単一経路へ集約し、wide spread は実 `hotspotRadius × planeScale` 面積の二乗に対して強度を逆比例させ、焦点エネルギー代理を保存する。
 - 物理接続: caustics と cyan floor marker は T-GO-04 の同じ `floorHit` を中心とし、cusp 方向は `outgoingDirection` の床面投影を使用する。no-hit / OFF は実効強度 0 かつ mesh 非表示、`motionScale=0` は `uTime=0`。デフォルト光源を `(2.0, 3.2, 1.0)` に再構図し、低 IOR でも beam → 着地点 → 暖核を画面内で読めるようにした。marker は depth test を維持した低輝度補助、PointLight は 1.5 へ抑え、底辺反射が焦点を超えない値構造にした。
 - QA 強化: `glass-optics-qa-metrics.mjs` を追加し、sRGB→linear の ON/OFF 差分、P99.9 peak、half-max 半径/重心、active footprint、plateau、channel clip、25% box downsample を測る。dim tail と単一 255 outlier の双方で平坦ピークを見逃さない反例テストを追加した。`qa:glass` は spread 0.05/0.34/0.9 と IOR 1.0/1.48/2.4 の 6 対、OFF pixel identity、底辺反射 ROI、静止/運動、180-frame drag allocation を恒常 gate にした。
@@ -53,4 +54,4 @@ research-glass-optics.md §2.4(a)「現行シェーダを物理経路に接続�
 - 決定論/安定性: 通常/reduced-motion の 1 s→11 s 静止差分は mean/max/strong pixels すべて 0、motion positive control は mean delta 1.314。ON/OFF は 16/15 calls、デフォルトは 5,606 triangles / 25 geometries。Light X 180 frame drag は calls `16→16`、geometries `25→25`、禁止 allocation 0。
 - 性能: 同一 RTX 4070 Ti / Chrome D3D11、`b7256e9` baseline と revision `3ae0ffd` の 5 組 interleaved production 比較は paired median regression **-0.0007%** (上限 +5%)。software median 6.72 FPS、hardware reference 200 FPS、16 calls / 5,606 triangles。
 - 証拠: `captures/t-go-03-default-after.png`、`t-go-03-payoff-matrix.png`、spread/IOR 6 枚、`t-go-03-glass-qa-2026-07-20.json`、`t-go-03-telemetry-2026-07-20.json`。
-- 検証: `pnpm lint`、`pnpm typecheck`、`pnpm test` (34 files / 251 tests)、`pnpm build`、`pnpm exhibits:check`、`pnpm qa:visual`、`pnpm qa:exhibits`、`pnpm qa:glass` を通過。独立 code review / visual review はともに `APPROVE`。
+- 検証: `pnpm lint`、`pnpm typecheck`、`pnpm test` (34 files / 251 tests)、`pnpm build`、`pnpm exhibits:check`、`pnpm qa:visual`、`pnpm qa:exhibits`、`pnpm qa:glass` を通過。独立 code review / visual review はともに `APPROVE`、独立 test verification は `PASS`。
