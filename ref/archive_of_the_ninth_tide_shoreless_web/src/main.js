@@ -5,6 +5,10 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import {
+  createMediaTimeDeltaTracker,
+  createSpectralFluxOnsetDetector,
+} from './spectral-flux-onset.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -92,6 +96,18 @@ const tideMeta = [
 const sectionBoundaries = [0, 48.9709, 75.0469, 103.0966, 145.2408, 183.8092, 224.8853, 260.2260, 330.0484, 354.5040];
 const scoreDuration = sectionBoundaries[sectionBoundaries.length - 1];
 const sectionTransitionDuration = 2.85;
+const onsetDetectorConfig = Object.freeze({
+  historySeconds: 1.25,
+  warmupSeconds: 1,
+  thresholdStdDeviations: 1.5,
+  lowpassLambda: 30,
+  minFlux: 0.012,
+  minSamples: 12,
+});
+const onsetBandFloorHz = 190;
+const onsetPathByChapter = Object.freeze([
+  'full', 'full', 'full', 'full', 'full', 'full', 'full', 'band', 'full'
+]);
 
 const palettes = [
   { deep: 0x010609, fog: 0x031419, glow: 0x67ddce, accent: 0xe3f8e9, secondary: 0x1c6470 },
@@ -1742,8 +1758,16 @@ let gainNode = null;
 let frequencyData = null;
 let timeData = null;
 let objectUrl = null;
+const onsetDetector = createSpectralFluxOnsetDetector(onsetDetectorConfig);
+const onsetMediaTime = createMediaTimeDeltaTracker();
+
+function resetOnsetDetector() {
+  onsetDetector.reset();
+  onsetMediaTime.reset();
+}
 
 function setAudioSource(source) {
+  resetOnsetDetector();
   ui.audio.preload = 'auto';
   ui.audio.src = source;
   ui.audio.load();
@@ -1994,14 +2018,17 @@ ui.audio.addEventListener('play', () => {
     queueRuntimeMediaReconciliation();
     return;
   }
+  resetOnsetDetector();
   state.playing = true;
   ui.audioState.textContent = 'PLAYING';
   ui.signal.textContent = 'LIVE FFT';
 });
 ui.audio.addEventListener('pause', () => {
+  resetOnsetDetector();
   state.playing = false;
   if (!state.ended) ui.audioState.textContent = state.audioReady ? 'PAUSED' : 'STANDBY';
 });
+ui.audio.addEventListener('seeking', resetOnsetDetector);
 ui.audio.addEventListener('ended', () => finishEnding());
 ui.audio.addEventListener('error', () => {
   state.audioFailed = true;
@@ -2039,6 +2066,7 @@ async function prepareAudio() {
 }
 
 function resetExperienceState() {
+  resetOnsetDetector();
   state.calibrated = false;
   state.ceremonyTime = 0;
   state.ceremonyCue = 0;
@@ -2198,6 +2226,24 @@ function updateSpectrumTexture(elapsed) {
   spectrumTexture.needsUpdate = true;
 }
 
+function resolveOnsetBandStartIndex(spectrum) {
+  if (spectrum === frequencyData && audioContext) {
+    const nyquist = audioContext.sampleRate / 2;
+    return clamp(Math.ceil(onsetBandFloorHz / nyquist * spectrum.length), 0, spectrum.length - 1);
+  }
+  const logFrequencyRange = Math.log(17000 / 28);
+  const normalizedFloor = Math.log(onsetBandFloorHz / 28) / logFrequencyRange;
+  return clamp(Math.ceil(normalizedFloor * spectrum.length), 0, spectrum.length - 1);
+}
+
+function resolveOnsetDeltaSeconds(frameDeltaSeconds) {
+  if (!state.playing) {
+    onsetMediaTime.reset();
+    return frameDeltaSeconds;
+  }
+  return onsetMediaTime.advance(ui.audio.currentTime);
+}
+
 function updateAudio(dt, elapsed) {
   let lowTarget;
   let midTarget;
@@ -2232,6 +2278,16 @@ function updateAudio(dt, elapsed) {
   state.previousEnergy = energyTarget;
   state.energy = damp(state.energy, energyTarget, 7.8, dt);
   updateSpectrumTexture(elapsed);
+  const onsetSpectrum = analyser && frequencyData && state.playing && audioContext
+    ? frequencyData
+    : spectrumBytes;
+  const onsetDeltaSeconds = resolveOnsetDeltaSeconds(dt);
+  const onset = onsetDeltaSeconds > 0
+    ? onsetDetector.update(onsetSpectrum, onsetDeltaSeconds, {
+      bandStartIndex: resolveOnsetBandStartIndex(onsetSpectrum),
+      selectedPath: onsetPathByChapter[state.tideIndex],
+    })
+    : { onset: false, strength: 0 };
 
   globals.low.value = state.low;
   globals.mid.value = state.mid;
@@ -2252,8 +2308,8 @@ function updateAudio(dt, elapsed) {
   }
 
   state.pulseCooldown = Math.max(0, state.pulseCooldown - dt);
-  if (state.calibrated && !state.ending && state.playing && state.transient > 0.16 && state.pulseCooldown <= 0) {
-    triggerPulse(new THREE.Vector2(0, 0), 0.48 + state.transient * 0.7, 0.32, false);
+  if (state.calibrated && !state.ending && state.playing && onset.onset && state.pulseCooldown <= 0) {
+    triggerPulse(new THREE.Vector2(0, 0), 0.48 + onset.strength * 0.7, 0.32, false);
     state.pulseCooldown = 1.15 + (1 - state.low) * 0.7;
   }
 }
@@ -3428,6 +3484,7 @@ function restoreDeterministicBaseline() {
   pointerSmooth.fromArray(deterministicBaseline.pointerSmooth);
   spectrumBytes.set(deterministicBaseline.spectrum);
   spectrumTexture.needsUpdate = true;
+  resetOnsetDetector();
   random.setState(deterministicBaseline.randomState);
   lastTide = deterministicBaseline.lastTide;
   Object.assign(frameStats, deterministicBaseline.frameStats);

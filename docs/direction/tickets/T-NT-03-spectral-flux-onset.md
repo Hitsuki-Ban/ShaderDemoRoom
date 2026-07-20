@@ -47,3 +47,24 @@ research-audio-reactive.md §2.3 の実装要点(ライブラリ不要、JS 約3
 - オフライン検証スクリプトは `uv` 管理の使い捨てツールとして作り(グローバル設定の Python 方針)、成果物は出荷しない。§2.8 の Foote ノベルティ検証(sectionBoundaries 妥当性)と同じツールチェーンに相乗り可能だが、章境界検証自体は本票のスコープ外。
 - 閾値 k・帯域限定の選択は「調整パラメータ」としてコード先頭の定数群に集約し、耳当て定数の散在を再生産しないこと。
 - 参照: research-audio-reactive.md §2.3(実装要点・出典)、§3 P1-2(適用推奨)
+
+## 完了報告 (2026-07-21)
+
+- auto-sonar の発火判定を、独立した全帯域 / 190 Hz 以上の spectral flux、1.25 s の
+  `mean + 1.5σ` 適応閾値、lambda 30/s low-pass、1 frame look-ahead local maximum へ置換した。
+  Chapter VIII は帯域限定経路、その他の章は全帯域経路を使う。
+- 調整値は先頭の定数群へ集約した。source change / play / pause / seek / replay で履歴を reset し、
+  実音声の履歴時間は `audio.currentTime` で進める。最初の frame、buffering、量子化された同値時刻は
+  sample せず、負方向の時刻跳変は再アンカーする。
+- 既存 `transient` 連続包絡と 1.15–1.85 s cooldown は維持し、legacy auto-trigger、fallback、alias、
+  Meyda / Essentia.js は残していない。silent synthetic spectrum も同一検出器を通るが発火しない。
+- 10 unit tests で steady、broadband / high-pass、path selection、warm-up、local maximum、plateau、
+  reset / spectrum resize、frame-rate independent window、media clock stall / backward jump、invalid input を固定した。
+- 固定音源の gate-screened offline 比較では、quiet crescendo の誤発火 0、dense high-frequency 区間の
+  TP は legacy 0 → spectral flux 4。aggregate precision / recall は `0 / 0` → `0.308 / 0.160`。
+  詳細な時刻列、環境、方法、限界は [ninth-tide-onset-qa.md](../ninth-tide-onset-qa.md) に記録した。
+- 変更前後の公式 `qa:ninth-tide` manifest は app SHA を除き完全一致し、99 hook calls の
+  framebuffer/canvas/state/metrics/hits は不変。`pnpm test` (36 files / 289 tests)、`pnpm lint`、
+  `pnpm typecheck`、`pnpm build`、production `qa:ninth-tide`、`qa:exhibits`、`qa:visual` を通過した。
+- 独立 review が media clock stall 時の RAF fallback を検出し、fallback 削除と clock tracker の回帰テスト後に
+  差量 approve。独立 verifier も実装、全量 gates、manifest、offline 数値の整合を確認した。
