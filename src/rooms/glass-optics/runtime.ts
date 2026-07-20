@@ -30,6 +30,7 @@ import {
   SphereGeometry,
   SRGBColorSpace,
   UnsignedByteType,
+  Vector2,
   Vector3,
   type Material,
   type Object3D,
@@ -54,6 +55,7 @@ import {
   createGlassLightPathWorkspace,
   traceGlassRayInto,
 } from './light-path';
+import { glassOpticsDefaults, glassOpticsDomains } from './state';
 
 function disposeObject(object: Object3D) {
   object.traverse((child) => {
@@ -76,6 +78,92 @@ const BEAM_OUTGOING_INDEX = 3;
 
 const GLASS_STAGE_BACKGROUND = 0x03070b;
 const GLASS_STAGE_FOG = 0x03070b;
+
+export const CAUSTICS_ENABLED_INTENSITY = 1;
+export const CAUSTICS_ALPHA_BUDGET = 0.7;
+
+const CAUSTICS_SPREAD_MIN = glassOpticsDomains.beamSpread.min;
+const CAUSTICS_SPREAD_RANGE = (
+  glassOpticsDomains.beamSpread.max - glassOpticsDomains.beamSpread.min
+);
+const CAUSTICS_IOR_MIN = glassOpticsDomains.ior.min;
+const CAUSTICS_IOR_RANGE = glassOpticsDomains.ior.max - glassOpticsDomains.ior.min;
+const CAUSTICS_DIRECTION_EPSILON_SQUARED = 1e-10;
+
+export interface CausticsProfile {
+  focus: number;
+  intensityScale: number;
+  hotspotRadius: number;
+  planeScale: number;
+  cuspLength: number;
+  cuspWidth: number;
+  ringRadius: number;
+  ringWidth: number;
+}
+
+export function causticsIntensity(showCaustics: boolean, intensityScale: number) {
+  return showCaustics ? CAUSTICS_ENABLED_INTENSITY * intensityScale : 0;
+}
+
+export function calculateCausticsProfileInto(
+  beamSpread: number,
+  ior: number,
+  output: CausticsProfile,
+) {
+  if (
+    !Number.isFinite(beamSpread)
+    || beamSpread < CAUSTICS_SPREAD_MIN
+    || beamSpread > CAUSTICS_SPREAD_MIN + CAUSTICS_SPREAD_RANGE
+  ) {
+    throw new RangeError('Glass caustics beamSpread is outside its declared domain.');
+  }
+  if (
+    !Number.isFinite(ior)
+    || ior < CAUSTICS_IOR_MIN
+    || ior > CAUSTICS_IOR_MIN + CAUSTICS_IOR_RANGE
+  ) {
+    throw new RangeError('Glass caustics ior is outside its declared domain.');
+  }
+
+  const spread = (beamSpread - CAUSTICS_SPREAD_MIN) / CAUSTICS_SPREAD_RANGE;
+  output.focus = (ior - CAUSTICS_IOR_MIN) / CAUSTICS_IOR_RANGE;
+  output.hotspotRadius = 0.155 + spread * 0.04 - output.focus * 0.07;
+  output.planeScale = 0.78 + beamSpread * 0.58 + (ior - 1) * 0.16;
+  const defaultSpread = (
+    glassOpticsDefaults.beamSpread - CAUSTICS_SPREAD_MIN
+  ) / CAUSTICS_SPREAD_RANGE;
+  const referenceHotspotRadius = 0.155 + defaultSpread * 0.04 - output.focus * 0.07;
+  const referencePlaneScale = 0.78
+    + glassOpticsDefaults.beamSpread * 0.58
+    + (ior - 1) * 0.16;
+  const referenceFootprintRadius = referenceHotspotRadius * referencePlaneScale;
+  const footprintRadius = output.hotspotRadius * output.planeScale;
+  output.intensityScale = Math.min(
+    1,
+    (referenceFootprintRadius / footprintRadius) ** 2,
+  );
+  output.cuspLength = 0.25 + output.focus * 0.08 + spread * 0.03;
+  output.cuspWidth = 0.07 + spread * 0.018 - output.focus * 0.01;
+  output.ringRadius = 0.21 + spread * 0.02 - output.focus * 0.02;
+  output.ringWidth = 0.018 + spread * 0.003;
+  return output;
+}
+
+export function setCausticsDirectionFromOutgoing(
+  outgoingDirection: Vector3,
+  output: Vector2,
+) {
+  const localX = outgoingDirection.x;
+  const localY = -outgoingDirection.z;
+  const lengthSquared = localX * localX + localY * localY;
+  if (lengthSquared <= CAUSTICS_DIRECTION_EPSILON_SQUARED) {
+    output.set(1, 0);
+    return 'canonical' as const;
+  }
+  const inverseLength = 1 / Math.sqrt(lengthSquared);
+  output.set(localX * inverseLength, localY * inverseLength);
+  return 'projected' as const;
+}
 
 export function glassEnvironmentIntensity(thickness: number) {
   return 1.05 + thickness * 0.28;
@@ -227,6 +315,18 @@ export function createRoomRuntime(
   const internalColor = new Color(0xf8ffff);
   const outgoingColor = new Color(0xb8f8ff);
   const workingBeamColor = new Color();
+  const causticsDirection = new Vector2(1, 0);
+  const causticsProfile: CausticsProfile = {
+    focus: 0,
+    intensityScale: 0,
+    hotspotRadius: 0,
+    planeScale: 0,
+    cuspLength: 0,
+    cuspWidth: 0,
+    ringRadius: 0,
+    ringWidth: 0,
+  };
+  calculateCausticsProfileInto(settings.beamSpread, settings.ior, causticsProfile);
 
   scene.background = new Color(GLASS_STAGE_BACKGROUND);
   scene.fog = new Fog(GLASS_STAGE_FOG, 16, 34);
@@ -265,7 +365,7 @@ export function createRoomRuntime(
   const ambient = new AmbientLight(0x8fb8ff, 0.62);
   const keyLight = new DirectionalLight(0xffffff, 1.55);
   keyLight.position.set(5, 7, 4);
-  const pointLight = new PointLight(0xbdeeff, 6.5, 18);
+  const pointLight = new PointLight(0xbdeeff, 1.5, 18);
   root.add(ambient, keyLight, pointLight);
 
   const floorMaterial = new MeshStandardMaterial({
@@ -345,7 +445,7 @@ export function createRoomRuntime(
   const glassShellMaterial = new MeshBasicMaterial({
     color: 0xb9fbff,
     transparent: true,
-    opacity: 0.08,
+    opacity: Math.min(0.14, 0.05 + (settings.ior - 1) * 0.05),
     wireframe: true,
     blending: AdditiveBlending,
     depthWrite: false,
@@ -370,6 +470,8 @@ export function createRoomRuntime(
   const sourceHalo = new Mesh(new SphereGeometry(0.28, 28, 18), sourceHaloMaterial);
   source.name = 'glass-optics-light-source';
   sourceHalo.name = 'glass-optics-light-source-halo';
+  source.scale.setScalar(0.92 + settings.beamSpread * 0.35);
+  sourceHalo.scale.setScalar(0.72 + settings.beamSpread * 0.58);
   source.frustumCulled = false;
   sourceHalo.frustumCulled = false;
   source.renderOrder = 10;
@@ -449,14 +551,14 @@ export function createRoomRuntime(
   const refractionMarkerMaterial = new MeshBasicMaterial({
     color: 0x9ff8ff,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.12,
     blending: AdditiveBlending,
     depthWrite: false,
     toneMapped: false,
   });
   const targetMarker = new Mesh(new SphereGeometry(0.055, 16, 10), markerMaterial);
   const reflectionMarker = new Mesh(new SphereGeometry(0.07, 16, 10), reflectionMarkerMaterial);
-  const refractionMarker = new Mesh(new SphereGeometry(0.085, 16, 10), refractionMarkerMaterial);
+  const refractionMarker = new Mesh(new SphereGeometry(0.07, 16, 10), refractionMarkerMaterial);
   targetMarker.name = 'glass-optics-entry-marker';
   reflectionMarker.name = 'glass-optics-exit-marker';
   refractionMarker.name = 'glass-optics-floor-marker';
@@ -473,8 +575,16 @@ export function createRoomRuntime(
     fragmentShader: causticsFragmentShader,
     uniforms: {
       uTime: { value: 0 },
-      uIntensity: { value: settings.showCaustics ? 1 : 0 },
-      uSpread: { value: settings.beamSpread },
+      uIntensity: {
+        value: causticsIntensity(settings.showCaustics, causticsProfile.intensityScale),
+      },
+      uFocus: { value: causticsProfile.focus },
+      uFocusRadius: { value: causticsProfile.hotspotRadius },
+      uCuspLength: { value: causticsProfile.cuspLength },
+      uCuspWidth: { value: causticsProfile.cuspWidth },
+      uRingRadius: { value: causticsProfile.ringRadius },
+      uRingWidth: { value: causticsProfile.ringWidth },
+      uDirection: { value: causticsDirection },
     },
     transparent: true,
     depthWrite: false,
@@ -613,10 +723,12 @@ export function createRoomRuntime(
       refractionMarker.position.copy(lightPath.floorHit);
       caustics.position.copy(lightPath.floorHit);
       caustics.position.y = 0.022;
+      setCausticsDirectionFromOutgoing(
+        lightPath.outgoingDirection,
+        causticsDirection,
+      );
     }
-    caustics.scale.setScalar(
-      0.78 + settings.beamSpread * 0.58 + (settings.ior - 1) * 0.16,
-    );
+    caustics.scale.setScalar(causticsProfile.planeScale);
     updateCausticsVisibility();
   };
 
@@ -626,8 +738,17 @@ export function createRoomRuntime(
     glassMaterial.thickness = settings.thickness;
     glassMaterial.envMapIntensity = glassEnvironmentIntensity(settings.thickness);
     glassShellMaterial.opacity = Math.min(0.14, 0.05 + (settings.ior - 1) * 0.05);
-    causticsMaterial.uniforms.uIntensity.value = settings.showCaustics ? 1.25 : 0;
-    causticsMaterial.uniforms.uSpread.value = settings.beamSpread;
+    calculateCausticsProfileInto(settings.beamSpread, settings.ior, causticsProfile);
+    causticsMaterial.uniforms.uIntensity.value = causticsIntensity(
+      settings.showCaustics,
+      causticsProfile.intensityScale,
+    );
+    causticsMaterial.uniforms.uFocus.value = causticsProfile.focus;
+    causticsMaterial.uniforms.uFocusRadius.value = causticsProfile.hotspotRadius;
+    causticsMaterial.uniforms.uCuspLength.value = causticsProfile.cuspLength;
+    causticsMaterial.uniforms.uCuspWidth.value = causticsProfile.cuspWidth;
+    causticsMaterial.uniforms.uRingRadius.value = causticsProfile.ringRadius;
+    causticsMaterial.uniforms.uRingWidth.value = causticsProfile.ringWidth;
     source.scale.setScalar(0.92 + settings.beamSpread * 0.35);
     sourceHalo.scale.setScalar(0.72 + settings.beamSpread * 0.58);
     updateCausticsVisibility();
@@ -651,7 +772,6 @@ export function createRoomRuntime(
     root.rotation.y = 0;
   };
 
-  updateMaterial();
   updateLightPath();
 
   return {
