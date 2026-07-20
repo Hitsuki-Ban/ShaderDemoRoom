@@ -5,6 +5,7 @@ import { parseTelemetryReferenceConfig } from './telemetry-reference-config.mjs'
 const cliArgs = process.argv.slice(2).filter((argument) => argument !== '--');
 const {
   baseUrl,
+  baselineRevision,
   baselineUrl,
   buildId,
   outputPath,
@@ -14,7 +15,7 @@ const {
 
 const warmupSeconds = 5;
 const measurementSeconds = 15;
-const expectedDrawCalls = roomId === 'glass-optics' ? 16 : 19;
+const expectedDrawCalls = roomId === 'glass-optics' ? 15 : 19;
 
 function assert(condition, message) {
   if (!condition) {
@@ -221,6 +222,7 @@ async function capturePairedOverhead() {
     );
     return {
       comparison: `${roomId} baseline vs candidate`,
+      baselineRevision,
       baselineUrl,
       candidateUrl: baseUrl,
       method: {

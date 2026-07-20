@@ -51,6 +51,7 @@ import {
   traceGlassRayInto,
 } from './light-path';
 import { glassOpticsDefaults, glassOpticsDomains } from './state';
+import { createReferencePanelTexture } from './reference-panel';
 
 function disposeObject(object: Object3D) {
   object.traverse((child) => {
@@ -181,10 +182,6 @@ export function setCausticsDirectionFromOutgoing(
 
 export function glassEnvironmentIntensity(thickness: number) {
   return 1.05 + thickness * 0.28;
-}
-
-export function glassShellOpacity(ior: number) {
-  return Math.min(0.08, 0.03 + (ior - 1) * 0.03);
 }
 
 export function glassSpectralIorOffset(ior: number, dispersion: number) {
@@ -378,7 +375,11 @@ export function createRoomRuntime(
   grid.position.y = 0.005;
   root.add(grid);
 
+  const referenceTexture = createReferencePanelTexture();
   const referenceMaterial = new ShaderMaterial({
+    uniforms: {
+      uReferencePanel: { value: referenceTexture },
+    },
     vertexShader: `
       varying vec2 vUv;
 
@@ -388,27 +389,11 @@ export function createRoomRuntime(
       }
     `,
     fragmentShader: `
+      uniform sampler2D uReferencePanel;
       varying vec2 vUv;
 
       void main() {
-        float phase = abs(fract(vUv.x * 12.0) - 0.5);
-        float antialiasWidth = max(fwidth(phase) * 0.5, 0.001);
-        float stripe = 1.0 - smoothstep(
-          0.025 - antialiasWidth,
-          0.025 + antialiasWidth,
-          phase
-        );
-        stripe *= smoothstep(0.16, 0.22, vUv.y);
-        float edgeDistance = min(
-          min(vUv.x, 1.0 - vUv.x),
-          min(vUv.y, 1.0 - vUv.y)
-        );
-        float edge = 1.0 - smoothstep(0.0, 0.025, edgeDistance);
-        vec3 dark = vec3(0.0);
-        vec3 neutral = vec3(1.0);
-        vec3 color = mix(dark, neutral, stripe);
-        color += vec3(0.05, 0.14, 0.16) * edge;
-        gl_FragColor = vec4(color, 1.0);
+        gl_FragColor = texture2D(uReferencePanel, vUv);
       }
     `,
     transparent: false,
@@ -416,9 +401,9 @@ export function createRoomRuntime(
     side: DoubleSide,
   });
   referenceMaterial.toneMapped = false;
-  const referencePanel = new Mesh(new PlaneGeometry(3.8, 2.7), referenceMaterial);
+  const referencePanel = new Mesh(new PlaneGeometry(3.8, 2.1), referenceMaterial);
   referencePanel.name = 'glass-optics-dispersion-reference';
-  referencePanel.position.set(1.55, 1.0, -1.85);
+  referencePanel.position.set(0.8, 1.0, -1.85);
   referencePanel.renderOrder = 1;
   root.add(referencePanel);
 
@@ -432,20 +417,6 @@ export function createRoomRuntime(
   const glass = new Mesh(new IcosahedronGeometry(1.35, 8), glassMaterial);
   glass.renderOrder = 3;
   glassGroup.add(glass);
-
-  const glassShellMaterial = new MeshBasicMaterial({
-    color: 0xb9fbff,
-    transparent: true,
-    opacity: glassShellOpacity(settings.ior),
-    wireframe: true,
-    blending: AdditiveBlending,
-    depthWrite: false,
-    toneMapped: false,
-  });
-  const glassShell = new Mesh(new IcosahedronGeometry(1.365, 3), glassShellMaterial);
-  glassShell.name = 'glass-optics-glass-shell';
-  glassShell.renderOrder = 4;
-  glassGroup.add(glassShell);
 
   const sourceMaterial = new MeshBasicMaterial({ color: 0xffd48b });
   sourceMaterial.toneMapped = false;
@@ -763,7 +734,6 @@ export function createRoomRuntime(
     glassMaterial.roughness = settings.roughness;
     glassMaterial.thickness = settings.thickness;
     glassMaterial.envMapIntensity = glassEnvironmentIntensity(settings.thickness);
-    glassShellMaterial.opacity = glassShellOpacity(settings.ior);
     calculateCausticsProfileInto(settings.beamSpread, settings.ior, causticsProfile);
     causticsMaterial.uniforms.uIntensity.value = causticsIntensity(
       settings.showCaustics,
@@ -835,7 +805,6 @@ export function createRoomRuntime(
       disposeObject(root);
       [
         glassMaterial,
-        glassShellMaterial,
         sourceMaterial,
         sourceHaloMaterial,
         markerMaterial,
@@ -845,6 +814,7 @@ export function createRoomRuntime(
         glowBeamMaterial,
         causticsMaterial,
       ].forEach((material: Material) => material.dispose());
+      referenceTexture.dispose();
       environment.dispose();
       pmrem.dispose();
     },

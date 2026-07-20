@@ -39,3 +39,32 @@
 - **挙動テストへの影響**: `runtime.test.ts` はパネル・シェルを直接固定していないため定数変更は安全。ただしシェル削除で `createGlassMaterial` 以外の公開 API を変える場合はテスト同期。
 - **T-GO-05 との相互作用**: パネルの高コントラストパターンは dispersion(T-GO-05)の色ずれを見せる背景としても機能する。パターン設計時に細線(色収差が見えやすい)を 1 要素含めておくと相乗する。
 - **モーション**: パネルのスキャンラインアニメーション(uTime 連動)を残す場合は `motionScale = 0` で静止しても意図が読めるデザインにする(reduced-motion 契約)。
+
+## 作業報告 (2026-07-21)
+
+### 実装
+
+- 旧ストライプ Shader を廃止し、512×288 / 2×2 supersampling の決定論的なキャリブレーションターゲットを `DataTexture` として起動時に1回だけ生成する `reference-panel.ts` を追加した。Siemens star、3-bar group、checker、resolution wedge、tone blocks、slanted edge、非対称の向きマーカーを文字なしで構成し、パネル本体と球内の屈折像を対応づけられるようにした。
+- パネルは不透明な1枚の plane (`3.8 × 2.1`, position `(0.8, 1.0, -1.85)`, renderOrder 1) とし、実行時 Shader は単一 texture sample のみにした。静的画素は module 単位で共有し、room session ごとの texture 所有と明示 dispose を維持する。
+- `glassShell` の geometry / material / renderOrder / IOR-opacity 更新 / dispose をすべて削除した。フレネルや代替シェルは追加せず、IOR の視覚フィードバックはガラス本体・光路・分散へ一本化した。
+- QA はシェルなしの広域輪郭を測る `broadContrast`、default 15 calls / caustics-off 14 calls、180-frame drag 中の geometry / texture / program 不変を固定した。T-GO-07 には `referenceTexture` が material dispose の対象外である所有境界を申し送った。
+
+### 視覚・計測証拠
+
+- before: [`../captures/t-go-06-before.png`](../captures/t-go-06-before.png)
+- after: [`../captures/t-go-06-after.png`](../captures/t-go-06-after.png)
+- calibration target close-up: [`../captures/t-go-06-reference-panel-closeup.png`](../captures/t-go-06-reference-panel-closeup.png)
+- Glass QA: [`../captures/t-go-06-glass-qa-2026-07-21.json`](../captures/t-go-06-glass-qa-2026-07-21.json) — 16 states pass、default `15 calls / 5 textures / 23 geometries / 14 programs / 5,542 triangles`、25% glass-disc local contrast `21.04`、maximum roughness broad contrast `11.39`、静止2回差分 `maxDelta 0`、IOR=1 dispersion collapse `meanDelta 0`、180-frame drag `15 → 15 calls / 23 → 23 geometries / 5 → 5 textures / 15 → 15 warmed programs / forbidden allocation 0`。
+- performance: [`../captures/t-go-06-telemetry-2026-07-21.json`](../captures/t-go-06-telemetry-2026-07-21.json) — candidate `1eb074086f745aac45bd8ac15203353c48a6172f` と T-GO-05 baseline `c48b021e1ea8e125b06210afaad55e1520afd648` を、同一 RTX 4070 Ti / D3D11 で5組交錯・交互測定し、paired median regression **−16.16%** (許容上限 +5%)。候補の system Chrome median `164.77 FPS`、SwiftShader median `6.19 FPS`、いずれも 15 calls。
+
+### 検証
+
+- `pnpm build` ✅
+- `pnpm test` ✅ — 35 files / 273 tests
+- `pnpm lint` ✅
+- `pnpm typecheck` ✅
+- `pnpm exhibits:check` ✅
+- `pnpm qa:visual` ✅ — desktop/mobile 14 captures、console errors 0、overflow/telemetry/i18n/URL-state gates pass
+- `pnpm qa:glass` ✅ — 16 states、default 15 calls、stable geometry/resources
+- `pnpm qa:telemetry-reference` ✅ — paired overhead gate −16.16%、candidate/baseline の full commit SHA を記録
+- `pnpm qa:renderer` ⚠️ — Glass は8回すべて 15 calls (`6.05–6.24 FPS`) で安定。未変更の Voxel Water が同じ SwiftShader run で mean `13.86 FPS` となり、歴史基準の 10% FPS budget だけを下回ったためコマンド全体は fail。本票の Glass topology / lifecycle 回帰は検出されていない。
