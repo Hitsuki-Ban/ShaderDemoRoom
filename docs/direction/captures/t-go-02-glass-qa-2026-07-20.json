@@ -1,0 +1,4071 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-20T06:37:50.649Z",
+  "browserVersion": "148.0.7778.96",
+  "baseUrl": "http://127.0.0.1:4175",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "captures": [
+    {
+      "name": "default",
+      "parameters": {
+        "autoRotate": "false",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/default.png",
+      "canvasScreenshot": "output/glass-qa/default-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 4.7232,
+        "p90": 22.660200000000003,
+        "p95": 32.0946,
+        "p99": 84.7336,
+        "brightClipRatio": 0,
+        "blackClipRatio": 0,
+        "localContrast": 6.441883350365349
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 21.645583121380145,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 37.7376,
+          "max": 252.54519999999997,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6788747584595336,
+          "localContrast": 0.3332284785571966
+        },
+        "caustics": {
+          "mean": 14.440456527887182,
+          "p50": 6.5106,
+          "p90": 29.674599999999998,
+          "p95": 42.42139999999999,
+          "p99": 110.3548,
+          "max": 159.4174,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0.0004713275726630008,
+          "highlightCoverage": 0.16590730557737626,
+          "localContrast": 3.804346687614599
+        },
+        "floor": {
+          "mean": 15.283224137824552,
+          "p50": 6.7954,
+          "p90": 42.1812,
+          "p95": 50.04299999999999,
+          "p99": 61.391999999999996,
+          "max": 70.6006,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.23808191062599124,
+          "localContrast": 0.482611354707629
+        },
+        "grid": {
+          "mean": 6.770273537702471,
+          "p50": 6.5828,
+          "p90": 7.582799999999999,
+          "p95": 7.582799999999999,
+          "p99": 8.442400000000001,
+          "max": 9.4424,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.1549213060840962
+        },
+        "hero": {
+          "mean": 23.61111605436088,
+          "p50": 6.7954,
+          "p90": 65.5106,
+          "p95": 86.08999999999999,
+          "p99": 198.5302,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.002501493428912784,
+          "blackClipRatio": 0.0003733572281959379,
+          "highlightCoverage": 0.35110513739545995,
+          "localContrast": 9.453940163281894
+        },
+        "lowerLeft": {
+          "mean": 20.98093661616118,
+          "p50": 8.5828,
+          "p90": 51.471199999999996,
+          "p95": 60.620799999999996,
+          "p99": 72.77040000000001,
+          "max": 81.20479999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.3656705948372615,
+          "localContrast": 0.924990647212864
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 4.7954,
+          "p90": 14.1576,
+          "p95": 17.0854,
+          "p99": 89.466,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "localContrast": 6.63252552964488
+        },
+        "stage": {
+          "background": {
+            "mean": 21.326911403509712,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 34.8098,
+            "max": 250.68159999999997,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6827485380116959,
+            "localContrast": 0.5370979532163744
+          },
+          "caustics": {
+            "mean": 15.048206060606027,
+            "p50": 7.510599999999999,
+            "p90": 28.8322,
+            "p95": 39.977799999999995,
+            "p99": 110.0832,
+            "max": 156.7022,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.17343649258542876,
+            "localContrast": 5.551042338276393
+          },
+          "floor": {
+            "mean": 15.452778640059075,
+            "p50": 6.8675999999999995,
+            "p90": 43.047,
+            "p95": 50.4712,
+            "p99": 61.4642,
+            "max": 70.8132,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.24069967972406997,
+            "localContrast": 0.8385070214338535
+          },
+          "grid": {
+            "mean": 6.770417899929507,
+            "p50": 6.5828,
+            "p90": 7.3702,
+            "p95": 7.582799999999999,
+            "p99": 7.8675999999999995,
+            "max": 8.5828,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.14963589382194012
+          },
+          "hero": {
+            "mean": 23.305532884262018,
+            "p50": 13.297999999999998,
+            "p90": 64.5828,
+            "p95": 83.08999999999999,
+            "p99": 168.9128,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.00045927740355174526,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3279240661359461,
+            "localContrast": 11.557868952847551
+          },
+          "lowerLeft": {
+            "mean": 21.062478451178425,
+            "p50": 9.1576,
+            "p90": 52.1864,
+            "p95": 60.620799999999996,
+            "p99": 71.8426,
+            "max": 79.4174,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3664421997755331,
+            "localContrast": 1.6548821548821604
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 7.317073170731709,
+        "frameTimeMs": 136.66666666666663,
+        "frameTimeP95Ms": 349.91999999999996,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          49.992000000000004,
+          16.666666666666668,
+          16.59999999999991,
+          366.70000000000005,
+          null,
+          null,
+          391.65,
+          300,
+          133.29999999999995,
+          133.35000000000014,
+          150,
+          125,
+          116.64999999999986,
+          133.35000000000014,
+          133.30000000000018,
+          200,
+          124.94999999999982,
+          116.69999999999982
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "focus",
+      "parameters": {
+        "autoRotate": "false",
+        "beamSpread": "0.18",
+        "lightX": "-0.28",
+        "lightY": "3.45",
+        "lightZ": "1.45",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/focus.png",
+      "canvasScreenshot": "output/glass-qa/focus-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 4.7954,
+        "p90": 32.0224,
+        "p95": 41.3846,
+        "p99": 121.7336,
+        "brightClipRatio": 0.00034063812876121267,
+        "blackClipRatio": 0,
+        "localContrast": 7.404678096968444
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 24.926484141468634,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 235.26739999999998,
+          "max": 252.54519999999997,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6664269986069294,
+          "localContrast": 1.0073548135831816
+        },
+        "caustics": {
+          "mean": 11.136945923016807,
+          "p50": 6.5106,
+          "p90": 22.1078,
+          "p95": 31.3308,
+          "p99": 44.855799999999995,
+          "max": 106.5578,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0.0004713275726630008,
+          "highlightCoverage": 0.11861743912018853,
+          "localContrast": 2.6941084053417264
+        },
+        "floor": {
+          "mean": 15.27216087943621,
+          "p50": 6.5828,
+          "p90": 42.11919999999999,
+          "p95": 50.04299999999999,
+          "p99": 60.6768,
+          "max": 70.6006,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.23749105948938024,
+          "localContrast": 0.48210343004633116
+        },
+        "grid": {
+          "mean": 6.732621670190103,
+          "p50": 6.5828,
+          "p90": 6.8675999999999995,
+          "p95": 7.582799999999999,
+          "p99": 8.3702,
+          "max": 9.4424,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.15339440920836198
+        },
+        "hero": {
+          "mean": 22.267605100059573,
+          "p50": 6.5106,
+          "p90": 63.1072,
+          "p95": 82.16219999999998,
+          "p99": 175.84699999999998,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.002800179211469534,
+          "blackClipRatio": 0.0003733572281959379,
+          "highlightCoverage": 0.33169056152927123,
+          "localContrast": 8.873058542413686
+        },
+        "lowerLeft": {
+          "mean": 21.120992340066984,
+          "p50": 8.5828,
+          "p90": 51.471199999999996,
+          "p95": 60.620799999999996,
+          "p99": 72.77040000000001,
+          "max": 81.20479999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.3664421997755331,
+          "localContrast": 0.9194958847736536
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 5.5106,
+          "p90": 16.0854,
+          "p95": 37.945,
+          "p99": 105.31639999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "localContrast": 8.337753391251315
+        },
+        "stage": {
+          "background": {
+            "mean": 24.969077156433727,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 235.26739999999998,
+            "max": 252.54519999999997,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6714181286549707,
+            "localContrast": 1.784234892787523
+          },
+          "caustics": {
+            "mean": 11.66931373307542,
+            "p50": 6.7954,
+            "p90": 22.525,
+            "p95": 30.118199999999998,
+            "p99": 40.4936,
+            "max": 61.206,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.12314635718891039,
+            "localContrast": 3.352030947775642
+          },
+          "floor": {
+            "mean": 15.442600172456157,
+            "p50": 6.7954,
+            "p90": 43.047,
+            "p95": 50.4712,
+            "p99": 61.391999999999996,
+            "max": 70.8132,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.23996058142399607,
+            "localContrast": 0.8382195943171592
+          },
+          "grid": {
+            "mean": 6.739235940803356,
+            "p50": 6.5828,
+            "p90": 7.3702,
+            "p95": 7.582799999999999,
+            "p99": 7.654999999999999,
+            "max": 7.8675999999999995,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.14752172891707752
+          },
+          "hero": {
+            "mean": 21.937086527862867,
+            "p50": 12.3702,
+            "p90": 58.420199999999994,
+            "p95": 79.9496,
+            "p99": 161.3596,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.0003061849357011635,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3046540110226577,
+            "localContrast": 10.445907328026117
+          },
+          "lowerLeft": {
+            "mean": 21.202284343434325,
+            "p50": 9.1576,
+            "p90": 52.1864,
+            "p95": 60.620799999999996,
+            "p99": 71.8426,
+            "max": 79.4174,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.36840628507295176,
+            "localContrast": 1.6461840628507365
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 7.727623982908315,
+        "frameTimeMs": 129.40588235294115,
+        "frameTimeP95Ms": 283.3000000000002,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          49.992000000000004,
+          16.666666666666668,
+          16.59999999999991,
+          366.70000000000005,
+          null,
+          null,
+          391.65,
+          300,
+          133.29999999999995,
+          133.35000000000014,
+          150,
+          125,
+          116.64999999999986,
+          133.35000000000014,
+          133.30000000000018,
+          200,
+          124.94999999999982,
+          116.69999999999982,
+          94.4333333333334,
+          66.70000000000027,
+          183.29999999999973,
+          116.69999999999982,
+          208.30000000000018,
+          125,
+          133.3499999999999,
+          124.95000000000027,
+          75,
+          133.3499999999999,
+          266.59999999999945,
+          133.35000000000036,
+          233.29999999999927,
+          116.60000000000036,
+          400.10000000000036,
+          183.29999999999927,
+          75,
+          94.43333333333369,
+          366.59999999999854,
+          133.40000000000146,
+          133.29999999999927,
+          122.23333333333358,
+          133.30000000000018,
+          133.34999999999945,
+          116.70000000000073,
+          88.86666666666618,
+          133.35000000000036,
+          66.64999999999964,
+          158.30000000000018,
+          250.10000000000036,
+          77.73333333333358,
+          null,
+          216.69999999999982,
+          127.73333333333296,
+          200,
+          66.70000000000073,
+          191.64999999999964,
+          125,
+          88.90000000000025,
+          99.89999999999964,
+          191.64999999999964,
+          100.10000000000036
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "crystal",
+      "parameters": {
+        "autoRotate": "false",
+        "ior": "1.72",
+        "roughness": "0.01",
+        "thickness": "1.8",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/crystal.png",
+      "canvasScreenshot": "output/glass-qa/crystal-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 4.5106,
+        "p90": 25.235,
+        "p95": 35.597199999999994,
+        "p99": 101.58399999999999,
+        "brightClipRatio": 0.003065743158850914,
+        "blackClipRatio": 0,
+        "localContrast": 7.329018583702353
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 21.645583121380145,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 37.7376,
+          "max": 252.54519999999997,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6788747584595336,
+          "localContrast": 0.3332284785571966
+        },
+        "caustics": {
+          "mean": 14.962467399843185,
+          "p50": 6.5106,
+          "p90": 30.9056,
+          "p95": 44.855799999999995,
+          "p99": 115.58579999999999,
+          "max": 205.9896,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0.0006284367635506677,
+          "highlightCoverage": 0.17156323644933227,
+          "localContrast": 4.0335166273894005
+        },
+        "floor": {
+          "mean": 15.287752340082216,
+          "p50": 6.8675999999999995,
+          "p90": 42.1812,
+          "p95": 50.04299999999999,
+          "p99": 61.391999999999996,
+          "max": 70.6006,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.23808191062599124,
+          "localContrast": 0.48484000373168773
+        },
+        "grid": {
+          "mean": 6.7830111346017175,
+          "p50": 6.5828,
+          "p90": 7.582799999999999,
+          "p95": 7.654999999999999,
+          "p99": 8.655000000000001,
+          "max": 10.582799999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.1619097956307252
+        },
+        "hero": {
+          "mean": 24.329062507466983,
+          "p50": 6.7954,
+          "p90": 65.4602,
+          "p95": 89.08599999999998,
+          "p99": 222.357,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.003882915173237754,
+          "blackClipRatio": 0.00044802867383512545,
+          "highlightCoverage": 0.3548760454002389,
+          "localContrast": 10.239695340501777
+        },
+        "lowerLeft": {
+          "mean": 21.29164494949454,
+          "p50": 9.298,
+          "p90": 52.258599999999994,
+          "p95": 60.620799999999996,
+          "p99": 73.5578,
+          "max": 154.22199999999998,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.3700196408529742,
+          "localContrast": 1.0357977927422237
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 4.5106,
+          "p90": 15.872799999999998,
+          "p95": 18.6602,
+          "p99": 104.5932,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "localContrast": 7.730224051211725
+        },
+        "stage": {
+          "background": {
+            "mean": 21.326911403509712,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 34.8098,
+            "max": 250.68159999999997,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6827485380116959,
+            "localContrast": 0.5370979532163744
+          },
+          "caustics": {
+            "mean": 15.551773049645364,
+            "p50": 7.510599999999999,
+            "p90": 29.6024,
+            "p95": 42.4132,
+            "p99": 113.71699999999998,
+            "max": 187.96599999999995,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.1773049645390071,
+            "localContrast": 5.765527616591458
+          },
+          "floor": {
+            "mean": 15.469821754126603,
+            "p50": 6.8675999999999995,
+            "p90": 43.047,
+            "p95": 50.4712,
+            "p99": 61.4642,
+            "max": 70.8132,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.24069967972406997,
+            "localContrast": 0.8463086146013006
+          },
+          "grid": {
+            "mean": 6.819251303735022,
+            "p50": 6.5828,
+            "p90": 7.582799999999999,
+            "p95": 7.582799999999999,
+            "p99": 8.8676,
+            "max": 11.9358,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.1754756871035937
+          },
+          "hero": {
+            "mean": 24.005722657685173,
+            "p50": 14.0854,
+            "p90": 65.298,
+            "p95": 84.94559999999998,
+            "p99": 178.3138,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.00045927740355174526,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3337415799142682,
+            "localContrast": 12.340528679322318
+          },
+          "lowerLeft": {
+            "mean": 21.355076487093136,
+            "p50": 9.863599999999998,
+            "p90": 52.258599999999994,
+            "p95": 60.620799999999996,
+            "p99": 73.5578,
+            "max": 139.3612,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3712121212121212,
+            "localContrast": 1.87860082304528
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 6.363925632983324,
+        "frameTimeMs": 157.13571428571413,
+        "frameTimeP95Ms": 266.7000000000007,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          133.34999999999945,
+          116.70000000000073,
+          88.86666666666618,
+          133.35000000000036,
+          66.64999999999964,
+          158.30000000000018,
+          250.10000000000036,
+          77.73333333333358,
+          null,
+          216.69999999999982,
+          127.73333333333296,
+          200,
+          66.70000000000073,
+          191.64999999999964,
+          125,
+          88.90000000000025,
+          99.89999999999964,
+          191.64999999999964,
+          77.79999999999988,
+          null,
+          183.30000000000018,
+          null,
+          341.65000000000055,
+          133.29999999999927,
+          122.23333333333358,
+          75.04999999999927,
+          133.3000000000011,
+          141.64999999999964,
+          88.90000000000025,
+          133.34999999999854,
+          74.95000000000073,
+          183.35000000000036,
+          16.599999999998545,
+          133.36666666666738,
+          141.59999999999854,
+          66.70000000000073,
+          383.2999999999993,
+          116.64999999999964,
+          233.3000000000029,
+          125,
+          141.64999999999964,
+          116.69999999999891,
+          94.4333333333343,
+          125,
+          133.29999999999927,
+          83.35000000000036,
+          116.64999999999964,
+          105.5666666666669,
+          141.64999999999964,
+          150,
+          83.35000000000036,
+          266.59999999999854,
+          266.7000000000007,
+          191.64999999999964,
+          133.3000000000011,
+          125,
+          116.64999999999964,
+          133.35000000000036,
+          116.69999999999709,
+          150
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "extreme",
+      "parameters": {
+        "autoRotate": "false",
+        "lightX": "-6",
+        "lightY": "2.61",
+        "lightZ": "-6",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/extreme.png",
+      "canvasScreenshot": "output/glass-qa/extreme-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 4.7232,
+        "p90": 40.5972,
+        "p95": 65.5106,
+        "p99": 101.38459999999999,
+        "brightClipRatio": 0.00011354604292040422,
+        "blackClipRatio": 0,
+        "localContrast": 7.382120283108188
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 20.517665267607818,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 21.4648,
+          "max": 21.4648,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6657978699501191,
+          "localContrast": 0.018978714480444334
+        },
+        "caustics": {
+          "mean": 17.33714589159488,
+          "p50": 6.5106,
+          "p90": 35.408199999999994,
+          "p95": 59.200799999999994,
+          "p99": 147.81900000000002,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.0017282010997643363,
+          "blackClipRatio": 0.0004713275726630008,
+          "highlightCoverage": 0.20644147682639435,
+          "localContrast": 6.679759099240753
+        },
+        "floor": {
+          "mean": 14.553011524705884,
+          "p50": 5.7232,
+          "p90": 42.109,
+          "p95": 49.471199999999996,
+          "p99": 60.6046,
+          "max": 70.5284,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.2349721678017228,
+          "localContrast": 0.5056856464637087
+        },
+        "grid": {
+          "mean": 5.832949224806431,
+          "p50": 5.7232,
+          "p90": 5.7232,
+          "p95": 6.7954,
+          "p99": 7.582799999999999,
+          "max": 8.5828,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.18680996006577466
+        },
+        "hero": {
+          "mean": 23.53029775238829,
+          "p50": 6.5106,
+          "p90": 65.5106,
+          "p95": 84.0178,
+          "p99": 219.5314,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.0035842293906810036,
+          "blackClipRatio": 0.00041069295101553167,
+          "highlightCoverage": 0.34057646356033455,
+          "localContrast": 8.634333930705044
+        },
+        "lowerLeft": {
+          "mean": 22.87811752244639,
+          "p50": 9.0854,
+          "p90": 53.2586,
+          "p95": 63.408199999999994,
+          "p99": 105.73419999999999,
+          "max": 214.43179999999998,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.37591189674523007,
+          "localContrast": 2.2091049382716115
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 4.7232,
+          "p90": 33.0224,
+          "p95": 65.5106,
+          "p99": 85.8058,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "localContrast": 8.295686633135162
+        },
+        "stage": {
+          "background": {
+            "mean": 20.526930701755354,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 21.4648,
+            "max": 21.4648,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6701388888888888,
+            "localContrast": 0.0367933723196883
+          },
+          "caustics": {
+            "mean": 19.283458671824615,
+            "p50": 7.510599999999999,
+            "p90": 38.919799999999995,
+            "p95": 69.5066,
+            "p99": 136.9084,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.0012894906511927789,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.2256608639587363,
+            "localContrast": 9.226950354609896
+          },
+          "floor": {
+            "mean": 14.726268662232227,
+            "p50": 5.7232,
+            "p90": 42.89639999999999,
+            "p95": 50.255599999999994,
+            "p99": 61.319799999999994,
+            "max": 70.741,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.23725055432372505,
+            "localContrast": 0.8566559908023353
+          },
+          "grid": {
+            "mean": 5.837448343904224,
+            "p50": 5.7232,
+            "p90": 6.5106,
+            "p95": 6.5106,
+            "p99": 6.7232,
+            "max": 6.7954,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.16607939863753823
+          },
+          "hero": {
+            "mean": 23.16638392529074,
+            "p50": 13.297999999999998,
+            "p90": 65.5106,
+            "p95": 79.62299999999999,
+            "p99": 185.0614,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.0003061849357011635,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.31353337415799143,
+            "localContrast": 10.064656052255529
+          },
+          "lowerLeft": {
+            "mean": 23.113787542087508,
+            "p50": 10.0854,
+            "p90": 54.046,
+            "p95": 64.4082,
+            "p99": 120.86439999999999,
+            "max": 210.3636,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.37850729517396187,
+            "localContrast": 3.721006359895216
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 5.366115420264399,
+        "frameTimeMs": 186.3545454545456,
+        "frameTimeP95Ms": 333.3000000000029,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          116.64999999999964,
+          105.5666666666669,
+          141.64999999999964,
+          150,
+          83.35000000000036,
+          266.59999999999854,
+          266.7000000000007,
+          191.64999999999964,
+          133.3000000000011,
+          125,
+          116.64999999999964,
+          133.35000000000036,
+          116.69999999999709,
+          133.35000000000036,
+          88.83333333333333,
+          75.05000000000109,
+          416.6999999999971,
+          183.3000000000029,
+          99.96666666666594,
+          133.35000000000036,
+          141.64999999999964,
+          150,
+          141.70000000000073,
+          133.29999999999927,
+          133.29999999999927,
+          191.65000000000146,
+          150,
+          150,
+          266.6999999999971,
+          133.35000000000036,
+          133.29999999999927,
+          83.34000000000015,
+          null,
+          483.2000000000007,
+          133.35000000000036,
+          91.64999999999964,
+          166.59999999999854,
+          166.70000000000073,
+          105.5666666666669,
+          166.59999999999854,
+          158.3000000000011,
+          116.70000000000073,
+          125,
+          91.64999999999782,
+          333.3000000000029,
+          108.29999999999927,
+          null,
+          250,
+          166.8000000000029,
+          116.6333333333314,
+          166.60000000000582,
+          105.5666666666657,
+          166.6999999999971,
+          183.3000000000029,
+          350,
+          175,
+          166.59999999999854,
+          158.35000000000218,
+          166.6999999999971,
+          174.95000000000073
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "ior-1",
+      "parameters": {
+        "autoRotate": "false",
+        "ior": "1",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/ior-1.png",
+      "canvasScreenshot": "output/glass-qa/ior-1-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 5.5106,
+        "p90": 24.1628,
+        "p95": 50.5828,
+        "p99": 102.231,
+        "brightClipRatio": 0,
+        "blackClipRatio": 0,
+        "localContrast": 5.558797925892314
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 21.645583121380145,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 37.7376,
+          "max": 252.54519999999997,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6788747584595336,
+          "localContrast": 0.3332284785571966
+        },
+        "caustics": {
+          "mean": 10.838461743912422,
+          "p50": 6.5106,
+          "p90": 21.3204,
+          "p95": 29.5474,
+          "p99": 43.281,
+          "max": 74.8334,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0.00031421838177533385,
+          "highlightCoverage": 0.10887666928515319,
+          "localContrast": 2.380570830060211
+        },
+        "floor": {
+          "mean": 15.283224137824552,
+          "p50": 6.7954,
+          "p90": 42.1812,
+          "p95": 50.04299999999999,
+          "p99": 61.391999999999996,
+          "max": 70.6006,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.23808191062599124,
+          "localContrast": 0.482611354707629
+        },
+        "grid": {
+          "mean": 6.770273537702471,
+          "p50": 6.5828,
+          "p90": 7.582799999999999,
+          "p95": 7.582799999999999,
+          "p99": 8.442400000000001,
+          "max": 9.4424,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.1549213060840962
+        },
+        "hero": {
+          "mean": 22.030412223714993,
+          "p50": 9.294,
+          "p90": 60.745,
+          "p95": 78.737,
+          "p99": 171.33339999999998,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.0023148148148148147,
+          "blackClipRatio": 0.0002613500597371565,
+          "highlightCoverage": 0.3274716248506571,
+          "localContrast": 7.397028076463604
+        },
+        "lowerLeft": {
+          "mean": 20.968245216048942,
+          "p50": 8.3702,
+          "p90": 51.471199999999996,
+          "p95": 60.620799999999996,
+          "p99": 72.77040000000001,
+          "max": 81.20479999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.3656705948372615,
+          "localContrast": 0.9216704077815133
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 5.582800000000001,
+          "p90": 16.796599999999998,
+          "p95": 41.7416,
+          "p99": 102.94619999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "localContrast": 6.5465630239293
+        },
+        "stage": {
+          "background": {
+            "mean": 21.326911403509712,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 34.8098,
+            "max": 250.68159999999997,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6827485380116959,
+            "localContrast": 0.5370979532163744
+          },
+          "caustics": {
+            "mean": 11.367027208252717,
+            "p50": 6.7954,
+            "p90": 21.4436,
+            "p95": 28.8322,
+            "p99": 40.4936,
+            "max": 61.206,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.11476466795615732,
+            "localContrast": 3.153019557274892
+          },
+          "floor": {
+            "mean": 15.452778640059075,
+            "p50": 6.8675999999999995,
+            "p90": 43.047,
+            "p95": 50.4712,
+            "p99": 61.4642,
+            "max": 70.8132,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.24069967972406997,
+            "localContrast": 0.8385070214338535
+          },
+          "grid": {
+            "mean": 6.770417899929507,
+            "p50": 6.5828,
+            "p90": 7.3702,
+            "p95": 7.582799999999999,
+            "p99": 7.8675999999999995,
+            "max": 8.5828,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.14963589382194012
+          },
+          "hero": {
+            "mean": 21.738382210655313,
+            "p50": 11.370199999999999,
+            "p90": 55.34219999999999,
+            "p95": 76.93199999999999,
+            "p99": 158.40419999999997,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.0003061849357011635,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3165952235150031,
+            "localContrast": 9.223923249642821
+          },
+          "lowerLeft": {
+            "mean": 21.049864085297386,
+            "p50": 9.0854,
+            "p90": 52.1864,
+            "p95": 60.620799999999996,
+            "p99": 71.8426,
+            "max": 79.4174,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3664421997755331,
+            "localContrast": 1.6489898989899041
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 9.677731539727095,
+        "frameTimeMs": 103.32999999999993,
+        "frameTimeP95Ms": 316.6999999999971,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          108.29999999999927,
+          null,
+          250,
+          166.8000000000029,
+          116.6333333333314,
+          166.60000000000582,
+          105.5666666666657,
+          166.6999999999971,
+          183.3000000000029,
+          350,
+          175,
+          166.59999999999854,
+          158.35000000000218,
+          166.6999999999971,
+          174.95000000000073,
+          91.70000000000073,
+          149.89999999999418,
+          null,
+          516.7000000000044,
+          166.59999999999854,
+          266.8000000000029,
+          349.8999999999942,
+          183.3000000000029,
+          183.34999999999854,
+          166.60000000000582,
+          316.6999999999971,
+          100,
+          133.3000000000029,
+          175,
+          283.3999999999942,
+          133.3000000000029,
+          174.95000000000073,
+          283.40000000000146,
+          125,
+          166.59999999999854,
+          105.53333333333285,
+          133.40000000000146,
+          316.6999999999971,
+          166.59999999999854,
+          166.70000000000073,
+          149.95000000000073,
+          100,
+          166.65000000000146,
+          105.5666666666657,
+          108.29999999999927,
+          116.70000000000073,
+          77.76666666666763,
+          100,
+          191.64999999999782,
+          83.33333333333333,
+          66.65000000000146,
+          233.34999999999854,
+          72.19999999999952,
+          108.35000000000218,
+          77.76666666666522,
+          83.32500000000073,
+          116.69999999999709,
+          122.23333333333478,
+          216.59999999999854,
+          125
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "ior-2-4",
+      "parameters": {
+        "autoRotate": "false",
+        "ior": "2.4",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/ior-2-4.png",
+      "canvasScreenshot": "output/glass-qa/ior-2-4-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 3.7232,
+        "p90": 32.809799999999996,
+        "p95": 60.3938,
+        "p99": 133.9554,
+        "brightClipRatio": 0.0053366640172589986,
+        "blackClipRatio": 0,
+        "localContrast": 9.947730971575632
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 21.645583121380145,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 37.7376,
+          "max": 252.54519999999997,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6788747584595336,
+          "localContrast": 0.3332284785571966
+        },
+        "caustics": {
+          "mean": 15.11395195600971,
+          "p50": 6.5106,
+          "p90": 31.2586,
+          "p95": 46.316399999999994,
+          "p99": 126.84939999999999,
+          "max": 206.424,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0.0006284367635506677,
+          "highlightCoverage": 0.16716417910447762,
+          "localContrast": 4.380989787902632
+        },
+        "floor": {
+          "mean": 15.387565948316912,
+          "p50": 6.8675999999999995,
+          "p90": 42.1812,
+          "p95": 50.04299999999999,
+          "p99": 61.391999999999996,
+          "max": 70.6006,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.23808191062599124,
+          "localContrast": 0.505312477324789
+        },
+        "grid": {
+          "mean": 7.071877484143855,
+          "p50": 6.5828,
+          "p90": 7.8675999999999995,
+          "p95": 9.7232,
+          "p99": 13.863599999999998,
+          "max": 15.5788,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.23655156213295786
+        },
+        "hero": {
+          "mean": 24.997831884707107,
+          "p50": 6.5828,
+          "p90": 65.8334,
+          "p95": 89.3708,
+          "p99": 238.20459999999997,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.00492831541218638,
+          "blackClipRatio": 0.0004853643966547192,
+          "highlightCoverage": 0.3506944444444444,
+          "localContrast": 11.822866885702972
+        },
+        "lowerLeft": {
+          "mean": 22.929248148147707,
+          "p50": 10.8728,
+          "p90": 54.2586,
+          "p95": 63.6208,
+          "p99": 90.9416,
+          "max": 206.424,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.3899410774410774,
+          "localContrast": 1.452838570894129
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 4.4384,
+          "p90": 19.872799999999998,
+          "p95": 33.882,
+          "p99": 132.3806,
+          "brightClipRatio": 0.002286236854138089,
+          "blackClipRatio": 0,
+          "localContrast": 10.442767870751391
+        },
+        "stage": {
+          "background": {
+            "mean": 21.326911403509712,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 34.8098,
+            "max": 250.68159999999997,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6827485380116959,
+            "localContrast": 0.5370979532163744
+          },
+          "caustics": {
+            "mean": 15.112675048355868,
+            "p50": 7.298,
+            "p90": 28.8322,
+            "p95": 39.56679999999999,
+            "p99": 125.8626,
+            "max": 191.903,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.16956802063185042,
+            "localContrast": 5.756716097141616
+          },
+          "floor": {
+            "mean": 15.558152746982014,
+            "p50": 6.8675999999999995,
+            "p90": 43.047,
+            "p95": 50.4712,
+            "p99": 61.4642,
+            "max": 70.8132,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.24069967972406997,
+            "localContrast": 0.8835920177383638
+          },
+          "grid": {
+            "mean": 7.062632417195247,
+            "p50": 6.5828,
+            "p90": 7.654999999999999,
+            "p95": 9.7232,
+            "p99": 13.791399999999998,
+            "max": 15.004,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.3084331688982861
+          },
+          "hero": {
+            "mean": 24.5754894366196,
+            "p50": 16.8688,
+            "p90": 64.8322,
+            "p95": 83.80519999999999,
+            "p99": 196.832,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.0013778322106552357,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3498162890385793,
+            "localContrast": 13.354255970606317
+          },
+          "lowerLeft": {
+            "mean": 22.998493209876532,
+            "p50": 10.945,
+            "p90": 54.2586,
+            "p95": 63.408199999999994,
+            "p99": 87.1176,
+            "max": 191.903,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3900112233445567,
+            "localContrast": 2.694257388701826
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 8.571428571428571,
+        "frameTimeMs": 116.66666666666667,
+        "frameTimeP95Ms": 233.1999999999971,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          166.70000000000073,
+          149.95000000000073,
+          100,
+          166.65000000000146,
+          105.5666666666657,
+          108.29999999999927,
+          116.70000000000073,
+          77.76666666666763,
+          100,
+          191.64999999999782,
+          83.33333333333333,
+          66.65000000000146,
+          233.34999999999854,
+          72.19999999999952,
+          108.35000000000218,
+          77.76666666666522,
+          83.32500000000073,
+          116.69999999999709,
+          122.23333333333478,
+          216.59999999999854,
+          125,
+          100,
+          77.76666666666763,
+          null,
+          225,
+          108.29999999999927,
+          175,
+          116.64999999999782,
+          83.33333333333333,
+          108.35000000000218,
+          116.64999999999782,
+          116.70000000000073,
+          83.30000000000109,
+          100.09999999999854,
+          122.23333333333237,
+          77.76666666666763,
+          99.90000000000146,
+          175,
+          83.33333333333333,
+          166.64999999999782,
+          125,
+          116.70000000000073,
+          116.65000000000146,
+          116.69999999999709,
+          144.39999999999904,
+          133.3000000000029,
+          125,
+          133.34999999999854,
+          166.65000000000146,
+          116.65000000000146,
+          116.69999999999709,
+          116.66666666666667,
+          116.70000000000073,
+          116.59999999999854,
+          116.69999999999952,
+          108.30000000000291,
+          116.64999999999782,
+          83.33333333333333,
+          116.65000000000146,
+          233.40000000000146
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "thickness-0-2",
+      "parameters": {
+        "autoRotate": "false",
+        "thickness": "0.2",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/thickness-0-2.png",
+      "canvasScreenshot": "output/glass-qa/thickness-0-2-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 5.4384,
+        "p90": 22.732400000000002,
+        "p95": 32.809799999999996,
+        "p99": 77.6562,
+        "brightClipRatio": 0,
+        "blackClipRatio": 0,
+        "localContrast": 6.335263616063085
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 21.645583121380145,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 37.7376,
+          "max": 252.54519999999997,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6788747584595336,
+          "localContrast": 0.3332284785571966
+        },
+        "caustics": {
+          "mean": 14.454610746268967,
+          "p50": 6.5106,
+          "p90": 29.674599999999998,
+          "p95": 42.42139999999999,
+          "p99": 110.3548,
+          "max": 159.4174,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0.0004713275726630008,
+          "highlightCoverage": 0.1657501963864886,
+          "localContrast": 3.8030898140874965
+        },
+        "floor": {
+          "mean": 15.283224137824552,
+          "p50": 6.7954,
+          "p90": 42.1812,
+          "p95": 50.04299999999999,
+          "p99": 61.391999999999996,
+          "max": 70.6006,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.23808191062599124,
+          "localContrast": 0.482611354707629
+        },
+        "grid": {
+          "mean": 6.770273537702471,
+          "p50": 6.5828,
+          "p90": 7.582799999999999,
+          "p95": 7.582799999999999,
+          "p99": 8.442400000000001,
+          "max": 9.4424,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.1549213060840962
+        },
+        "hero": {
+          "mean": 24.130528666367663,
+          "p50": 10.8556,
+          "p90": 65.5828,
+          "p95": 85.8774,
+          "p99": 190.9174,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.0018294504181600956,
+          "blackClipRatio": 0.0002613500597371565,
+          "highlightCoverage": 0.3604017323775388,
+          "localContrast": 9.354428016726642
+        },
+        "lowerLeft": {
+          "mean": 20.98093661616118,
+          "p50": 8.5828,
+          "p90": 51.471199999999996,
+          "p95": 60.620799999999996,
+          "p99": 72.77040000000001,
+          "max": 81.20479999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.3656705948372615,
+          "localContrast": 0.924990647212864
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 5.5106,
+          "p90": 15.085399999999998,
+          "p95": 17.945,
+          "p99": 87.9462,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "localContrast": 6.4142661179698335
+        },
+        "stage": {
+          "background": {
+            "mean": 21.326911403509712,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 34.8098,
+            "max": 250.68159999999997,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6827485380116959,
+            "localContrast": 0.5370979532163744
+          },
+          "caustics": {
+            "mean": 15.062056995486751,
+            "p50": 7.510599999999999,
+            "p90": 28.8322,
+            "p95": 39.977799999999995,
+            "p99": 110.0832,
+            "max": 156.7022,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.17343649258542876,
+            "localContrast": 5.549537932516669
+          },
+          "floor": {
+            "mean": 15.452778640059075,
+            "p50": 6.8675999999999995,
+            "p90": 43.047,
+            "p95": 50.4712,
+            "p99": 61.4642,
+            "max": 70.8132,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.24069967972406997,
+            "localContrast": 0.8385070214338535
+          },
+          "grid": {
+            "mean": 6.770417899929507,
+            "p50": 6.5828,
+            "p90": 7.3702,
+            "p95": 7.582799999999999,
+            "p99": 7.8675999999999995,
+            "max": 8.5828,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.14963589382194012
+          },
+          "hero": {
+            "mean": 23.841761757501477,
+            "p50": 14.1576,
+            "p90": 64.6006,
+            "p95": 83.08999999999999,
+            "p99": 160.9588,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.00045927740355174526,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.34507042253521125,
+            "localContrast": 11.322208614002905
+          },
+          "lowerLeft": {
+            "mean": 21.062478451178425,
+            "p50": 9.1576,
+            "p90": 52.1864,
+            "p95": 60.620799999999996,
+            "p99": 71.8426,
+            "max": 79.4174,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3664421997755331,
+            "localContrast": 1.6548821548821604
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 9.193844962740773,
+        "frameTimeMs": 108.76842105263113,
+        "frameTimeP95Ms": 250,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          125,
+          116.70000000000073,
+          116.65000000000146,
+          116.69999999999709,
+          144.39999999999904,
+          133.3000000000029,
+          125,
+          133.34999999999854,
+          166.65000000000146,
+          116.65000000000146,
+          116.69999999999709,
+          116.66666666666667,
+          116.70000000000073,
+          116.59999999999854,
+          116.69999999999952,
+          108.30000000000291,
+          116.64999999999782,
+          83.33333333333333,
+          116.65000000000146,
+          125,
+          83.33333333333333,
+          100,
+          283.29999999999563,
+          250,
+          125,
+          116.70000000000073,
+          111.06666666666813,
+          125.04999999999927,
+          108.29999999999927,
+          125,
+          125,
+          108.29999999999927,
+          125,
+          66.70000000000073,
+          183.29999999999927,
+          83.33333333333333,
+          116.70000000000073,
+          250,
+          116.59999999999854,
+          200,
+          125,
+          116.65000000000146,
+          116.66666666666667,
+          125,
+          216.59999999999854,
+          77.76666666666763,
+          108.34999999999854,
+          116.59999999999854,
+          133.33333333333576,
+          116.64999999999418,
+          66.70000000000437,
+          175,
+          116.66666666666667,
+          108.29999999999563,
+          108.30000000000291,
+          125.05000000000291,
+          116.64999999999418,
+          77.76666666666763,
+          111.13333333333624,
+          116.64999999999418
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    },
+    {
+      "name": "thickness-2-4",
+      "parameters": {
+        "autoRotate": "false",
+        "thickness": "2.4",
+        "v": "2"
+      },
+      "screenshot": "output/glass-qa/thickness-2-4.png",
+      "canvasScreenshot": "output/glass-qa/thickness-2-4-canvas.png",
+      "glassDiscMetrics": {
+        "samples": 8807,
+        "p50": 4.5106,
+        "p90": 22.4476,
+        "p95": 31.809799999999996,
+        "p99": 89.3084,
+        "brightClipRatio": 0.0009083683433632338,
+        "blackClipRatio": 0,
+        "localContrast": 6.5454751901897374
+      },
+      "stageMetrics": {
+        "background": {
+          "mean": 21.645583121380145,
+          "p50": 20.677400000000002,
+          "p90": 21.4648,
+          "p95": 21.4648,
+          "p99": 37.7376,
+          "max": 252.54519999999997,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.6788747584595336,
+          "localContrast": 0.3332284785571966
+        },
+        "caustics": {
+          "mean": 14.421657721917041,
+          "p50": 6.5106,
+          "p90": 29.674599999999998,
+          "p95": 42.42139999999999,
+          "p99": 110.3548,
+          "max": 159.4174,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0.0004713275726630008,
+          "highlightCoverage": 0.16543597800471327,
+          "localContrast": 3.8037706205813424
+        },
+        "floor": {
+          "mean": 15.283224137824552,
+          "p50": 6.7954,
+          "p90": 42.1812,
+          "p95": 50.04299999999999,
+          "p99": 61.391999999999996,
+          "max": 70.6006,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.23808191062599124,
+          "localContrast": 0.482611354707629
+        },
+        "grid": {
+          "mean": 6.770273537702471,
+          "p50": 6.5828,
+          "p90": 7.582799999999999,
+          "p95": 7.582799999999999,
+          "p99": 8.442400000000001,
+          "max": 9.4424,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0,
+          "localContrast": 0.1549213060840962
+        },
+        "hero": {
+          "mean": 23.610045258363243,
+          "p50": 6.7954,
+          "p90": 65.298,
+          "p95": 86.2304,
+          "p99": 209.23119999999997,
+          "max": 254.99999999999997,
+          "brightClipRatio": 0.0032482078853046594,
+          "blackClipRatio": 0.0003360215053763441,
+          "highlightCoverage": 0.3512171445639188,
+          "localContrast": 9.526495917961332
+        },
+        "lowerLeft": {
+          "mean": 20.98093661616118,
+          "p50": 8.5828,
+          "p90": 51.471199999999996,
+          "p95": 60.620799999999996,
+          "p99": 72.77040000000001,
+          "max": 81.20479999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "highlightCoverage": 0.3656705948372615,
+          "localContrast": 0.924990647212864
+        }
+      },
+      "thumbnailMetrics": {
+        "scale": 0.25,
+        "glassDisc": {
+          "samples": 2187,
+          "p50": 4.5828,
+          "p90": 13.944999999999999,
+          "p95": 16.872799999999998,
+          "p99": 93.80579999999999,
+          "brightClipRatio": 0,
+          "blackClipRatio": 0,
+          "localContrast": 6.843316567596415
+        },
+        "stage": {
+          "background": {
+            "mean": 21.326911403509712,
+            "p50": 20.677400000000002,
+            "p90": 21.4648,
+            "p95": 21.4648,
+            "p99": 34.8098,
+            "max": 250.68159999999997,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.6827485380116959,
+            "localContrast": 0.5370979532163744
+          },
+          "caustics": {
+            "mean": 15.028292714377786,
+            "p50": 7.510599999999999,
+            "p90": 28.8322,
+            "p95": 39.977799999999995,
+            "p99": 110.0832,
+            "max": 156.7022,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.17343649258542876,
+            "localContrast": 5.549537932516669
+          },
+          "floor": {
+            "mean": 15.452778640059075,
+            "p50": 6.8675999999999995,
+            "p90": 43.047,
+            "p95": 50.4712,
+            "p99": 61.4642,
+            "max": 70.8132,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.24069967972406997,
+            "localContrast": 0.8385070214338535
+          },
+          "grid": {
+            "mean": 6.770417899929507,
+            "p50": 6.5828,
+            "p90": 7.3702,
+            "p95": 7.582799999999999,
+            "p99": 7.8675999999999995,
+            "max": 8.5828,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0,
+            "localContrast": 0.14963589382194012
+          },
+          "hero": {
+            "mean": 23.30959758113902,
+            "p50": 13.0854,
+            "p90": 64.6088,
+            "p95": 83.3072,
+            "p99": 172.6058,
+            "max": 254.99999999999997,
+            "brightClipRatio": 0.00045927740355174526,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3280771586037967,
+            "localContrast": 11.71545213308843
+          },
+          "lowerLeft": {
+            "mean": 21.062478451178425,
+            "p50": 9.1576,
+            "p90": 52.1864,
+            "p95": 60.620799999999996,
+            "p99": 71.8426,
+            "max": 79.4174,
+            "brightClipRatio": 0,
+            "blackClipRatio": 0,
+            "highlightCoverage": 0.3664421997755331,
+            "localContrast": 1.6548821548821604
+          }
+        }
+      },
+      "telemetry": {
+        "fps": 8.925914906277868,
+        "frameTimeMs": 112.03333333333366,
+        "frameTimeP95Ms": 233.40000000000873,
+        "sampleState": "live",
+        "frameTimeHistoryMs": [
+          116.59999999999854,
+          200,
+          125,
+          116.65000000000146,
+          116.66666666666667,
+          125,
+          216.59999999999854,
+          77.76666666666763,
+          108.34999999999854,
+          116.59999999999854,
+          133.33333333333576,
+          116.64999999999418,
+          66.70000000000437,
+          175,
+          116.66666666666667,
+          108.29999999999563,
+          108.30000000000291,
+          125.05000000000291,
+          116.64999999999418,
+          77.76666666666763,
+          111.13333333333624,
+          116.64999999999418,
+          94.40000000000389,
+          58.39999999999418,
+          366.6000000000058,
+          125,
+          108.34999999999854,
+          116.65000000000146,
+          124.94999999999709,
+          108.35000000000582,
+          175,
+          250,
+          83.33333333333333,
+          124.94999999999709,
+          116.69999999999709,
+          216.60000000000582,
+          62.525000000001455,
+          108.29999999999563,
+          233.40000000000873,
+          87.47499999999854,
+          108.30000000000291,
+          116.69999999999709,
+          116.69999999999709,
+          124.95000000000437,
+          125,
+          77.76666666666763,
+          166.64999999999418,
+          50.05000000000291,
+          200,
+          83.29999999999806,
+          133.3000000000029,
+          175,
+          83.33333333333333,
+          116.70000000000437,
+          116.64999999999418,
+          116.65000000000146,
+          125,
+          116.65000000000146,
+          125,
+          111.10000000000097
+        ],
+        "drawCalls": 16,
+        "drawCallsMax": 16,
+        "trianglesAvg": 5606,
+        "textures": 5,
+        "geometries": 25,
+        "programs": 14,
+        "environment": {
+          "maskedVendor": "WebKit",
+          "maskedRenderer": "WebKit WebGL",
+          "unmaskedVendor": "Google Inc. (Google)",
+          "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "classification": "software",
+          "classificationReason": "software renderer marker matched: swiftshader"
+        }
+      }
+    }
+  ],
+  "deterministicStatic": [
+    {
+      "reducedMotion": "no-preference",
+      "firstPath": "output/glass-qa/static-normal-1s.png",
+      "secondPath": "output/glass-qa/static-normal-11s.png",
+      "diff": {
+        "meanDelta": 0,
+        "strongRatio": 0,
+        "maxDelta": 0
+      }
+    },
+    {
+      "reducedMotion": "reduce",
+      "firstPath": "output/glass-qa/static-reduced-1s.png",
+      "secondPath": "output/glass-qa/static-reduced-11s.png",
+      "diff": {
+        "meanDelta": 0,
+        "strongRatio": 0,
+        "maxDelta": 0
+      }
+    }
+  ],
+  "motionPositiveControl": {
+    "firstPath": "output/glass-qa/motion-positive-1s.png",
+    "secondPath": "output/glass-qa/motion-positive-2s.png",
+    "diff": {
+      "meanDelta": 1.5181590037404944,
+      "strongRatio": 0.012454819514812886,
+      "maxDelta": 151.66666666666666
+    }
+  },
+  "continuousLightDrag": {
+    "allocationGate": {
+      "build": "unminified",
+      "forbiddenAllocationNames": [
+        "BufferAttribute",
+        "Geometry",
+        "Vector3"
+      ],
+      "positiveControlMatches": [
+        {
+          "functionName": "Vector3AllocationPositiveControl",
+          "scriptId": "50",
+          "url": "",
+          "lineNumber": 2,
+          "columnNumber": 17,
+          "selfSize": 31048
+        }
+      ]
+    },
+    "durationFrames": 180,
+    "drawCallsBefore": 16,
+    "drawCallsAfter": 16,
+    "geometriesBefore": 25,
+    "geometriesAfter": 25,
+    "sampledAllocationNodes": [
+      {
+        "functionName": "performWorkUntilDeadline",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 495,
+        "columnNumber": 34,
+        "selfSize": 8440
+      },
+      {
+        "functionName": "recursivelyTraversePassiveUnmountEffects",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6707,
+        "columnNumber": 50,
+        "selfSize": 308
+      },
+      {
+        "functionName": "commitPassiveUnmountEffectsInsideOfDeletedTree_begin",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6768,
+        "columnNumber": 62,
+        "selfSize": 320
+      },
+      {
+        "functionName": "detachFiberAfterEffects",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6039,
+        "columnNumber": 33,
+        "selfSize": 156
+      },
+      {
+        "functionName": "detachFiberAfterEffects",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6039,
+        "columnNumber": 33,
+        "selfSize": 192
+      },
+      {
+        "functionName": "performWorkOnRoot",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6834,
+        "columnNumber": 27,
+        "selfSize": 1988
+      },
+      {
+        "functionName": "setProp",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 8102,
+        "columnNumber": 17,
+        "selfSize": 560
+      },
+      {
+        "functionName": "commitMutationEffectsOnFiber",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6207,
+        "columnNumber": 38,
+        "selfSize": 1312
+      },
+      {
+        "functionName": "commitDeletionEffectsOnFiber",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6059,
+        "columnNumber": 38,
+        "selfSize": 452
+      },
+      {
+        "functionName": "recursivelyTraverseDeletionEffects",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6056,
+        "columnNumber": 44,
+        "selfSize": 168
+      },
+      {
+        "functionName": "isRenderConsistentWithExternalStores",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6939,
+        "columnNumber": 46,
+        "selfSize": 180
+      },
+      {
+        "functionName": "renderRootConcurrent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 7096,
+        "columnNumber": 30,
+        "selfSize": 300
+      },
+      {
+        "functionName": "useLinkClickHandler",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11720,
+        "columnNumber": 28,
+        "selfSize": 920
+      },
+      {
+        "functionName": "updateCallback",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 4035,
+        "columnNumber": 24,
+        "selfSize": 160
+      },
+      {
+        "functionName": "is",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 304
+      },
+      {
+        "functionName": "ShowroomPage",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46640,
+        "columnNumber": 21,
+        "selfSize": 428
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "stripBasename",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10367,
+        "columnNumber": 22,
+        "selfSize": 272
+      },
+      {
+        "functionName": "concat",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10645,
+        "columnNumber": 61,
+        "selfSize": 140
+      },
+      {
+        "functionName": "replace",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 140
+      },
+      {
+        "functionName": "join",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 160
+      },
+      {
+        "functionName": "HashRouter",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11504,
+        "columnNumber": 19,
+        "selfSize": 144
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "ShowroomPage",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46640,
+        "columnNumber": 21,
+        "selfSize": 276
+      },
+      {
+        "functionName": "useSearchParams",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11756,
+        "columnNumber": 24,
+        "selfSize": 140
+      },
+      {
+        "functionName": "useNavigateUnstable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10566,
+        "columnNumber": 28,
+        "selfSize": 160
+      },
+      {
+        "functionName": "cloneDefaults",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46543,
+        "columnNumber": 22,
+        "selfSize": 132
+      },
+      {
+        "functionName": "reconcileChildrenArray",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3049,
+        "columnNumber": 33,
+        "selfSize": 608
+      },
+      {
+        "functionName": "mapRemainingChildren",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2954,
+        "columnNumber": 31,
+        "selfSize": 192
+      },
+      {
+        "functionName": "forEach",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 168
+      },
+      {
+        "functionName": "next",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "scheduleTaskForRootDuringMicrotask",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 7590,
+        "columnNumber": 44,
+        "selfSize": 144
+      },
+      {
+        "functionName": "onAnimationFrame",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 35379,
+        "columnNumber": 26,
+        "selfSize": 24152
+      },
+      {
+        "functionName": "push",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13476,
+        "columnNumber": 5,
+        "selfSize": 3744
+      },
+      {
+        "functionName": "recordHistorySample",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13523,
+        "columnNumber": 20,
+        "selfSize": 2464
+      },
+      {
+        "functionName": "set",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1812
+      },
+      {
+        "functionName": "from",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 752
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13537,
+        "columnNumber": 36,
+        "selfSize": 144
+      },
+      {
+        "functionName": "filter",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 336
+      },
+      {
+        "functionName": "next",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13624,
+        "columnNumber": 5,
+        "selfSize": 168
+      },
+      {
+        "functionName": "WebGLShadowMap.render",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 40522,
+        "columnNumber": 23,
+        "selfSize": 1680
+      },
+      {
+        "functionName": "projectObject",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 45353,
+        "columnNumber": 24,
+        "selfSize": 152
+      },
+      {
+        "functionName": "setProgram",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 45594,
+        "columnNumber": 21,
+        "selfSize": 304
+      },
+      {
+        "functionName": "setValueM4",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 38424,
+        "columnNumber": 19,
+        "selfSize": 264
+      },
+      {
+        "functionName": "setValueV3f",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 38358,
+        "columnNumber": 20,
+        "selfSize": 144
+      },
+      {
+        "functionName": "refreshUniformsCommon",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 43392,
+        "columnNumber": 31,
+        "selfSize": 132
+      },
+      {
+        "functionName": "refreshUniformsPhysical",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 43515,
+        "columnNumber": 33,
+        "selfSize": 132
+      },
+      {
+        "functionName": "getParameters",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 39509,
+        "columnNumber": 23,
+        "selfSize": 180
+      },
+      {
+        "functionName": "setValueM4",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 38424,
+        "columnNumber": 19,
+        "selfSize": 408
+      },
+      {
+        "functionName": "getProgramCacheKeyParameters",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 39740,
+        "columnNumber": 38,
+        "selfSize": 720
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46698,
+        "columnNumber": 46,
+        "selfSize": 14964
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11763,
+        "columnNumber": 48,
+        "selfSize": 452
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10577,
+        "columnNumber": 33,
+        "selfSize": 748
+      },
+      {
+        "functionName": "replace2",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10122,
+        "columnNumber": 18,
+        "selfSize": 944
+      },
+      {
+        "functionName": "getHistoryState",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10031,
+        "columnNumber": 24,
+        "selfSize": 560
+      },
+      {
+        "functionName": "createLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10043,
+        "columnNumber": 23,
+        "selfSize": 268
+      },
+      {
+        "functionName": "createHashLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 9993,
+        "columnNumber": 28,
+        "selfSize": 140
+      },
+      {
+        "functionName": "createSearchParams",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11062,
+        "columnNumber": 27,
+        "selfSize": 1208
+      },
+      {
+        "functionName": "",
+        "scriptId": "14",
+        "url": "",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "selfSize": 428
+      },
+      {
+        "functionName": "evaluate",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 295,
+        "columnNumber": 10,
+        "selfSize": 1036
+      },
+      {
+        "functionName": "parseEvaluationResultValue",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 102,
+        "columnNumber": 35,
+        "selfSize": 760
+      },
+      {
+        "functionName": "parseEvaluationResultValue",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 102,
+        "columnNumber": 35,
+        "selfSize": 160
+      },
+      {
+        "functionName": "parseEvaluationResultValue",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 102,
+        "columnNumber": 35,
+        "selfSize": 288
+      },
+      {
+        "functionName": "_promiseAwareJsonValueNoThrow",
+        "scriptId": "8",
+        "url": "",
+        "lineNumber": 317,
+        "columnNumber": 31,
+        "selfSize": 144
+      },
+      {
+        "functionName": "getElementComputedStyle",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 2724,
+        "columnNumber": 32,
+        "selfSize": 160
+      },
+      {
+        "functionName": "querySelectorAll",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 6680,
+        "columnNumber": 18,
+        "selfSize": 200
+      },
+      {
+        "functionName": "end",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 5099,
+        "columnNumber": 5,
+        "selfSize": 836
+      },
+      {
+        "functionName": "_matchesParents",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 5243,
+        "columnNumber": 17,
+        "selfSize": 176
+      },
+      {
+        "functionName": "_checkSelector",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 5124,
+        "columnNumber": 16,
+        "selfSize": 144
+      },
+      {
+        "functionName": "previewNode",
+        "scriptId": "7",
+        "url": "",
+        "lineNumber": 7453,
+        "columnNumber": 13,
+        "selfSize": 160
+      },
+      {
+        "functionName": "",
+        "scriptId": "55",
+        "url": "",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "selfSize": 7572
+      },
+      {
+        "functionName": "batchedUpdates$1",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1795,
+        "columnNumber": 26,
+        "selfSize": 660
+      },
+      {
+        "functionName": "restoreStateOfTarget",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1765,
+        "columnNumber": 30,
+        "selfSize": 288
+      },
+      {
+        "functionName": "getActiveElementDeep",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2231,
+        "columnNumber": 30,
+        "selfSize": 144
+      },
+      {
+        "functionName": "basicStateReducer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3603,
+        "columnNumber": 27,
+        "selfSize": 132
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 7840,
+        "columnNumber": 27,
+        "selfSize": 432
+      },
+      {
+        "functionName": "isTextInputElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2126,
+        "columnNumber": 28,
+        "selfSize": 284
+      },
+      {
+        "functionName": "createAndAccumulateChangeEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2130,
+        "columnNumber": 40,
+        "selfSize": 1352
+      },
+      {
+        "functionName": "SyntheticBaseEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1866,
+        "columnNumber": 29,
+        "selfSize": 292
+      },
+      {
+        "functionName": "accumulateTwoPhaseListeners",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 8064,
+        "columnNumber": 37,
+        "selfSize": 576
+      },
+      {
+        "functionName": "getTargetInstForInputOrChangeEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2181,
+        "columnNumber": 44,
+        "selfSize": 324
+      },
+      {
+        "functionName": "onChange",
+        "scriptId": "5",
+        "url": "http://127.0.0.1:4175/assets/Controls-DiVMMRcE.js",
+        "lineNumber": 63,
+        "columnNumber": 16,
+        "selfSize": 144
+      },
+      {
+        "functionName": "patchSettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46717,
+        "columnNumber": 23,
+        "selfSize": 288
+      },
+      {
+        "functionName": "applySettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46704,
+        "columnNumber": 23,
+        "selfSize": 628
+      },
+      {
+        "functionName": "scheduleUrlWrite",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46690,
+        "columnNumber": 26,
+        "selfSize": 976
+      },
+      {
+        "functionName": "Promise",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 316
+      },
+      {
+        "functionName": "dispatchDiscreteEvent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 9461,
+        "columnNumber": 31,
+        "selfSize": 544
+      },
+      {
+        "functionName": "restoreStateOfTarget",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1765,
+        "columnNumber": 30,
+        "selfSize": 484
+      },
+      {
+        "functionName": "getInstanceFromNode",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1395,
+        "columnNumber": 29,
+        "selfSize": 156
+      },
+      {
+        "functionName": "updateProperties",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 8483,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "get",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1503,
+        "columnNumber": 17,
+        "selfSize": 1148
+      },
+      {
+        "functionName": "commitMutationEffectsOnFiber",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6207,
+        "columnNumber": 38,
+        "selfSize": 400
+      },
+      {
+        "functionName": "getHostSibling",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 5805,
+        "columnNumber": 24,
+        "selfSize": 264
+      },
+      {
+        "functionName": "updateProperties",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 8483,
+        "columnNumber": 26,
+        "selfSize": 224
+      },
+      {
+        "functionName": "commitLayoutEffectOnFiber",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 5958,
+        "columnNumber": 35,
+        "selfSize": 456
+      },
+      {
+        "functionName": "updateLightPath",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-8n5QfY6m.js",
+        "lineNumber": 539,
+        "columnNumber": 25,
+        "selfSize": 980
+      },
+      {
+        "functionName": "calculateGlassAimDirectionInto",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-8n5QfY6m.js",
+        "lineNumber": 78,
+        "columnNumber": 39,
+        "selfSize": 672
+      },
+      {
+        "functionName": "traceGlassRayInto",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-8n5QfY6m.js",
+        "lineNumber": 101,
+        "columnNumber": 26,
+        "selfSize": 1456
+      },
+      {
+        "functionName": "reflect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 16988,
+        "columnNumber": 8,
+        "selfSize": 192
+      },
+      {
+        "functionName": "resetResult",
+        "scriptId": "9",
+        "url": "http://127.0.0.1:4175/assets/runtime-8n5QfY6m.js",
+        "lineNumber": 15,
+        "columnNumber": 20,
+        "selfSize": 236
+      },
+      {
+        "functionName": "createFiberImplClass",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2373,
+        "columnNumber": 30,
+        "selfSize": 416
+      },
+      {
+        "functionName": "updateSlot",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3018,
+        "columnNumber": 21,
+        "selfSize": 416
+      },
+      {
+        "functionName": "updateForwardRef",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 4653,
+        "columnNumber": 26,
+        "selfSize": 316
+      },
+      {
+        "functionName": "LinkWithRef",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11550,
+        "columnNumber": 55,
+        "selfSize": 856
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 428
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 1056
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 132
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 1056
+      },
+      {
+        "functionName": "usePrefetchBehavior",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11294,
+        "columnNumber": 28,
+        "selfSize": 704
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13,
+        "columnNumber": 9,
+        "selfSize": 3716
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 736
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 864
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 736
+      },
+      {
+        "functionName": "createFunctionComponentUpdateQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3556,
+        "columnNumber": 44,
+        "selfSize": 140
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 864
+      },
+      {
+        "functionName": "mergeRefs",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 11491,
+        "columnNumber": 18,
+        "selfSize": 836
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 924
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13,
+        "columnNumber": 9,
+        "selfSize": 1836
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 1804
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 448
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 576
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 1232
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 576
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 616
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 700
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 308
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 440
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "is",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 432
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 308
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12420,
+        "columnNumber": 40,
+        "selfSize": 2508
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 2372
+      },
+      {
+        "functionName": "join",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 740
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 616
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 4144
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12444,
+        "columnNumber": 48,
+        "selfSize": 1396
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13,
+        "columnNumber": 9,
+        "selfSize": 11552
+      },
+      {
+        "functionName": "exports.createElement",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 302,
+        "columnNumber": 33,
+        "selfSize": 980
+      },
+      {
+        "functionName": "trim",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 160
+      },
+      {
+        "functionName": "reconcileChildFibersImpl",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3104,
+        "columnNumber": 35,
+        "selfSize": 208
+      },
+      {
+        "functionName": "createFiberImplClass",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2373,
+        "columnNumber": 30,
+        "selfSize": 416
+      },
+      {
+        "functionName": "TelemetrySparkline",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13168,
+        "columnNumber": 27,
+        "selfSize": 840
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "createFunctionComponentUpdateQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3556,
+        "columnNumber": 44,
+        "selfSize": 140
+      },
+      {
+        "functionName": "TelemetryPanel",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 13218,
+        "columnNumber": 23,
+        "selfSize": 4748
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12262,
+        "columnNumber": 8,
+        "selfSize": 144
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 2016
+      },
+      {
+        "functionName": "ShaderCanvas",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46277,
+        "columnNumber": 21,
+        "selfSize": 1328
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "createFunctionComponentUpdateQueue",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3556,
+        "columnNumber": 44,
+        "selfSize": 140
+      },
+      {
+        "functionName": "bind",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 288
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 132
+      },
+      {
+        "functionName": "Button",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46414,
+        "columnNumber": 15,
+        "selfSize": 884
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 448
+      },
+      {
+        "functionName": "trim",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 300
+      },
+      {
+        "functionName": "RoomRail",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46607,
+        "columnNumber": 17,
+        "selfSize": 628
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 448
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46618,
+        "columnNumber": 24,
+        "selfSize": 2388
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 1312
+      },
+      {
+        "functionName": "ShowroomPage",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46640,
+        "columnNumber": 21,
+        "selfSize": 2808
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 288
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46705,
+        "columnNumber": 19,
+        "selfSize": 140
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 132
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "useLocation",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10554,
+        "columnNumber": 20,
+        "selfSize": 132
+      },
+      {
+        "functionName": "useNavigateUnstable",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10566,
+        "columnNumber": 28,
+        "selfSize": 284
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "pushSimpleEffect",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3958,
+        "columnNumber": 26,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "Set",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "replace",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 168
+      },
+      {
+        "functionName": "from",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "matchAll",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1556
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 1888
+      },
+      {
+        "functionName": "readContextForConsumer",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 2746,
+        "columnNumber": 32,
+        "selfSize": 308
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46768,
+        "columnNumber": 37,
+        "selfSize": 140
+      },
+      {
+        "functionName": "GlassOpticsControls",
+        "scriptId": "5",
+        "url": "http://127.0.0.1:4175/assets/Controls-DiVMMRcE.js",
+        "lineNumber": 51,
+        "columnNumber": 28,
+        "selfSize": 2700
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 1152
+      },
+      {
+        "functionName": "ControlGroup",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-WPEPiUpr.js",
+        "lineNumber": 18,
+        "columnNumber": 21,
+        "selfSize": 136
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 288
+      },
+      {
+        "functionName": "SliderControl",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-WPEPiUpr.js",
+        "lineNumber": 27,
+        "columnNumber": 22,
+        "selfSize": 4972
+      },
+      {
+        "functionName": "updateWorkInProgressHook",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 3532,
+        "columnNumber": 34,
+        "selfSize": 448
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 2016
+      },
+      {
+        "functionName": "ToggleControl",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-WPEPiUpr.js",
+        "lineNumber": 47,
+        "columnNumber": 22,
+        "selfSize": 640
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 160
+      },
+      {
+        "functionName": "updateSuspenseComponent",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 4937,
+        "columnNumber": 33,
+        "selfSize": 280
+      },
+      {
+        "functionName": "resetWorkInProgressStack",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6982,
+        "columnNumber": 34,
+        "selfSize": 528
+      },
+      {
+        "functionName": "beginWork",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 5183,
+        "columnNumber": 19,
+        "selfSize": 216
+      },
+      {
+        "functionName": "createPath",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 10054,
+        "columnNumber": 19,
+        "selfSize": 360
+      },
+      {
+        "functionName": "values",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 284
+      },
+      {
+        "functionName": "[Symbol.iterator]",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 280
+      },
+      {
+        "functionName": "keys",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 7436
+      },
+      {
+        "functionName": "is",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 576
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46705,
+        "columnNumber": 19,
+        "selfSize": 152
+      },
+      {
+        "functionName": "",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12262,
+        "columnNumber": 8,
+        "selfSize": 504
+      },
+      {
+        "functionName": "hasOwn",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 140
+      },
+      {
+        "functionName": "replace",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 384
+      },
+      {
+        "functionName": "from",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 360
+      },
+      {
+        "functionName": "matchAll",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 144
+      },
+      {
+        "functionName": "jsxProd",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 12277,
+        "columnNumber": 17,
+        "selfSize": 3828
+      },
+      {
+        "functionName": "completeWork",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 5360,
+        "columnNumber": 22,
+        "selfSize": 588
+      },
+      {
+        "functionName": "completeWork",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 5360,
+        "columnNumber": 22,
+        "selfSize": 304
+      },
+      {
+        "functionName": "detachAlternateSiblings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 6698,
+        "columnNumber": 33,
+        "selfSize": 144
+      },
+      {
+        "functionName": "detachDeletedInstance",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1371,
+        "columnNumber": 31,
+        "selfSize": 140
+      },
+      {
+        "functionName": "accumulateTwoPhaseListeners",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 8064,
+        "columnNumber": 37,
+        "selfSize": 140
+      },
+      {
+        "functionName": "createDispatchListener",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 8057,
+        "columnNumber": 32,
+        "selfSize": 312
+      },
+      {
+        "functionName": "updateValueIfChanged",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1532,
+        "columnNumber": 30,
+        "selfSize": 184
+      },
+      {
+        "functionName": "functionThatReturnsFalse",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 1862,
+        "columnNumber": 34,
+        "selfSize": 140
+      },
+      {
+        "functionName": "onChange",
+        "scriptId": "6",
+        "url": "http://127.0.0.1:4175/assets/ControlPrimitives-WPEPiUpr.js",
+        "lineNumber": 43,
+        "columnNumber": 13,
+        "selfSize": 136
+      },
+      {
+        "functionName": "onChange",
+        "scriptId": "5",
+        "url": "http://127.0.0.1:4175/assets/Controls-DiVMMRcE.js",
+        "lineNumber": 63,
+        "columnNumber": 16,
+        "selfSize": 144
+      },
+      {
+        "functionName": "patchSettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46717,
+        "columnNumber": 23,
+        "selfSize": 684
+      },
+      {
+        "functionName": "dispatchSetStateInternal",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 4188,
+        "columnNumber": 34,
+        "selfSize": 160
+      },
+      {
+        "functionName": "scheduleUrlWrite",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46690,
+        "columnNumber": 26,
+        "selfSize": 388
+      },
+      {
+        "functionName": "serializeRoomUrlSettings",
+        "scriptId": "4",
+        "url": "http://127.0.0.1:4175/assets/index-CN-J9DEE.js",
+        "lineNumber": 46584,
+        "columnNumber": 33,
+        "selfSize": 476
+      },
+      {
+        "functionName": "(V8 API)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1032
+      },
+      {
+        "functionName": "(PARSER)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 396
+      },
+      {
+        "functionName": "(BYTECODE_COMPILER)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 1500
+      },
+      {
+        "functionName": "(IDLE_EXTERNAL)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1,
+        "selfSize": 32912
+      }
+    ],
+    "forbiddenAllocations": []
+  },
+  "errors": []
+}

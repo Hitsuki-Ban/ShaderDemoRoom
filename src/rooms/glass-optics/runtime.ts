@@ -1,9 +1,10 @@
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
   AdditiveBlending,
   AmbientLight,
+  BoxGeometry,
   Color,
   CylinderGeometry,
+  DataTexture,
   DirectionalLight,
   DoubleSide,
   DynamicDrawUsage,
@@ -12,18 +13,23 @@ import {
   Group,
   IcosahedronGeometry,
   InstancedMesh,
+  LinearFilter,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  MeshLambertMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
   PlaneGeometry,
   PointLight,
   Quaternion,
+  RGBAFormat,
   Scene,
   ShaderMaterial,
   SphereGeometry,
+  SRGBColorSpace,
+  UnsignedByteType,
   Vector3,
   type Material,
   type Object3D,
@@ -68,6 +74,102 @@ const BEAM_REFLECTED_INDEX = 1;
 const BEAM_INTERNAL_INDEX = 2;
 const BEAM_OUTGOING_INDEX = 3;
 
+const GLASS_STAGE_BACKGROUND = 0x03070b;
+const GLASS_STAGE_FOG = 0x03070b;
+
+export function glassEnvironmentIntensity(thickness: number) {
+  return 1.05 + thickness * 0.28;
+}
+
+function createDarkFieldEnvironment() {
+  const environmentScene = new Scene();
+  environmentScene.name = 'glass-optics-darkfield-environment';
+  environmentScene.background = new Color(0x000000);
+
+  const createStrip = (
+    name: string,
+    color: number,
+    intensity: number,
+    position: [number, number, number],
+    scale: [number, number, number],
+    rotationY: number,
+  ) => {
+    const strip = new Mesh(
+      new BoxGeometry(1, 1, 1),
+      new MeshLambertMaterial({
+        color: 0x000000,
+        emissive: color,
+        emissiveIntensity: intensity,
+      }),
+    );
+    strip.name = name;
+    strip.position.set(...position);
+    strip.scale.set(...scale);
+    strip.rotation.y = rotationY;
+    environmentScene.add(strip);
+  };
+
+  createStrip(
+    'glass-optics-env-strip-cool',
+    0x9ef4ff,
+    24,
+    [1.8, 2.4, -5.4],
+    [0.09, 4.6, 0.26],
+    -0.16,
+  );
+  createStrip(
+    'glass-optics-env-strip-warm',
+    0xffd08a,
+    18,
+    [5.2, 2.8, -3.7],
+    [0.09, 4.2, 0.24],
+    0.2,
+  );
+  createStrip(
+    'glass-optics-env-strip-top',
+    0xe8fdff,
+    10,
+    [0, 5.1, 0.4],
+    [2.3, 0.08, 0.38],
+    0,
+  );
+  return environmentScene;
+}
+
+function createRadialBackgroundTexture() {
+  const width = 192;
+  const height = 128;
+  const data = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const normalizedX = (x / (width - 1) - 0.48) * 1.12;
+      const normalizedY = (y / (height - 1) - 0.54) * 0.92;
+      const radial = Math.max(0, 1 - Math.hypot(normalizedX, normalizedY) / 0.74);
+      const halo = radial * radial * (3 - 2 * radial);
+      const warmBias = Math.max(0, normalizedX) * halo;
+      const offset = (y * width + x) * 4;
+      data[offset] = Math.round(3 + halo * 5 + warmBias * 4);
+      data[offset + 1] = Math.round(7 + halo * 17 + warmBias * 2);
+      data[offset + 2] = Math.round(11 + halo * 25);
+      data[offset + 3] = 255;
+    }
+  }
+  const texture = new DataTexture(
+    data,
+    width,
+    height,
+    RGBAFormat,
+    UnsignedByteType,
+  );
+  texture.name = 'glass-optics-radial-background-texture';
+  texture.colorSpace = SRGBColorSpace;
+  texture.magFilter = LinearFilter;
+  texture.minFilter = LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>) {
   const material = new MeshPhysicalMaterial({
     color: 0xe8fdff,
@@ -79,7 +181,7 @@ export function createGlassMaterial(settings: DeepReadonly<GlassOpticsSettings>)
     transparent: true,
     opacity: 1,
     reflectivity: 0.92,
-    envMapIntensity: 2.15,
+    envMapIntensity: glassEnvironmentIntensity(settings.thickness),
     clearcoat: 1,
     clearcoatRoughness: 0.02,
     attenuationColor: 0x9ff4ff,
@@ -126,15 +228,39 @@ export function createRoomRuntime(
   const outgoingColor = new Color(0xb8f8ff);
   const workingBeamColor = new Color();
 
-  scene.background = new Color(0x071018);
-  scene.fog = new Fog(0x071018, 16, 34);
-  camera.position.set(5.9, 3.35, 6.4);
-  camera.lookAt(0, 1.05, 0);
+  scene.background = new Color(GLASS_STAGE_BACKGROUND);
+  scene.fog = new Fog(GLASS_STAGE_FOG, 16, 34);
+  camera.position.set(-5.9, 3.55, 6.45);
+  camera.lookAt(0.15, 1.05, -0.15);
+  root.name = 'glass-optics-stage-root';
   scene.add(root);
 
   const pmrem = createPmremGenerator();
-  const environment = pmrem.fromScene(new RoomEnvironment(), 0.04);
+  const darkFieldEnvironment = createDarkFieldEnvironment();
+  const environment = pmrem.fromScene(
+    darkFieldEnvironment,
+    0.025,
+    0.1,
+    20,
+    { size: 128 },
+  );
+  disposeObject(darkFieldEnvironment);
   scene.environment = environment.texture;
+
+  const backgroundTexture = createRadialBackgroundTexture();
+  const backgroundMaterial = new MeshBasicMaterial({
+    map: backgroundTexture,
+    transparent: true,
+    opacity: 1,
+    depthWrite: false,
+    depthTest: true,
+    toneMapped: false,
+  });
+  const backgroundPlane = new Mesh(new PlaneGeometry(30, 18), backgroundMaterial);
+  backgroundPlane.name = 'glass-optics-radial-background';
+  backgroundPlane.position.set(4.2, 2.8, -4.8);
+  backgroundPlane.renderOrder = 0;
+  scene.add(backgroundPlane);
 
   const ambient = new AmbientLight(0x8fb8ff, 0.62);
   const keyLight = new DirectionalLight(0xffffff, 1.55);
@@ -142,23 +268,25 @@ export function createRoomRuntime(
   const pointLight = new PointLight(0xbdeeff, 6.5, 18);
   root.add(ambient, keyLight, pointLight);
 
-  const floor = new Mesh(
-    new PlaneGeometry(16, 16),
-    new MeshStandardMaterial({
-      color: 0x121c26,
-      metalness: 0.1,
-      roughness: 0.5,
-    }),
-  );
+  const floorMaterial = new MeshStandardMaterial({
+    color: 0x101820,
+    metalness: 0.6,
+    roughness: 0.11,
+    envMap: environment.texture,
+    envMapIntensity: 0.1,
+  });
+  const floor = new Mesh(new PlaneGeometry(16, 16), floorMaterial);
+  floor.name = 'glass-optics-reflective-floor';
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -0.05;
   root.add(floor);
 
-  const grid = new GridHelper(16, 32, 0x42e9ff, 0x163949);
+  const grid = new GridHelper(16, 32, 0x19333b, 0x13262d);
+  grid.name = 'glass-optics-subdued-grid';
   const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
   gridMaterials.forEach((material) => {
     material.transparent = true;
-    material.opacity = 0.28;
+    material.opacity = 0.075;
     material.depthWrite = false;
   });
   grid.position.y = 0.005;
@@ -204,10 +332,12 @@ export function createRoomRuntime(
   root.add(referencePanel);
 
   const glassGroup = new Group();
+  glassGroup.name = 'glass-optics-glass-group';
   glassGroup.position.y = 1.25;
   root.add(glassGroup);
 
   const glassMaterial = createGlassMaterial(settings);
+  glassMaterial.envMap = environment.texture;
   const glass = new Mesh(new IcosahedronGeometry(1.35, 8), glassMaterial);
   glass.renderOrder = 3;
   glassGroup.add(glass);
@@ -238,6 +368,10 @@ export function createRoomRuntime(
     toneMapped: false,
   });
   const sourceHalo = new Mesh(new SphereGeometry(0.28, 28, 18), sourceHaloMaterial);
+  source.name = 'glass-optics-light-source';
+  sourceHalo.name = 'glass-optics-light-source-halo';
+  source.frustumCulled = false;
+  sourceHalo.frustumCulled = false;
   source.renderOrder = 10;
   sourceHalo.renderOrder = 9;
   root.add(sourceHalo, source);
@@ -326,6 +460,8 @@ export function createRoomRuntime(
   targetMarker.name = 'glass-optics-entry-marker';
   reflectionMarker.name = 'glass-optics-exit-marker';
   refractionMarker.name = 'glass-optics-floor-marker';
+  targetMarker.frustumCulled = false;
+  reflectionMarker.frustumCulled = false;
   targetMarker.renderOrder = 8;
   reflectionMarker.renderOrder = 8;
   refractionMarker.renderOrder = 8;
@@ -347,6 +483,7 @@ export function createRoomRuntime(
   causticsMaterial.toneMapped = false;
   const caustics = new Mesh(new PlaneGeometry(5.6, 5.6), causticsMaterial);
   caustics.name = 'glass-optics-caustics';
+  caustics.frustumCulled = false;
   caustics.rotation.x = -Math.PI / 2;
   caustics.position.set(0.8, 0.02, 0.4);
   caustics.renderOrder = 5;
@@ -487,13 +624,31 @@ export function createRoomRuntime(
     glassMaterial.ior = settings.ior;
     glassMaterial.roughness = settings.roughness;
     glassMaterial.thickness = settings.thickness;
-    glassMaterial.envMapIntensity = 1.55 + settings.thickness * 0.42;
+    glassMaterial.envMapIntensity = glassEnvironmentIntensity(settings.thickness);
     glassShellMaterial.opacity = Math.min(0.14, 0.05 + (settings.ior - 1) * 0.05);
     causticsMaterial.uniforms.uIntensity.value = settings.showCaustics ? 1.25 : 0;
     causticsMaterial.uniforms.uSpread.value = settings.beamSpread;
     source.scale.setScalar(0.92 + settings.beamSpread * 0.35);
     sourceHalo.scale.setScalar(0.72 + settings.beamSpread * 0.58);
     updateCausticsVisibility();
+  };
+
+  const applyMotionPhase = () => {
+    causticsMaterial.uniforms.uTime.value = motionElapsed;
+    referenceMaterial.uniforms.uTime.value = motionElapsed;
+    sourceMaterial.color.setHSL(
+      0.1,
+      0.95,
+      0.64 + Math.sin(motionElapsed * 2.4) * 0.08,
+    );
+    sourceHaloMaterial.color.copy(sourceMaterial.color);
+  };
+
+  const applyCanonicalPose = () => {
+    motionElapsed = 0;
+    applyMotionPhase();
+    glassGroup.rotation.set(0, 0, 0);
+    root.rotation.y = 0;
   };
 
   updateMaterial();
@@ -507,6 +662,7 @@ export function createRoomRuntime(
         || nextSettings.ior !== settings.ior
         || nextSettings.beamSpread !== settings.beamSpread;
       settings = nextSettings;
+      if (!settings.autoRotate) applyCanonicalPose();
       updateMaterial();
       if (pathChanged) updateLightPath();
     },
@@ -518,20 +674,21 @@ export function createRoomRuntime(
       camera.updateProjectionMatrix();
     },
     render({ delta }: RoomFrame) {
-      motionElapsed += delta * motionScale;
-      causticsMaterial.uniforms.uTime.value = motionElapsed;
-      referenceMaterial.uniforms.uTime.value = motionElapsed;
-      sourceMaterial.color.setHSL(0.1, 0.95, 0.64 + Math.sin(motionElapsed * 2.4) * 0.08);
-      sourceHaloMaterial.color.copy(sourceMaterial.color);
       if (settings.autoRotate) {
+        motionElapsed += delta * motionScale;
+        applyMotionPhase();
         glassGroup.rotation.y += delta * motionScale * 0.34;
         glassGroup.rotation.x = Math.sin(motionElapsed * 0.42) * 0.08;
+        root.rotation.y = Math.sin(motionElapsed * 0.05) * 0.04;
+      } else {
+        applyCanonicalPose();
       }
-      root.rotation.y = Math.sin(motionElapsed * 0.05) * 0.04;
       renderer.render(scene, camera);
     },
     dispose() {
       disposeObject(root);
+      disposeObject(backgroundPlane);
+      backgroundTexture.dispose();
       [
         referenceMaterial,
         glassMaterial,
@@ -545,7 +702,7 @@ export function createRoomRuntime(
         glowBeamMaterial,
         causticsMaterial,
       ].forEach((material: Material) => material.dispose());
-      environment.texture.dispose();
+      environment.dispose();
       pmrem.dispose();
     },
   };
