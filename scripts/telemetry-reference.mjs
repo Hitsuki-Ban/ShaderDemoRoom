@@ -14,6 +14,7 @@ const {
 
 const warmupSeconds = 5;
 const measurementSeconds = 15;
+const expectedDrawCalls = roomId === 'glass-optics' ? 15 : 19;
 
 function assert(condition, message) {
   if (!condition) {
@@ -86,8 +87,8 @@ async function captureReference({ expectedClassification, label, launchOptions }
       `${label} classified as ${metadata.environment.classification}; expected ${expectedClassification}.`,
     );
     assert(
-      samples.every(({ drawCalls }) => drawCalls === 19),
-      `${label} changed the calibrated 19-call baseline.`,
+      samples.every(({ drawCalls }) => drawCalls === expectedDrawCalls),
+      `${label} changed the calibrated ${expectedDrawCalls}-call ${roomId} baseline.`,
     );
 
     return {

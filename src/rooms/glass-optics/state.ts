@@ -7,7 +7,7 @@ type GlassOpticsNumericSetting = Exclude<
 
 export const glassOpticsDomains = {
   lightX: { min: -6, max: 6, step: 0.01 },
-  lightY: { min: 0.8, max: 6, step: 0.01 },
+  lightY: { min: 2.61, max: 6, step: 0.01 },
   lightZ: { min: -6, max: 6, step: 0.01 },
   beamSpread: { min: 0.05, max: 0.9, step: 0.01 },
   ior: { min: 1, max: 2.4, step: 0.01 },
@@ -20,7 +20,7 @@ export const glassOpticsDomains = {
 
 export const glassOpticsDefaults: DeepReadonly<GlassOpticsSettings> = {
   lightX: -0.05,
-  lightY: 2.42,
+  lightY: 3.2,
   lightZ: 2.05,
   beamSpread: 0.34,
   ior: 1.48,
@@ -32,7 +32,7 @@ export const glassOpticsDefaults: DeepReadonly<GlassOpticsSettings> = {
 
 export const glassOpticsFocusPreset: DeepReadonly<Partial<GlassOpticsSettings>> = {
   lightX: -0.28,
-  lightY: 2.85,
+  lightY: 3.45,
   lightZ: 1.45,
   beamSpread: 0.18,
 };

@@ -36,7 +36,7 @@ With `renderer.info.autoReset = false`, the shell reads counters after the room 
 
 Textures/geometries/programs are live renderer resource counts, not frame averages. WebGLRenderer does not expose uniform count or VRAM bytes, so the shell must not display either value or an unlabeled estimate.
 
-The calibrated production baseline for both native rooms at T-SH-02 is 19 logical-frame draw calls. Glass transmission is already included in this value; T-SH-03 must preserve that invariant rather than force a change from the obsolete ticket premise.
+The calibrated production topology is 19 logical-frame draw calls for Voxel Water and, after T-GO-04 replaces six beam meshes with two fixed instanced batches, 15 for Glass Optics. Glass transmission is included in the 15-call value.
 
 ## 5. Renderer environment
 
