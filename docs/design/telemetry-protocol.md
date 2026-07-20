@@ -36,7 +36,7 @@ With `renderer.info.autoReset = false`, the shell reads counters after the room 
 
 Textures/geometries/programs are live renderer resource counts, not frame averages. WebGLRenderer does not expose uniform count or VRAM bytes, so the shell must not display either value or an unlabeled estimate.
 
-The calibrated production topology is 19 logical-frame draw calls for Voxel Water and, after T-GO-04 replaces six beam meshes with two fixed instanced batches and T-GO-02 adds one radial stage backdrop, 16 for Glass Optics. Glass transmission is included in the 16-call value.
+The calibrated production topology is 19 logical-frame draw calls for Voxel Water and 15 for Glass Optics. The Glass Optics value includes glass transmission and reflects the T-GO-04 fixed instanced beam batches, the T-GO-02 radial stage backdrop, and the T-GO-06 removal of the one-draw wireframe glass shell.
 
 ## 5. Renderer environment
 
@@ -96,6 +96,7 @@ The shell serializes the current unrounded `RoomStats` object on the telemetry r
   ],
   "overhead": {
     "comparison": "voxel-water baseline vs candidate",
+    "baselineRevision": "git-sha-containing-the-baseline-code",
     "baselineUrl": "https://example.invalid/baseline",
     "candidateUrl": "http://127.0.0.1:4173/ShaderDemoRoom",
     "method": { "pairs": 5, "order": "interleaved and alternating", "warmupSeconds": 5, "measurementSeconds": 15 },
@@ -105,7 +106,7 @@ The shell serializes the current unrounded `RoomStats` object on the telemetry r
 }
 ```
 
-Each reference sample contains `second`, the unrounded cadence and renderer-counter fields exported by `RoomStats`, and its sample state. Each overhead pair contains its execution order, independent rAF cadence measurements for baseline and candidate, renderer strings, and the paired regression percentage. `sourceRevision` identifies the commit that contains the measured executable code; a later evidence-only commit may add the generated record.
+Each reference sample contains `second`, the unrounded cadence and renderer-counter fields exported by `RoomStats`, and its sample state. Each overhead pair contains its execution order, independent rAF cadence measurements for baseline and candidate, renderer strings, and the paired regression percentage. `sourceRevision` identifies the commit that contains the measured executable code; `overhead.baselineRevision` identifies the commit served by the mutable baseline URL at measurement time. Both inputs must be full 40-character Git commit hashes, and a later evidence-only commit may add the generated record.
 
 Room-specific software performance gates use `pnpm qa:software-pairs -- <room-id> <output-path>`. The command requires explicit candidate/baseline URLs and source revisions, launches SwiftShader explicitly, verifies the actual renderer string, and records five alternating pairs plus the exact `pairedSpeedupMedian`. It writes the raw artifact before failing a missed gate; a single reference capture is environment provenance, not a substitute for the paired gate.
 

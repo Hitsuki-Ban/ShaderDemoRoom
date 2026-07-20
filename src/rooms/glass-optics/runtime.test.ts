@@ -4,9 +4,9 @@ import {
   Camera,
   Color,
   CylinderGeometry,
+  DataTexture,
   Group,
   GridHelper,
-  IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
   Mesh,
@@ -35,7 +35,6 @@ import {
   createGlassMaterial,
   createRoomRuntime,
   glassEnvironmentIntensity,
-  glassShellOpacity,
   glassSpectralIorOffset,
   setCausticsDirectionFromOutgoing,
 } from './runtime';
@@ -512,22 +511,37 @@ describe('glass optics runtime contracts', () => {
     expect(environmentTarget.dispose).toHaveBeenCalledTimes(1);
   });
 
-  it('builds one sparse opaque dispersion reference over a subdued reflective floor', () => {
+  it('builds one opaque asymmetrical calibration target over a subdued reflective floor', () => {
     const { objects, runtime } = createRuntimeHarness();
-    const reference = objects.find((object) =>
+    const references = objects.filter((object) =>
       object.name === 'glass-optics-dispersion-reference');
+    const reference = references[0];
     const floor = objects.find((object) =>
       object.name === 'glass-optics-reflective-floor');
     const grid = objects.find((object) =>
       object.name === 'glass-optics-subdued-grid');
 
+    expect(references).toHaveLength(1);
     expect(reference).toBeInstanceOf(Mesh);
+    expect((reference as Mesh).geometry).toBeInstanceOf(PlaneGeometry);
+    const referenceGeometry = (reference as Mesh).geometry as PlaneGeometry;
+    expect(referenceGeometry.parameters.width).toBe(3.8);
+    expect(referenceGeometry.parameters.height).toBe(2.1);
+    expect(reference.position.toArray()).toEqual([0.8, 1, -1.85]);
+    expect(reference.renderOrder).toBe(1);
     expect((reference as Mesh).material).toBeInstanceOf(ShaderMaterial);
     const referenceMaterial = (reference as Mesh).material as ShaderMaterial;
     expect(referenceMaterial.transparent).toBe(false);
     expect(referenceMaterial.depthWrite).toBe(false);
-    expect(referenceMaterial.fragmentShader).toContain('vUv.x * 12.0');
-    expect(referenceMaterial.fragmentShader).toContain('vec3 neutral');
+    expect(referenceMaterial.toneMapped).toBe(false);
+    expect(referenceMaterial.fragmentShader).toContain(
+      'texture2D(uReferencePanel, vUv)',
+    );
+    expect(referenceMaterial.fragmentShader).not.toMatch(/fwidth|atan|sin|threeBarGroup/);
+    const referenceTexture = referenceMaterial.uniforms.uReferencePanel.value;
+    expect(referenceTexture).toBeInstanceOf(DataTexture);
+    expect(referenceTexture.name).toBe('glass-optics-calibration-target-map');
+    const disposeReferenceTexture = vi.spyOn(referenceTexture, 'dispose');
     expect(objects.some((object) =>
       object.name === 'glass-optics-radial-background')).toBe(false);
 
@@ -545,6 +559,7 @@ describe('glass optics runtime contracts', () => {
       : [gridMaterial];
     expect(gridMaterials.every((material) => material.opacity < 0.1)).toBe(true);
     runtime.dispose();
+    expect(disposeReferenceTexture).toHaveBeenCalledOnce();
   });
 
   it('uses one glass environment-intensity function across the thickness range', () => {
@@ -563,28 +578,20 @@ describe('glass optics runtime contracts', () => {
     runtime.dispose();
   });
 
-  it('keeps shell opacity on one IOR-only curve across unrelated updates', () => {
+  it('contains one physical glass body and no debug wireframe shell', () => {
     const { objects, runtime } = createRuntimeHarness();
-    const shell = objects.find((object): object is Mesh<IcosahedronGeometry, MeshBasicMaterial> =>
+    const glassGroup = objects.find((object): object is Group =>
+      object instanceof Group && object.name === 'glass-optics-glass-group');
+    const physicalGlass = glassGroup?.children.filter((object): object is Mesh =>
+      object instanceof Mesh && object.material instanceof MeshPhysicalMaterial);
+
+    expect(glassGroup).toBeDefined();
+    expect(physicalGlass).toHaveLength(1);
+    expect(objects.some((object) => object.name === 'glass-optics-glass-shell')).toBe(false);
+    expect(glassGroup?.children.some((object) =>
       object instanceof Mesh
-      && object.name === 'glass-optics-glass-shell'
-      && object.material instanceof MeshBasicMaterial);
-    expect(shell).toBeDefined();
-    expect(shell?.material.opacity).toBe(glassShellOpacity(glassOpticsDefaults.ior));
-
-    runtime.updateSettings({
-      ...glassOpticsDefaults,
-      dispersion: 0.82,
-      roughness: 0.31,
-      thickness: 2.1,
-    });
-    expect(shell?.material.opacity).toBe(glassShellOpacity(glassOpticsDefaults.ior));
-
-    runtime.updateSettings({
-      ...glassOpticsDefaults,
-      ior: 2.4,
-    });
-    expect(shell?.material.opacity).toBe(glassShellOpacity(2.4));
+      && object.material instanceof MeshBasicMaterial
+      && object.material.wireframe)).toBe(false);
     runtime.dispose();
   });
 
