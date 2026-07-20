@@ -54,3 +54,13 @@ research-glass-optics.md §2.2 の閉形式計算(すべて CPU/JS、設定更�
 **裁定: 垂直オフセット照準を採用**(改善方向1に反映済み)。目標 impact parameter を `p=0.6r` とし、`u = normalize((C−s) × worldUp)`(垂直整列時は +X)、`d=|C−s|`、`q=p·d/sqrt(d²−p²)`、`Q=C+q·u`、`direction=normalize(Q−s)` とする。固定 `Q=C+0.6r·u` では有限距離の source に対する実 impact parameter が `d·0.6r/sqrt(d²+(0.6r)²)` となり一定角を満たさないため、上記の q で補正した。全合法光源位置で入射角 arcsin(0.6) ≈ 36.9° の斜入射が保証され、IOR の屈折変化が常に可視、反射ビームも入射と分離する。対案の「固定オフセット照準点」は光源・照準点・中心が一直線に並ぶ合法配置(例: 真上 lightX=lightZ=0)で法線入射に退化するため不採用。受け入れ基準に (6) 入射角一定 と (7) TIR 防御ステータスの合法入力非発火 を追加し、TIR の実演を要求しないことを明確化した。
 
 実装補足: `light-path.ts` は source / incidentDirection を別入力に取る方向非依存の tracing API を維持し、同モジュールの `calculateGlassAimDirectionInto` が本仕様の照準方向を既存出力 buffer へ構築する。runtime はその方向を tracing API へ明示的に渡す。
+
+## 作業報告 (2026-07-20)
+
+- PR: [#31](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/31)、物理実装 revision: `d22970cb404349460799d77ed0ee5c5e21e9c492`。
+- `light-path.ts` に有限光源の固定 impact 照準、安定な ray/sphere 交差、`Vector3.reflect()`、Schlick 反射率、2 界面の Snell 屈折、明示 TIR/no-hit、床交差を実装した。合法 domain 40,625 組の独立走査では unexpected/TIR/非有限値 0、impact 最大誤差 `1.22e-15`、球面最大誤差 `6.66e-16`。
+- beam を core/glow 各 4 slot の常設 `InstancedMesh` へ置換し、設定 update は既存 matrix/color buffer のみ更新する。全 6 capture で 15 calls、Light X 180 frame 連続操作で calls `15→15`、geometries `26→26`。未圧縮 QA build の heap sampling は positive control を検出した上で `Geometry` / `BufferAttribute` / `Vector3` の update 中生成 0。
+- `lightY` を `2.61..6.00` にし default/Focus を再較正、URL schema を v2 へ更新した。v1・範囲外値は clamp/migration なしで拒否する。
+- 数値・runtime・URL の 50 targeted tests、全 231 tests、lint、production build、visual smoke、renderer lifecycle を通過。独立 reviewer の初回 2 P2 (aim invalid 出力、圧縮名による heap gate 偽陰性) を修正し、delta review は `APPROVE`。
+- 同一 RTX 4070 Ti / Chrome D3D11、5 組交互順序の T-GO-01 baseline 比較は paired median regression `-0.55%` (許容上限 `+5%`)。候補 reference は 15 calls / 5,604 triangles、raw record は `captures/t-go-04-telemetry-2026-07-20.json`。
+- 視覚証拠は before、default、Focus、Crystal、合法 extreme、IOR 1.0 / 2.4 を `docs/direction/captures/t-go-04-*.png` に保存した。extreme の物理 floor hit `(x≈6.991, y=0, z≈4.038)` は固定カメラ外になるため数値テストで床面位置を固定し、画面内 capture は入射・表面 P₁/P₂・出射方向を確認する。
