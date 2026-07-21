@@ -4,7 +4,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { DitheredOutputPass } from './dithered-output-pass.js';
 import {
   createMediaTimeDeltaTracker,
   createSpectralFluxOnsetDetector,
@@ -1743,7 +1743,8 @@ scene.add(upperLight);
 
 // ---------- Post-processing: bloom, optical memory, peripheral dissolution ----------
 const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), isMobile ? 0.72 : 0.94, 0.72, 0.22);
 composer.addPass(bloom);
 const afterimage = new AfterimagePass(0.865);
@@ -1866,7 +1867,8 @@ const veilPass = new ShaderPass({
   `
 });
 composer.addPass(veilPass);
-composer.addPass(new OutputPass());
+const ditheredOutputPass = new DitheredOutputPass(0);
+composer.addPass(ditheredOutputPass);
 
 // ---------- Audio graph ----------
 let audioContext = null;
@@ -1920,6 +1922,8 @@ let lifecycleAudioStartPending = false;
 let mediaTransition = Promise.resolve();
 let deterministicCaptureActive = false;
 let deterministicStepActive = false;
+let deterministicDitherScenarioActive = false;
+let deterministicDitherSeedOverride = null;
 let frameRenderCount = 0;
 const deterministicMainSettleSteps = 120;
 const frameStats = {
@@ -3207,6 +3211,11 @@ function advanceFrameState(dt, elapsed) {
 
 function renderFrame(dt, elapsed) {
   advanceFrameState(dt, elapsed);
+  ditheredOutputPass.setSeed(
+    deterministicCaptureRequested
+      ? deterministicDitherSeedOverride ?? 0
+      : frameRenderCount % 256
+  );
   composer.render(dt);
   frameRenderCount++;
 }
@@ -3569,6 +3578,42 @@ async function readCanonicalFramebuffer(gl) {
   return { width, height, hash: await sha256(canonical) };
 }
 
+async function readCanonicalHalfFloatTarget(target) {
+  if (!(target instanceof THREE.WebGLRenderTarget)
+    || target.texture.type !== THREE.HalfFloatType
+    || !Number.isInteger(target.width)
+    || target.width <= 0
+    || !Number.isInteger(target.height)
+    || target.height <= 0) {
+    throw new Error('Ninth Tide dither QA requires a non-empty half-float render target.');
+  }
+  const bottomLeft = new Uint16Array(target.width * target.height * 4);
+  await renderer.readRenderTargetPixelsAsync(
+    target,
+    0,
+    0,
+    target.width,
+    target.height,
+    bottomLeft
+  );
+  const canonical = new Uint8Array(14 + bottomLeft.byteLength);
+  canonical.set(new TextEncoder().encode('f16\0\0\0'), 0);
+  const header = new DataView(canonical.buffer, 0, 14);
+  header.setUint32(6, target.width, false);
+  header.setUint32(10, target.height, false);
+  const rowElements = target.width * 4;
+  const topLeft = new Uint16Array(bottomLeft.length);
+  for (let topRow = 0; topRow < target.height; topRow++) {
+    const sourceRow = target.height - 1 - topRow;
+    topLeft.set(
+      bottomLeft.subarray(sourceRow * rowElements, (sourceRow + 1) * rowElements),
+      topRow * rowElements
+    );
+  }
+  canonical.set(new Uint8Array(topLeft.buffer), 14);
+  return { width: target.width, height: target.height, hash: await sha256(canonical) };
+}
+
 function inspectRenderer(gl) {
   const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
   if (!debugInfo) throw new Error('Ninth Tide deterministic capture requires WEBGL_debug_renderer_info.');
@@ -3745,7 +3790,7 @@ function validateDeterministicStepRequest(request) {
   }
 }
 
-async function stepDeterministicPreview(request) {
+async function executeDeterministicPreviewStep(request) {
   if (deterministicStepActive) throw new Error('Ninth Tide deterministic step is already running.');
   validateDeterministicStepRequest(request);
   deterministicStepActive = true;
@@ -3808,6 +3853,74 @@ async function stepDeterministicPreview(request) {
   }
 }
 
+async function stepDeterministicPreview(request) {
+  if (deterministicDitherScenarioActive) {
+    throw new Error('Ninth Tide dither scenario is already running.');
+  }
+  return executeDeterministicPreviewStep(request);
+}
+
+function validateDitherScenarioRequest(request) {
+  if (!hasExactKeys(request, ['mode', 'section', 'timestampMs', 'seed'])) {
+    throw new Error('Ninth Tide dither scenario requires exactly mode, section, timestampMs, and seed.');
+  }
+  validateDeterministicStepRequest({
+    mode: request.mode,
+    section: request.section,
+    timestampMs: request.timestampMs,
+  });
+  if (!Number.isInteger(request.seed) || request.seed < 0 || request.seed > 255) {
+    throw new RangeError(`Ninth Tide dither seed must be an integer from 0 through 255; received ${String(request.seed)}.`);
+  }
+}
+
+async function runDeterministicDitherScenario(request) {
+  validateDitherScenarioRequest(request);
+  if (deterministicDitherScenarioActive || deterministicStepActive) {
+    throw new Error('Ninth Tide dither scenario is already running.');
+  }
+  deterministicDitherScenarioActive = true;
+  deterministicDitherSeedOverride = request.seed;
+  try {
+    const result = await executeDeterministicPreviewStep({
+      mode: request.mode,
+      section: request.section,
+      timestampMs: request.timestampMs,
+    });
+    const afterimageFeedback = await readCanonicalHalfFloatTarget(afterimage._textureOld);
+    const passLabels = new Map([
+      [renderPass, 'RenderPass'],
+      [bloom, 'UnrealBloomPass'],
+      [afterimage, 'AfterimagePass'],
+      [veilPass, 'VeilShaderPass'],
+      [ditheredOutputPass, 'DitheredOutputPass'],
+    ]);
+    const passChain = composer.passes.map((pass) => {
+      const label = passLabels.get(pass);
+      if (!label) throw new Error('Ninth Tide composer contains an unaudited pass.');
+      return label;
+    });
+    return {
+      ...result,
+      seed: request.seed,
+      afterimageFeedback,
+      passChain,
+      outputOwners: composer.passes.filter((pass) => pass.isDitheredOutputPass === true).length,
+      intermediatePrecision: {
+        composerHalfFloat: composer.readBuffer.texture.type === THREE.HalfFloatType
+          && composer.writeBuffer.texture.type === THREE.HalfFloatType,
+        afterimageHalfFloat: afterimage._textureOld.texture.type === THREE.HalfFloatType
+          && afterimage._textureComp.texture.type === THREE.HalfFloatType,
+      },
+    };
+  } finally {
+    deterministicDitherSeedOverride = null;
+    ditheredOutputPass.setSeed(0);
+    renderer.setRenderTarget(deterministicBaseline.rendererTarget);
+    deterministicDitherScenarioActive = false;
+  }
+}
+
 function validatePulseScenarioRequest(request) {
   if (!hasExactKeys(request, ['scenario', 'section', 'timestampMs'])) {
     throw new Error('Ninth Tide pulse scenario requires exactly scenario, section, and timestampMs.');
@@ -3833,7 +3946,9 @@ function validatePulseScenarioRequest(request) {
 }
 
 async function runDeterministicPulseScenario(request) {
-  if (deterministicStepActive) throw new Error('Ninth Tide deterministic step is already running.');
+  if (deterministicStepActive || deterministicDitherScenarioActive) {
+    throw new Error('Ninth Tide deterministic step is already running.');
+  }
   validatePulseScenarioRequest(request);
   deterministicStepActive = true;
   try {
@@ -3984,6 +4099,7 @@ if (deterministicCaptureRequested) {
   window.__NINTH_TIDE_STEP__ = stepDeterministicPreview;
   window.__NINTH_TIDE_HIT_TEST__ = hitTestDeterministicPreview;
   window.__NINTH_TIDE_PULSE_SCENARIO__ = runDeterministicPulseScenario;
+  window.__NINTH_TIDE_DITHER_SCENARIO__ = runDeterministicDitherScenario;
 }
 
 initializeRuntimeControl();
@@ -3996,5 +4112,7 @@ window.addEventListener('beforeunload', () => {
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   timer.dispose();
+  ditheredOutputPass.dispose();
+  composer.dispose();
   renderer.dispose();
 });

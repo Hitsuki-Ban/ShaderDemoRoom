@@ -1,0 +1,977 @@
+{
+  "schemaVersion": 1,
+  "gate": "qa:ninth-tide-dither-performance",
+  "recordedAt": "2026-07-21T02:42:02.397Z",
+  "builds": {
+    "baseline": {
+      "revision": "70a67ea94655a33ab23fc7443c210a59debd6ad7",
+      "baseUrl": "http://127.0.0.1:4177/ShaderDemoRoom",
+      "bundle": {
+        "url": "http://127.0.0.1:4177/ShaderDemoRoom/exhibits/ninth-tide-archive/app.js",
+        "bytes": 681047,
+        "sha256": "457e40a7e6eebf0cce993884b7d403f141dafbe801fd661d1ddc3326a000c944"
+      }
+    },
+    "candidate": {
+      "revision": "codex/t-nt-02-dark-banding-dither@9af8896fb19877a4bbab9898848bcc83d7e16485022d8d29dd05a6db1ce6f34c",
+      "baseUrl": "http://127.0.0.1:4175/ShaderDemoRoom",
+      "bundle": {
+        "url": "http://127.0.0.1:4175/ShaderDemoRoom/exhibits/ninth-tide-archive/app.js",
+        "bytes": 689849,
+        "sha256": "9af8896fb19877a4bbab9898848bcc83d7e16485022d8d29dd05a6db1ce6f34c"
+      }
+    }
+  },
+  "environment": {
+    "browserVersion": "150.0.7871.125",
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "method": {
+    "pairs": 5,
+    "order": "AB/BA alternating in one browser process",
+    "warmupSeconds": 8,
+    "bridgeSampleCount": 10,
+    "bridgeSampleIntervalSeconds": 1,
+    "cadenceMeasurementSeconds": 8,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1
+    },
+    "preview": {
+      "mode": "main",
+      "section": 8
+    }
+  },
+  "aggregates": {
+    "bridgePairRegressions": [
+      -21.018317704994736,
+      -19.495287331745704,
+      11.268155681855863,
+      -2.9964468665935717,
+      39.527892545223
+    ],
+    "bridgePairedMedianRegressionPercent": -2.9964468665935717,
+    "cadencePairRegressions": [
+      9.08496076051164,
+      -15.509102753525605,
+      10.756049304438942,
+      -1.200311650938024,
+      -8.56701883090003
+    ],
+    "cadencePairedMedianRegressionPercent": -1.200311650938024
+  },
+  "gateResult": {
+    "maximumRegressionPercent": 5,
+    "bridgePassed": true,
+    "cadencePassed": true,
+    "passed": true
+  },
+  "pairs": [
+    {
+      "pair": 1,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 163.70533040527064,
+              "frameTimeMs": 6.108536585365849,
+              "frameCount": 1187,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 150.1679509978264,
+              "frameTimeMs": 6.659210526315794,
+              "frameCount": 1345,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 83.9679750048818,
+              "frameTimeMs": 11.909302325581404,
+              "frameCount": 1440,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 94.24700569409006,
+              "frameTimeMs": 10.610416666666652,
+              "frameCount": 1538,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 89.17954815695595,
+              "frameTimeMs": 11.213333333333342,
+              "frameCount": 1632,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 85.53809429082939,
+              "frameTimeMs": 11.690697674418622,
+              "frameCount": 1718,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 88.18342151675498,
+              "frameTimeMs": 11.339999999999984,
+              "frameCount": 1807,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 81.93523214982407,
+              "frameTimeMs": 12.204761904761957,
+              "frameCount": 1893,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 83.25266214908035,
+              "frameTimeMs": 12.011627906976743,
+              "frameCount": 1976,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 75.39682539682539,
+              "frameTimeMs": 13.263157894736842,
+              "frameCount": 2052,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 11.515348837209302,
+          "fpsMedian": 86.86075790379218
+        },
+        "cadence": {
+          "elapsedMs": 8008.299999999999,
+          "intervals": 1136,
+          "frameTimeMs": 7.049559859154929,
+          "fps": 141.8528276912703
+        }
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 150.88346237840017,
+              "frameTimeMs": 6.627631578947354,
+              "frameCount": 869,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 110.51904479968407,
+              "frameTimeMs": 9.048214285714298,
+              "frameCount": 992,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 77.41436036384738,
+              "frameTimeMs": 12.917500000000018,
+              "frameCount": 1079,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 109.38743038981718,
+              "frameTimeMs": 9.141818181818168,
+              "frameCount": 1182,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 105.9788042391521,
+              "frameTimeMs": 9.43584905660378,
+              "frameCount": 1289,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 77.0446463848283,
+              "frameTimeMs": 12.979487179487151,
+              "frameCount": 1382,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 77.66990291262135,
+              "frameTimeMs": 12.875,
+              "frameCount": 1458,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 161.61213088587425,
+              "frameTimeMs": 6.187654320987641,
+              "frameCount": 1600,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 161.70892393691426,
+              "frameTimeMs": 6.183950617283924,
+              "frameCount": 1760,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 164.78062338693763,
+              "frameTimeMs": 6.068674698795146,
+              "frameCount": 1924,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 9.095016233766234,
+          "fpsMedian": 109.95323759475062
+        },
+        "cadence": {
+          "elapsedMs": 8005.299999999999,
+          "intervals": 1041,
+          "frameTimeMs": 7.690009606147934,
+          "fps": 130.0388492623637
+        }
+      },
+      "bridgeRegressionPercent": -21.018317704994736,
+      "cadenceRegressionPercent": 9.08496076051164
+    },
+    {
+      "pair": 2,
+      "order": [
+        "candidate",
+        "baseline"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 87.09422011084706,
+              "frameTimeMs": 11.481818181818198,
+              "frameCount": 866,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 90.67612852355622,
+              "frameTimeMs": 11.028260869565202,
+              "frameCount": 957,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 93.36511720301954,
+              "frameTimeMs": 10.710638297872332,
+              "frameCount": 1043,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 91.07107503464654,
+              "frameTimeMs": 10.980434782608704,
+              "frameCount": 1131,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 81.28469468675631,
+              "frameTimeMs": 12.30243902439028,
+              "frameCount": 1218,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 77.53479125248509,
+              "frameTimeMs": 12.897435897435898,
+              "frameCount": 1303,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 88.23529411764706,
+              "frameTimeMs": 11.333333333333334,
+              "frameCount": 1393,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 91.05304829770408,
+              "frameTimeMs": 10.98260869565215,
+              "frameCount": 1485,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 84.92988346829894,
+              "frameTimeMs": 11.774418604651231,
+              "frameCount": 1575,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 90.87317265902792,
+              "frameTimeMs": 11.004347826086972,
+              "frameCount": 1660,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 11.180797101449269,
+          "fpsMedian": 89.45571132060164
+        },
+        "cadence": {
+          "elapsedMs": 8002.5999999999985,
+          "intervals": 765,
+          "frameTimeMs": 10.460915032679736,
+          "fps": 95.59393197210908
+        }
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 164.78062338693644,
+              "frameTimeMs": 6.068674698795189,
+              "frameCount": 1152,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 79.76071784646062,
+              "frameTimeMs": 12.5375,
+              "frameCount": 1247,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 164.78062338693644,
+              "frameTimeMs": 6.068674698795189,
+              "frameCount": 1402,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 103.9011958439521,
+              "frameTimeMs": 9.6245283018868,
+              "frameCount": 1517,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 76.32093933463797,
+              "frameTimeMs": 13.102564102564102,
+              "frameCount": 1605,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 100.89020771513353,
+              "frameTimeMs": 9.911764705882353,
+              "frameCount": 1695,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 162.73070053582072,
+              "frameTimeMs": 6.145121951219508,
+              "frameCount": 1857,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 114.76058567471318,
+              "frameTimeMs": 8.71379310344827,
+              "frameCount": 1972,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 113.74975054879299,
+              "frameTimeMs": 8.791228070175412,
+              "frameCount": 2086,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 108.56691669956605,
+              "frameTimeMs": 9.210909090909064,
+              "frameCount": 2195,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 9.001068580542238,
+          "fpsMedian": 111.15833362417952
+        },
+        "cadence": {
+          "elapsedMs": 8007.700000000001,
+          "intervals": 906,
+          "frameTimeMs": 8.83852097130243,
+          "fps": 113.14110168962372
+        }
+      },
+      "bridgeRegressionPercent": -19.495287331745704,
+      "cadenceRegressionPercent": -15.509102753525605
+    },
+    {
+      "pair": 3,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 86.32528938591346,
+              "frameTimeMs": 11.584090909090884,
+              "frameCount": 961,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 110.38833037650282,
+              "frameTimeMs": 9.058928571428591,
+              "frameCount": 1067,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 110.12782694198623,
+              "frameTimeMs": 9.080357142857142,
+              "frameCount": 1180,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 109.49631694206666,
+              "frameTimeMs": 9.13272727272726,
+              "frameCount": 1292,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 97.60956175298804,
+              "frameTimeMs": 10.244897959183673,
+              "frameCount": 1396,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 111.59824631327238,
+              "frameTimeMs": 8.960714285714273,
+              "frameCount": 1511,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 101.57339175463048,
+              "frameTimeMs": 9.845098039215694,
+              "frameCount": 1616,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 101.83706070287518,
+              "frameTimeMs": 9.819607843137277,
+              "frameCount": 1717,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 96.85708638070737,
+              "frameTimeMs": 10.324489795918398,
+              "frameCount": 1813,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 94.63722397476327,
+              "frameTimeMs": 10.566666666666682,
+              "frameCount": 1908,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 9.832352941176485,
+          "fpsMedian": 101.70522622875282
+        },
+        "cadence": {
+          "elapsedMs": 8004.5,
+          "intervals": 795,
+          "frameTimeMs": 10.068553459119498,
+          "fps": 99.31913298769442
+        }
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 93.53078721745895,
+              "frameTimeMs": 10.691666666666682,
+              "frameCount": 914,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 80.67689885871721,
+              "frameTimeMs": 12.395121951219485,
+              "frameCount": 992,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 87.24965298433484,
+              "frameTimeMs": 11.46136363636362,
+              "frameCount": 1079,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 89.37437934458788,
+              "frameTimeMs": 11.188888888888888,
+              "frameCount": 1168,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 125.89928057553966,
+              "frameTimeMs": 7.942857142857137,
+              "frameCount": 1270,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 141.94322271091593,
+              "frameTimeMs": 7.045070422535196,
+              "frameCount": 1418,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 111.19936457505949,
+              "frameTimeMs": 8.992857142857149,
+              "frameCount": 1527,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 110.62821019359922,
+              "frameTimeMs": 9.039285714285727,
+              "frameCount": 1640,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 89.00316455696164,
+              "frameTimeMs": 11.235555555555605,
+              "frameCount": 1739,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 79.77662544874387,
+              "frameTimeMs": 12.534999999999945,
+              "frameCount": 1817,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 10.940277777777785,
+          "fpsMedian": 91.45258328102341
+        },
+        "cadence": {
+          "elapsedMs": 8006.799999999999,
+          "intervals": 718,
+          "frameTimeMs": 11.151532033426182,
+          "fps": 89.6737772893041
+        }
+      },
+      "bridgeRegressionPercent": 11.268155681855863,
+      "cadenceRegressionPercent": 10.756049304438942
+    },
+    {
+      "pair": 4,
+      "order": [
+        "candidate",
+        "baseline"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 97.55126418474994,
+              "frameTimeMs": 10.251020408163287,
+              "frameCount": 961,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 162.6661376710969,
+              "frameTimeMs": 6.1475609756097604,
+              "frameCount": 1106,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 162.763001190949,
+              "frameTimeMs": 6.143902439024381,
+              "frameCount": 1268,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 118.13349084465455,
+              "frameTimeMs": 8.464999999999995,
+              "frameCount": 1408,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 100.07849293563572,
+              "frameTimeMs": 9.992156862745105,
+              "frameCount": 1519,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 109.95601759296305,
+              "frameTimeMs": 9.094545454545434,
+              "frameCount": 1628,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 108.3316919440613,
+              "frameTimeMs": 9.230909090909105,
+              "frameCount": 1738,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 100.91017016224744,
+              "frameTimeMs": 9.909803921568656,
+              "frameCount": 1840,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 92.6656151419557,
+              "frameTimeMs": 10.791489361702142,
+              "frameCount": 1933,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 88.51298190401297,
+              "frameTimeMs": 11.297777777777728,
+              "frameCount": 2023,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 9.57035650623888,
+          "fpsMedian": 104.62093105315438
+        },
+        "cadence": {
+          "elapsedMs": 8000.5,
+          "intervals": 878,
+          "frameTimeMs": 9.112186788154897,
+          "fps": 109.74314105368414
+        }
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 101.48321623731466,
+              "frameTimeMs": 9.853846153846147,
+              "frameCount": 994,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 109.01883052527255,
+              "frameTimeMs": 9.172727272727272,
+              "frameCount": 1104,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 111.35414595346955,
+              "frameTimeMs": 8.98035714285717,
+              "frameCount": 1215,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 109.3656790614437,
+              "frameTimeMs": 9.143636363636357,
+              "frameCount": 1326,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 111.11111111111111,
+              "frameTimeMs": 9,
+              "frameCount": 1436,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 78.77116975187093,
+              "frameTimeMs": 12.694999999999983,
+              "frameCount": 1528,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 75.47169811320755,
+              "frameTimeMs": 13.25,
+              "frameCount": 1606,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 71.62753680859525,
+              "frameTimeMs": 13.961111111111121,
+              "frameCount": 1682,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 163.7380191693293,
+              "frameTimeMs": 6.107317073170723,
+              "frameCount": 1828,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 106.44589000591381,
+              "frameTimeMs": 9.394444444444431,
+              "frameCount": 1959,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 9.283585858585852,
+          "fpsMedian": 107.73236026559317
+        },
+        "cadence": {
+          "elapsedMs": 8003.5,
+          "intervals": 889,
+          "frameTimeMs": 9.00281214848144,
+          "fps": 111.07640407321797
+        }
+      },
+      "bridgeRegressionPercent": -2.9964468665935717,
+      "cadenceRegressionPercent": -1.200311650938024
+    },
+    {
+      "pair": 5,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 164.22635536208955,
+              "frameTimeMs": 6.0891566265060195,
+              "frameCount": 1191,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 157.2139303482587,
+              "frameTimeMs": 6.360759493670886,
+              "frameCount": 1336,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 109.86815821014774,
+              "frameTimeMs": 9.101818181818189,
+              "frameCount": 1451,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 83.83233532934132,
+              "frameTimeMs": 11.928571428571429,
+              "frameCount": 1544,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 132.67326732673268,
+              "frameTimeMs": 7.537313432835821,
+              "frameCount": 1666,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 164.78062338693644,
+              "frameTimeMs": 6.068674698795189,
+              "frameCount": 1823,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 162.95707472178097,
+              "frameTimeMs": 6.136585365853645,
+              "frameCount": 1987,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 137.25880246668024,
+              "frameTimeMs": 7.285507246376795,
+              "frameCount": 2136,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 107.31319554848952,
+              "frameTimeMs": 9.318518518518532,
+              "frameCount": 2244,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 108.99722552516798,
+              "frameTimeMs": 9.174545454545495,
+              "frameCount": 2353,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 7.411410339606308,
+          "fpsMedian": 134.96603489670645
+        },
+        "cadence": {
+          "elapsedMs": 8003.200000000001,
+          "intervals": 723,
+          "frameTimeMs": 11.069432918395576,
+          "fps": 90.33886445421831
+        }
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "bridge": {
+          "samples": [
+            {
+              "sample": 1,
+              "fps": 86.51199370821858,
+              "frameTimeMs": 11.559090909090918,
+              "frameCount": 772,
+              "paused": false
+            },
+            {
+              "sample": 2,
+              "fps": 86.92216515211366,
+              "frameTimeMs": 11.504545454545472,
+              "frameCount": 856,
+              "paused": false
+            },
+            {
+              "sample": 3,
+              "fps": 91.94483310014004,
+              "frameTimeMs": 10.876086956521723,
+              "frameCount": 942,
+              "paused": false
+            },
+            {
+              "sample": 4,
+              "fps": 88.37391987431252,
+              "frameTimeMs": 11.315555555555571,
+              "frameCount": 1027,
+              "paused": false
+            },
+            {
+              "sample": 5,
+              "fps": 79.57032027053926,
+              "frameTimeMs": 12.567499999999972,
+              "frameCount": 1113,
+              "paused": false
+            },
+            {
+              "sample": 6,
+              "fps": 101.97960407918445,
+              "frameTimeMs": 9.805882352941149,
+              "frameCount": 1207,
+              "paused": false
+            },
+            {
+              "sample": 7,
+              "fps": 162.08736904526597,
+              "frameTimeMs": 6.169512195121947,
+              "frameCount": 1368,
+              "paused": false
+            },
+            {
+              "sample": 8,
+              "fps": 146.85453462988698,
+              "frameTimeMs": 6.809459459459455,
+              "frameCount": 1524,
+              "paused": false
+            },
+            {
+              "sample": 9,
+              "fps": 141.40609440350465,
+              "frameTimeMs": 7.071830985915524,
+              "frameCount": 1678,
+              "paused": false
+            },
+            {
+              "sample": 10,
+              "fps": 108.76013446707519,
+              "frameTimeMs": 9.194545454545468,
+              "frameCount": 1786,
+              "paused": false
+            }
+          ],
+          "frameTimeMsMedian": 10.340984654731436,
+          "fpsMedian": 96.96221858966226
+        },
+        "cadence": {
+          "elapsedMs": 8005.799999999999,
+          "intervals": 791,
+          "frameTimeMs": 10.12111251580278,
+          "fps": 98.80336755852008
+        }
+      },
+      "bridgeRegressionPercent": 39.527892545223,
+      "cadenceRegressionPercent": -8.56701883090003
+    }
+  ]
+}
