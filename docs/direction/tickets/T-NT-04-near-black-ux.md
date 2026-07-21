@@ -1,53 +1,69 @@
 # [T-NT-04] near-black 区間の「壊れて見える」問題を展示内キューで解消する
 
-- 分類: AD / UX
+- 分類: AD / UX / A11y
 - 優先度: P2
-- 評価軸: ストーリーテリング(意図的な暗黒の伝達)/ 対応環境(一見客の誤認防止)/ ヒーローショット成立性
-- 依存: T-NT-02(最終出力の暗部階調を確定) / T-NT-05(必須の変更前 baseline gate) / T-SH-04 / T-I18N-01(完了済み)
+- 状態: 実装・ローカル検証完了（PR 準備中）
+- 評価軸: ストーリーテリング / 一見客の誤認防止 / 近黒階調の維持
+- 依存: T-NT-02 / T-NT-05 / T-SH-04 / T-I18N-01（すべて完了）
 
-## 現状(証拠)
+## 2026-07-21 再調査で確定した問題
 
-### 済んでいるもの(第1バッチでカバー済み — 本票のスコープ外)
+基準 revision `58a38116f4fe211a34f608a4e795f05de8106f82` を Playwright 1.60.0 / bundled Chromium / SwiftShader / 1440×900 で full-page capture した。従来票は Canvas の暗さから開幕・第 IX 章・終幕を一括して問題視していたが、DOM compositor を含む実測では次のように分離される。
 
-- **シェル側の暗室化は T-SH-04 で実装済み**: `stageProfile: { shellChrome: 'dim' }`(src/rooms/registry.ts:94)→ `data-shell-chrome`(src/app/ShowroomPage.tsx:160)で topbar / rail / inspector を減光し、`qa:visual` が paired luma ratio ≤ 0.70 を hard gate(scripts/visual-smoke.mjs:128–188)。「サイドバーがページ最輝部になる」問題は解消済み。
-- postMessage ブリッジ v1(T-EMB-02)で pause / stats / set-preview は導入済みだが、**暗黒区間の可読性キューはブリッジの守備範囲外**。
+- 開幕 5.75 s: HUD は opacity `0` だが既存儀式キャプション「它先看见了我们。」が表示される。キャプション領域は 3:1 以上 1,565 px、4.5:1 以上 1,376 px、最大 18.93:1。故障誤認の空白ではない。
+- 第 IX 章通常 preview: 既存 HUD は opacity `.68`、章番号領域の最大コントラスト 8.61:1。章・進行情報とも読めるため追加キューは不要。
+- 終幕 preview: `body.ending` が通常 HUD を opacity `0` にし、一時メッセージ消失後は恒久 UI がない。`role=status` / `role=progressbar` / live region も各 0。これが唯一再現した「壊れて見える」空白である。
+- 進行表示は描画側の visual score clock と別計算だった。第 IX 章 preview が `00:02`、終幕が `00:00` / `0.005%` を示す一方、描画側の終幕時刻は 346.0 / 354.504 s = `97.601%`。見えるキューを足す前に同一時計へ統一する必要がある。
+- 旧 `docs/direction/captures/ninth-tide-ending.png` は Canvas-only のため、DOM キューの有無を受け入れ判定できない。以後は full-page compositor capture を正とする。
 
-### 残っている問題(本票のスコープ)
+原始証拠は `docs/direction/baselines/t-nt-04-before.json`、before/after は `docs/direction/captures/t-nt-04-*.png` に固定する。
 
-対象: `ref/archive_of_the_ninth_tide_shoreless_web/src/main.js`(現行 3062 行)+ シェル i18n カタログ
+## 採用方針
 
-- 開幕 0–8.65 s: `--blackout = max(1 - lightLevel, …)`(main.js:2900–2902)でほぼ全黒。HUD は `body.calibrated` 付与(8.65 s、reduced-motion 4.2 s)までフェードインしない。
-- 終幕: 露出が `× (1 - smoothstep(0.76,1,shutdown) * 0.96)` まで崩壊(main.js:2898)、`finishEnding()` で `--blackout: 1`(main.js:2392)。**証拠キャプチャ `docs/direction/captures/ninth-tide-ending.png` は事実上の黒画面**。原典批評も preview_ending.png を「サムネイルでは黒い長方形。代表スチルに絶対使用禁止」と明記(カルテ「ビジュアル現状評価」)。
-- 第IX章: パレット deep `0x000405`(main.js:89)+ 露出テーブル最小 0.54(main.js:2897)で、章途中参加した閲覧者には「消えかけの画面」だけが見える。
-- シェル側の説明文(`rooms.ninthTideArchive.controls.runtimeNote`、src/shared/i18n/index.ts の en/zh 両カタログ)は汎用文言のみで、「ほぼ暗転する章がある」ことへの言及がない。
-- research-audio-reactive.md §2.10: 黒画面+音のみはユーザーが故障と解釈する典型パターン(Unity 系フォーラムの反面事例)。誤認リスクが残るのは「開幕 0–8.65 s」と「章 IX / 終幕の途中参加」の2点。
+1. **終幕専用の最小アンカー**: `body.ending:not(.ended)` の間だけ、既存の造形言語を使った大きな `IX` と visual score の playhead を独立 DOM layer に出す。通常 HUD、開幕、第 IX 章通常表示、エピローグ、T-NT-02 の composer / dither / spectral comb は変更しない。
+2. **静止した状態表示**: 新しい装飾アニメーションや残光は追加しない。playhead の変化は作品時間そのものだけに従い、pause 時は止まる。`prefers-reduced-motion` でも余分な動作を発生させない。
+3. **単一 visual score clock**: 潮位選択、表示時刻、CSS `--progress`、索引、ARIA progressbar を同じ `visualScoreTime / visualScoreDuration` から更新する。preview と silent playback で表示だけが別時間を示す経路を残さない。
+4. **意味情報を別経路で提供**: 装飾 HUD は `aria-hidden=true` のまま維持し、章/終幕/完了の離散状態を polite status、進行を progressbar として公開する。毎 frame の live announcement は行わない。
+5. **シェル予告**: en / zh-CN の `rooms.ninthTideArchive.controls.runtimeNote` に、終幕が意図的に近黒へ退くことを 1 文で明示する。
 
-## 問題
+## 疑問・決定記録（非 BLOCK）
 
-シェルの暗室化で「周囲がうるさい」問題は解決したが、**展示自身が近黒になる区間で稼働中であることを伝える要素がない**。ショールーム経由の一見客は開幕・第IX章・終幕を「iframe が死んだ」と誤認しうる。意図的な暗黒(Ganzfeld / 消灯の演出)が故障に見えることは、展示の信頼性を最も安く毀損する。
+2026-07-21 の mock 比較では、終幕アンカー全体 opacity `.40` が章番号領域 P90 `3.512:1`（3:1 以上 873 px、全画面の 0.067%）、`.47` が P90 `4.535:1` だった。
 
-## 改善方向
+- 疑問: 誤認防止を優先して 4.5:1 まで上げるか、原作の暗順応と階調を優先して大きな章番号の 3:1 基準に留めるか。
+- 現行決定: `.40` を採用する。最小 28 px の通常ウェイト serif は WCAG large text の 3:1 基準を満たし、画面占有も小さい。`.47` は読みやすい代わりに終幕の主視覚へ寄り過ぎるため保留する。
+- 再評価条件: 実装後 full-page capture が P90 3:1 未満、モバイルで章番号が large text 条件を外れる、またはユーザーテストで故障誤認が残る場合のみ `.47` を再検討する。
+- 非 BLOCK 残余: score 終端は renderer の境界選択のため `scoreDuration - 0.001` に clamp される。媒体へ戻した表示値は完了直前だけ最終秒を切り捨てる可能性があるが、その時点では `ended` がアンカー/HUD を即時非表示にして完了 status と epilogue へ移るため、本票の可視・操作経路には影響しない。将来 transport を完了画面にも表示する場合に再検討する。
 
-research-audio-reactive.md §2.10 の3点を、exhibit 側(ref/ fork)+シェル側(i18n 1行)に振り分けて実装する:
-
-1. **常時可視の最小シグナル(exhibit 側)**: 近黒区間でも HUD のタイムライン(既存 `--progress`、main.js:2921)と章インデックスに opacity 下限(0.25 程度)を設ける。9章構成が見えるタイムラインは「これは 5:54 の作品で、いま暗い章にいる」ことを一目で伝える最強の周辺キュー。「読ませたい」要素だけ下限を高くする二層構造(§2.9 の HUD 設計と整合)。
-2. **知覚閾値上の残光(exhibit 側)**: blackout 中も 1 要素(スペクトラルコームの 2–3 セグメント、または信号ドット)だけ知覚閾値ぎりぎりの輝度で動かし続ける。「灯灭以后,海仍在读。」のコンセプト自体を UX 保険として使う。開幕は儀式キャプション(既存)があるため、適用対象は終幕と章IX 途中参加に絞る。
-3. **ショールーム側の予告(シェル側)**: `rooms.ninthTideArchive.controls.runtimeNote`(en/zh 両カタログ)に「この展示はほぼ暗転する章・終幕を含む」旨を 1 行追記する。iframe 改修不要で最も安い保険。
-- 適用しないもの: エンディングのエピローグカード(既存)はリプレイ導線として正しいので触らない。HUD 色の章パレット連動(NT-8)は別票(P3)であり本票に含めない — ただし opacity 下限の実装は NT-8 の opacity 連動設計と衝突しないよう `--hud-floor` 相当の変数に分離しておく。
+この疑問は受け入れ基準を満たす可逆な値選択であり BLOCK ではない。2026-07-21 の運用指示に従い、票内に根拠を残して `.40` で進行する。
 
 ## 受け入れ基準
 
-- 視覚: `?preview=ending` キャプチャで (a) タイムラインと章インデックスが判読可能(opacity 下限が効いている)、(b) 知覚閾値上の残光要素が 1 つ存在し、連続フレームのピクセル差分が非ゼロ(動いている)こと。現行 `ninth-tide-ending.png` との before/after を docs/direction/captures/ に残す。
-- AD 規則の維持: 残光・HUD 下限はシーンの最大輝度を超えない(「HUD がシーンを食う」逆転を起こさない)。原典の輝度3層構造(カルテ「ビジュアル現状評価」)を崩さないことを目視検収。
-- 開幕: 0–8.65 s 区間のいずれかの時点でタイムラインまたは進行キューが視認できること(儀式キャプションと重複しない配置)。
-- i18n: en/zh 両カタログに注記が入り、T-I18N-01 の整合性テスト(キー完全一致)を通過すること。
-- シェル回帰なし: `qa:visual` の stage-profile paired luma gate(3 region ≤ 0.70)と mobile overflow / HUD overlap 0 を維持。
-- `pnpm lint` / `pnpm test` / `pnpm build` / `pnpm exhibits:check` / `qa:exhibits` / `qa:visual` 通過。
+- `?preview=opening&section=0`: 既存儀式キャプションが full-page capture で 4.5:1 以上の画素を持ち、新アンカーは hidden。
+- `?preview=main&section=8`: 既存 HUD / IX が可視で、新アンカーは hidden。通常第 IX 章の構図を変えない。
+- `?preview=ending&section=8`: 一時メッセージに依存せず `IX` と playhead が可視。章番号領域 P90 が 3:1 以上 4.5:1 未満、全画面の 3:1 以上画素は 0.25% 以下。
+- 終幕 progress は `346.0 / 354.504 = 97.601%`、DOM progressbar は同値（丸め許容 ±0.1 percentage point）。表示時刻は `05:46 / 05:54`。
+- `role=status` と `role=progressbar` が各 1。status は章切替・終幕開始・完了だけを通知し、装飾 HUD / アンカーは accessibility tree に重複露出しない。
+- 新アンカーに CSS animation がなく、reduced-motion capture でも位置・opacity・進行値が一致する。
+- `body.ended` では新アンカーが消え、既存エピローグと replay 導線だけが残る。
+- en / zh-CN catalog のキー完全一致を維持し、近黒終幕の予告を表示する。
+- `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build` / `pnpm exhibits:check` / `pnpm qa:exhibits` / `pnpm qa:visual` / `pnpm qa:ninth-tide` / 新設 full-page near-black gate が通る。
 
-## 影響範囲・注意
+## 実装境界
 
-- exhibit 側変更は **ref/ で行い `pnpm exhibits:build` で再生成**(public 手編集禁止、`exhibits:check` が同期強制)。シェル側変更は i18n カタログ 1 箇所のみ。
-- HUD opacity の変更は `qa:exhibits` の DOM 検査(phaseNumber ローマ数字の可視判定)に影響しうる — セレクタ/可視性アサートを同期確認。
-- 残光要素は T-NT-02(暗部ディザ)と同じ輝度帯で動く。両票を実施する場合、残光の知覚閾値検収はディザ導入後に行うと安定する(ディザなしでは残光自体が縞に埋もれて評価がぶれる)。
-- prefers-reduced-motion 時は残光のアニメーションを静的表示に落とす(既存の reduced-motion 分岐と同じ流儀)。
-- 参照: research-audio-reactive.md §2.10(Active Silence / キオスク実務 / 反面事例の出典)、§2.9(HUD 二層構造)
+- exhibit 側は `ref/archive_of_the_ninth_tide_shoreless_web/` を正とし、`pnpm exhibits:build` で `public/exhibits/` を再生成する。public を直接編集しない。
+- full-page gate は compositor 後の PNG と computed DOM / ARIA を同時に検査する。dither による連続 frame 差分を「稼働中」の証拠にしない。
+- 「アンカーがシーン最大輝度以下」のような、シーンが完全黒なら常に破綻する相対条件は使わない。絶対コントラスト帯と占有率で上限・下限を固定する。
+- 既存 T-NT-02 の deterministic framebuffer hash は Canvas-only なので、DOM overlay 追加後も不変であることを既存 `qa:ninth-tide` で確認する。
+
+## 実装・検証結果（2026-07-21）
+
+- desktop ending: `IX` P90 `3.417:1` / P99 `3.417:1` / max `3.455:1`、3:1 以上 855 px、4.5:1 以上 0 px。全画面の 3:1 以上占有率 `0.0675%`、playhead は 3:1 以上 7 px。
+- mobile 390×844: `IX` は 28 px、P90 `3.417:1`、3:1 以上 158 px。全画面占有率 `0.0501%`、scroll width / height は viewport と一致。
+- ending transport: CSS `97.601%`、ARIA `97.6`、表示 `05:46 / 05:54`。status / progressbar / live region は各 1。
+- custom audio: 120 s / 600 s の音源を visual score 全体へ正規化する unit gate を追加。transport の表示時間は同じ score progress から媒体 duration へ戻すため、長尺音源でも 354.504 s で停止しない。
+- state exit: 同一 page で ending → main、ending → opening、ending → ended を実行し、3 経路すべて即時 `opacity: 0; visibility: hidden` を確認。退出時の 2.4 s 残留 transition はない。
+- reduced motion: desktop ending と screenshot SHA-256 が完全一致（`ee31c8380e9b8f676223c388cb9c07377a6a0640419f0b083152a0c16cfa00d2`）。
+- Canvas 不変: opening / section IX / ending framebuffer hash は before と after でそれぞれ `3200649e…` / `15855092…` / `8e2dda6c…` のまま。既存 3×11 deterministic matrix も通過。
+- 証拠: before `t-nt-04-ending-before.png`（SHA-256 `7312168b…`）、desktop after `t-nt-04-ending-after.png`（`ee31c838…`）、mobile after `t-nt-04-ending-mobile-after.png`（`d9b1d191…`）、5 capture manifest `t-nt-04-near-black-qa-2026-07-21.json`。
+- gates: `pnpm lint`、`pnpm typecheck`、`pnpm test`（41 files / 334 tests）、`pnpm build`、`pnpm qa:exhibits`、`pnpm qa:visual`、`pnpm qa:ninth-tide`、`pnpm qa:ninth-tide-near-black` が通過。`pnpm exhibits:check` は生成 snapshot を commit 後に再実行する。

@@ -89,6 +89,7 @@ jobs:
           pnpm qa:visual
           pnpm qa:water
           pnpm qa:ninth-tide
+          pnpm qa:ninth-tide-near-black
 
       - name: Upload QA artifacts
         if: ${{ !cancelled() && steps.visual_qa.outcome != 'skipped' }}

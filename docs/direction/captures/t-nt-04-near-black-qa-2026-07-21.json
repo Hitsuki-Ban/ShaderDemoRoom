@@ -1,0 +1,1343 @@
+{
+  "schemaVersion": 1,
+  "ticket": "T-NT-04",
+  "gate": "qa:ninth-tide-near-black",
+  "status": "passed",
+  "environment": {
+    "playwrightVersion": "1.60.0",
+    "nodeVersion": "v24.16.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "browserLaunchOptions": {
+      "headless": true,
+      "args": [
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader"
+      ]
+    },
+    "contextOptions": {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screen": {
+        "width": 1440,
+        "height": 900
+      },
+      "deviceScaleFactor": 1,
+      "locale": "en-US",
+      "timezoneId": "UTC",
+      "colorScheme": "dark",
+      "reducedMotion": "no-preference",
+      "forcedColors": "none",
+      "contrast": "no-preference",
+      "hasTouch": false,
+      "isMobile": false,
+      "javaScriptEnabled": true,
+      "serviceWorkers": "block",
+      "acceptDownloads": false
+    }
+  },
+  "thresholds": {
+    "openingMinimum4_5Pixels": 500,
+    "section8Minimum3Pixels": 500,
+    "endingPhaseP90": {
+      "minimum": 3,
+      "maximumExclusive": 4.5
+    },
+    "endingMinimum3Pixels": 500,
+    "endingMobileMinimum3Pixels": 100,
+    "endingMaximumFullFrame3Ratio": 0.0025,
+    "endingMinimumTrack3Pixels": 1,
+    "expectedEndingProgressPercent": 97.601,
+    "progressTolerancePercentagePoints": 0.1
+  },
+  "runs": [
+    {
+      "id": "opening",
+      "variant": "default-motion",
+      "request": {
+        "id": "opening",
+        "mode": "opening",
+        "section": 0,
+        "timestampMs": 5750
+      },
+      "url": "http://127.0.0.1:4175/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=opening&section=0",
+      "screenshot": {
+        "fileName": "opening.png",
+        "bytes": 151864,
+        "sha256": "25e5201f6b2e1180b9be3dfa362ca7b45b2172e697c2c9caded6c269a22c0aae"
+      },
+      "hook": {
+        "chapter": {
+          "mode": "opening",
+          "section": 0,
+          "phase": "I"
+        },
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "framebufferHash": "3200649e961d7db4d5ba67e3bce61ea361b4ca6508adae5ec9141f2c5481af59"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered"
+        ],
+        "anchor": {
+          "selector": "#endingAnchor",
+          "text": "IX",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "endingPhase": {
+          "selector": ".ending-anchor-phase",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "hidden",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 24,
+            "y": 422.7265625,
+            "width": 63.25,
+            "height": 54.546875,
+            "top": 422.7265625,
+            "right": 87.25,
+            "bottom": 477.2734375,
+            "left": 24
+          }
+        },
+        "endingTrack": {
+          "selector": ".ending-anchor-progress",
+          "text": "",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "hidden",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 279,
+            "y": 877,
+            "width": 842,
+            "height": 1,
+            "top": 877,
+            "right": 1121,
+            "bottom": 878,
+            "left": 279
+          }
+        },
+        "ritual": {
+          "selector": "#ritualCaption",
+          "text": "IX\n    它先看见了我们。\n    IT SAW US FIRST.",
+          "ariaHidden": "true",
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 390,
+            "y": 412,
+            "width": 660,
+            "height": 76,
+            "top": 412,
+            "right": 1050,
+            "bottom": 488,
+            "left": 390
+          }
+        },
+        "phase": {
+          "selector": "#phaseNumber",
+          "text": "I",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 40,
+            "y": 406.71875,
+            "width": 85.671875,
+            "height": 54.546875,
+            "top": 406.71875,
+            "right": 125.671875,
+            "bottom": 461.265625,
+            "left": 40
+          }
+        },
+        "hud": {
+          "selector": ".hud",
+          "text": "hadal record / node ix\n        第九潮汐档案馆ARCHIVE OF THE NINTH TIDE\n      \n      \n        CORE DORMANT\n        FIELD UNLIT\n        DEPTH −003953 M\n        COORD 0.076 / 1.218\n        INDEX 09–0487\n      \n    \n\n    I无月测深MOONLESS SOUNDING\n    \n    拖动：环视　滚轮：潜航点击核心：开合　点击空间：发出声呐SPACE：播放 / 暂停　M：静音　F：全屏\n\n    \n      SIGNAL SYNTHETICMODE OBSERVATIONAUDIO STANDBY\n      00:17ARCHIVE OF THE NINTH TIDE05:54\n      LOWMIDHIGH",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "epilogue": {
+          "selector": "#epilogue",
+          "text": "IX\n      归档。\n      灯灭以后，海仍在读。\n      再次下潜",
+          "ariaHidden": null,
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "progress": "4.873%",
+        "timeNow": "00:17",
+        "timeTotal": "05:54",
+        "messageClass": "",
+        "accessibility": {
+          "statusRoles": 1,
+          "progressbarRoles": 1,
+          "liveRegions": 1,
+          "runtimeStatus": "开场校准中",
+          "progressNow": "4.9",
+          "progressText": "00:17 / 05:54"
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "scrollWidth": 1440,
+          "scrollHeight": 900
+        }
+      },
+      "metrics": {
+        "focus": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 382,
+            "y": 404,
+            "width": 676,
+            "height": 92
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 62192,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 2806,
+          "visiblePixelRatio": 0.045118343195266274,
+          "atLeast3PixelCount": 1565,
+          "atLeast3Ratio": 0.025164008232570107,
+          "atLeast4_5PixelCount": 1376,
+          "atLeast4_5Ratio": 0.022125032158476974,
+          "contrastP90": 17.341066633618098,
+          "contrastP99": 18.926366509401902,
+          "contrastMax": 18.926366509401902
+        },
+        "fullFrame": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 1296000,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 4175,
+          "visiblePixelRatio": 0.003221450617283951,
+          "atLeast3PixelCount": 1578,
+          "atLeast3Ratio": 0.0012175925925925926,
+          "atLeast4_5PixelCount": 1379,
+          "atLeast4_5Ratio": 0.0010640432098765432,
+          "contrastP90": 17.014880044789923,
+          "contrastP99": 18.926366509401902,
+          "contrastMax": 18.926366509401902
+        }
+      },
+      "consoleErrors": []
+    },
+    {
+      "id": "section-8",
+      "variant": "default-motion",
+      "request": {
+        "id": "section-8",
+        "mode": "main",
+        "section": 8,
+        "timestampMs": 342276.2
+      },
+      "url": "http://127.0.0.1:4175/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=main&section=8",
+      "screenshot": {
+        "fileName": "section-8.png",
+        "bytes": 486250,
+        "sha256": "246403e39a334fcb5bb4831c21b1fc4bf3ac7cc15f218cd3384044877377d4ee"
+      },
+      "hook": {
+        "chapter": {
+          "mode": "main",
+          "section": 8,
+          "phase": "IX"
+        },
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "framebufferHash": "15855092a7dc382ec3c41d90478787c7b3d44f9d80767dd5e07192b36a39a496"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered",
+          "calibrated"
+        ],
+        "anchor": {
+          "selector": "#endingAnchor",
+          "text": "IX",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "endingPhase": {
+          "selector": ".ending-anchor-phase",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "hidden",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 24,
+            "y": 422.7265625,
+            "width": 63.25,
+            "height": 54.546875,
+            "top": 422.7265625,
+            "right": 87.25,
+            "bottom": 477.2734375,
+            "left": 24
+          }
+        },
+        "endingTrack": {
+          "selector": ".ending-anchor-progress",
+          "text": "",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "hidden",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 279,
+            "y": 877,
+            "width": 842,
+            "height": 1,
+            "top": 877,
+            "right": 1121,
+            "bottom": 878,
+            "left": 279
+          }
+        },
+        "ritual": {
+          "selector": "#ritualCaption",
+          "text": "I\n    听。\n    LISTEN.",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 390,
+            "y": 412,
+            "width": 660,
+            "height": 76,
+            "top": 412,
+            "right": 1050,
+            "bottom": 488,
+            "left": 390
+          }
+        },
+        "phase": {
+          "selector": "#phaseNumber",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 40,
+            "y": 406.71875,
+            "width": 95.734375,
+            "height": 54.546875,
+            "top": 406.71875,
+            "right": 135.734375,
+            "bottom": 461.265625,
+            "left": 40
+          }
+        },
+        "hud": {
+          "selector": ".hud",
+          "text": "hadal record / node ix\n        第九潮汐档案馆ARCHIVE OF THE NINTH TIDE\n      \n      \n        CORE DORMANT\n        FIELD UNLIT\n        DEPTH −004067 M\n        COORD 0.000 / 1.218\n        INDEX 09–9626\n      \n    \n\n    IX无岸长夜THE SHORELESS NIGHT\n    \n    拖动：环视　滚轮：潜航点击核心：开合　点击空间：发出声呐SPACE：播放 / 暂停　M：静音　F：全屏\n\n    \n      SIGNAL SYNTHETICMODE OBSERVATIONAUDIO STANDBY\n      05:41ARCHIVE OF THE NINTH TIDE05:54\n      LOWMIDHIGH",
+          "ariaHidden": "true",
+          "opacity": "0.68",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "epilogue": {
+          "selector": "#epilogue",
+          "text": "IX\n      归档。\n      灯灭以后，海仍在读。\n      再次下潜",
+          "ariaHidden": null,
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "progress": "96.275%",
+        "timeNow": "05:41",
+        "timeTotal": "05:54",
+        "messageClass": "",
+        "accessibility": {
+          "statusRoles": 1,
+          "progressbarRoles": 1,
+          "liveRegions": 1,
+          "runtimeStatus": "第 IX 章 · 无岸长夜",
+          "progressNow": "96.3",
+          "progressText": "05:41 / 05:54"
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "scrollWidth": 1440,
+          "scrollHeight": 900
+        }
+      },
+      "metrics": {
+        "focus": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 32,
+            "y": 398,
+            "width": 112,
+            "height": 72
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 8064,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 1894,
+          "visiblePixelRatio": 0.23487103174603174,
+          "atLeast3PixelCount": 1043,
+          "atLeast3Ratio": 0.1293402777777778,
+          "atLeast4_5PixelCount": 957,
+          "atLeast4_5Ratio": 0.11867559523809523,
+          "contrastP90": 8.527115890724083,
+          "contrastP99": 8.527115890724083,
+          "contrastMax": 8.609074528138644
+        },
+        "fullFrame": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 1296000,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 114978,
+          "visiblePixelRatio": 0.0887175925925926,
+          "atLeast3PixelCount": 4733,
+          "atLeast3Ratio": 0.0036520061728395063,
+          "atLeast4_5PixelCount": 4108,
+          "atLeast4_5Ratio": 0.0031697530864197533,
+          "contrastP90": 1.4032137062255838,
+          "contrastP99": 8.527115890724083,
+          "contrastMax": 21
+        }
+      },
+      "consoleErrors": []
+    },
+    {
+      "id": "ending",
+      "variant": "default-motion",
+      "request": {
+        "id": "ending",
+        "mode": "ending",
+        "section": 8,
+        "timestampMs": 346000
+      },
+      "url": "http://127.0.0.1:4175/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=ending&section=8",
+      "screenshot": {
+        "fileName": "ending.png",
+        "bytes": 67427,
+        "sha256": "ee31c8380e9b8f676223c388cb9c07377a6a0640419f0b083152a0c16cfa00d2"
+      },
+      "hook": {
+        "chapter": {
+          "mode": "ending",
+          "section": 8,
+          "phase": "IX"
+        },
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "framebufferHash": "8e2dda6c06aa84f7cb6357fd5d4108bffcfa747a3a1fb2a1dd7baedabbf9c97f"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered",
+          "calibrated",
+          "ending"
+        ],
+        "anchor": {
+          "selector": "#endingAnchor",
+          "text": "IX",
+          "ariaHidden": "true",
+          "opacity": "0.4",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "endingPhase": {
+          "selector": ".ending-anchor-phase",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 24,
+            "y": 422.7265625,
+            "width": 63.25,
+            "height": 54.546875,
+            "top": 422.7265625,
+            "right": 87.25,
+            "bottom": 477.2734375,
+            "left": 24
+          }
+        },
+        "endingTrack": {
+          "selector": ".ending-anchor-progress",
+          "text": "",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 279,
+            "y": 877,
+            "width": 842,
+            "height": 1,
+            "top": 877,
+            "right": 1121,
+            "bottom": 878,
+            "left": 279
+          }
+        },
+        "ritual": {
+          "selector": "#ritualCaption",
+          "text": "I\n    听。\n    LISTEN.",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 390,
+            "y": 412,
+            "width": 660,
+            "height": 76,
+            "top": 412,
+            "right": 1050,
+            "bottom": 488,
+            "left": 390
+          }
+        },
+        "phase": {
+          "selector": "#phaseNumber",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 40,
+            "y": 406.71875,
+            "width": 95.734375,
+            "height": 54.546875,
+            "top": 406.71875,
+            "right": 135.734375,
+            "bottom": 461.265625,
+            "left": 40
+          }
+        },
+        "hud": {
+          "selector": ".hud",
+          "text": "hadal record / node ix\n        第九潮汐档案馆ARCHIVE OF THE NINTH TIDE\n      \n      \n        CORE DORMANT\n        FIELD UNLIT\n        DEPTH −003953 M\n        COORD 0.000 / 0.804\n        INDEX 09–9759\n      \n    \n\n    IX无岸长夜THE SHORELESS NIGHT\n    \n    拖动：环视　滚轮：潜航点击核心：开合　点击空间：发出声呐SPACE：播放 / 暂停　M：静音　F：全屏\n\n    \n      SIGNAL SYNTHETICMODE WITHDRAWALAUDIO STANDBY\n      05:46ARCHIVE OF THE NINTH TIDE05:54\n      LOWMIDHIGH",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "epilogue": {
+          "selector": "#epilogue",
+          "text": "IX\n      归档。\n      灯灭以后，海仍在读。\n      再次下潜",
+          "ariaHidden": null,
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "progress": "97.601%",
+        "timeNow": "05:46",
+        "timeTotal": "05:54",
+        "messageClass": "",
+        "accessibility": {
+          "statusRoles": 1,
+          "progressbarRoles": 1,
+          "liveRegions": 1,
+          "runtimeStatus": "终幕退潮中 · 第 IX 章",
+          "progressNow": "97.6",
+          "progressText": "05:46 / 05:54"
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "scrollWidth": 1440,
+          "scrollHeight": 900
+        }
+      },
+      "metrics": {
+        "focus": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 16,
+            "y": 414,
+            "width": 80,
+            "height": 72
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 5760,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 1180,
+          "visiblePixelRatio": 0.2048611111111111,
+          "atLeast3PixelCount": 855,
+          "atLeast3Ratio": 0.1484375,
+          "atLeast4_5PixelCount": 0,
+          "atLeast4_5Ratio": 0,
+          "contrastP90": 3.4165436177015183,
+          "contrastP99": 3.4165436177015183,
+          "contrastMax": 3.455147199328988
+        },
+        "fullFrame": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 1296000,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 4219,
+          "visiblePixelRatio": 0.0032554012345679013,
+          "atLeast3PixelCount": 875,
+          "atLeast3Ratio": 0.0006751543209876543,
+          "atLeast4_5PixelCount": 3,
+          "atLeast4_5Ratio": 0.0000023148148148148148,
+          "contrastP90": 3.4165436177015183,
+          "contrastP99": 3.4165436177015183,
+          "contrastMax": 13.598040270266548
+        },
+        "track": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 271,
+            "y": 869,
+            "width": 858,
+            "height": 17
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 14586,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 2492,
+          "visiblePixelRatio": 0.1708487590840532,
+          "atLeast3PixelCount": 7,
+          "atLeast3Ratio": 0.00047991224461812695,
+          "atLeast4_5PixelCount": 0,
+          "atLeast4_5Ratio": 0,
+          "contrastP90": 2.888010435602464,
+          "contrastP99": 2.888010435602464,
+          "contrastMax": 3.6573664310763587
+        }
+      },
+      "consoleErrors": []
+    },
+    {
+      "id": "ending",
+      "variant": "reduced-motion",
+      "request": {
+        "id": "ending",
+        "mode": "ending",
+        "section": 8,
+        "timestampMs": 346000
+      },
+      "url": "http://127.0.0.1:4175/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=ending&section=8",
+      "screenshot": {
+        "fileName": "ending-reduced-motion.png",
+        "bytes": 67427,
+        "sha256": "ee31c8380e9b8f676223c388cb9c07377a6a0640419f0b083152a0c16cfa00d2"
+      },
+      "hook": {
+        "chapter": {
+          "mode": "ending",
+          "section": 8,
+          "phase": "IX"
+        },
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "framebufferHash": "8e2dda6c06aa84f7cb6357fd5d4108bffcfa747a3a1fb2a1dd7baedabbf9c97f"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered",
+          "calibrated",
+          "ending"
+        ],
+        "anchor": {
+          "selector": "#endingAnchor",
+          "text": "IX",
+          "ariaHidden": "true",
+          "opacity": "0.4",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "endingPhase": {
+          "selector": ".ending-anchor-phase",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 24,
+            "y": 422.7265625,
+            "width": 63.25,
+            "height": 54.546875,
+            "top": 422.7265625,
+            "right": 87.25,
+            "bottom": 477.2734375,
+            "left": 24
+          }
+        },
+        "endingTrack": {
+          "selector": ".ending-anchor-progress",
+          "text": "",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 279,
+            "y": 877,
+            "width": 842,
+            "height": 1,
+            "top": 877,
+            "right": 1121,
+            "bottom": 878,
+            "left": 279
+          }
+        },
+        "ritual": {
+          "selector": "#ritualCaption",
+          "text": "I\n    听。\n    LISTEN.",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 390,
+            "y": 412,
+            "width": 660,
+            "height": 76,
+            "top": 412,
+            "right": 1050,
+            "bottom": 488,
+            "left": 390
+          }
+        },
+        "phase": {
+          "selector": "#phaseNumber",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 40,
+            "y": 406.71875,
+            "width": 95.734375,
+            "height": 54.546875,
+            "top": 406.71875,
+            "right": 135.734375,
+            "bottom": 461.265625,
+            "left": 40
+          }
+        },
+        "hud": {
+          "selector": ".hud",
+          "text": "hadal record / node ix\n        第九潮汐档案馆ARCHIVE OF THE NINTH TIDE\n      \n      \n        CORE DORMANT\n        FIELD UNLIT\n        DEPTH −003953 M\n        COORD 0.000 / 0.804\n        INDEX 09–9759\n      \n    \n\n    IX无岸长夜THE SHORELESS NIGHT\n    \n    拖动：环视　滚轮：潜航点击核心：开合　点击空间：发出声呐SPACE：播放 / 暂停　M：静音　F：全屏\n\n    \n      SIGNAL SYNTHETICMODE WITHDRAWALAUDIO STANDBY\n      05:46ARCHIVE OF THE NINTH TIDE05:54\n      LOWMIDHIGH",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "epilogue": {
+          "selector": "#epilogue",
+          "text": "IX\n      归档。\n      灯灭以后，海仍在读。\n      再次下潜",
+          "ariaHidden": null,
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900,
+            "top": 0,
+            "right": 1440,
+            "bottom": 900,
+            "left": 0
+          }
+        },
+        "progress": "97.601%",
+        "timeNow": "05:46",
+        "timeTotal": "05:54",
+        "messageClass": "",
+        "accessibility": {
+          "statusRoles": 1,
+          "progressbarRoles": 1,
+          "liveRegions": 1,
+          "runtimeStatus": "终幕退潮中 · 第 IX 章",
+          "progressNow": "97.6",
+          "progressText": "05:46 / 05:54"
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "scrollWidth": 1440,
+          "scrollHeight": 900
+        }
+      },
+      "metrics": {
+        "focus": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 16,
+            "y": 414,
+            "width": 80,
+            "height": 72
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 5760,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 1180,
+          "visiblePixelRatio": 0.2048611111111111,
+          "atLeast3PixelCount": 855,
+          "atLeast3Ratio": 0.1484375,
+          "atLeast4_5PixelCount": 0,
+          "atLeast4_5Ratio": 0,
+          "contrastP90": 3.4165436177015183,
+          "contrastP99": 3.4165436177015183,
+          "contrastMax": 3.455147199328988
+        },
+        "fullFrame": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 1296000,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 4219,
+          "visiblePixelRatio": 0.0032554012345679013,
+          "atLeast3PixelCount": 875,
+          "atLeast3Ratio": 0.0006751543209876543,
+          "atLeast4_5PixelCount": 3,
+          "atLeast4_5Ratio": 0.0000023148148148148148,
+          "contrastP90": 3.4165436177015183,
+          "contrastP99": 3.4165436177015183,
+          "contrastMax": 13.598040270266548
+        },
+        "track": {
+          "width": 1440,
+          "height": 900,
+          "rect": {
+            "x": 271,
+            "y": 869,
+            "width": 858,
+            "height": 17
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 14586,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 2492,
+          "visiblePixelRatio": 0.1708487590840532,
+          "atLeast3PixelCount": 7,
+          "atLeast3Ratio": 0.00047991224461812695,
+          "atLeast4_5PixelCount": 0,
+          "atLeast4_5Ratio": 0,
+          "contrastP90": 2.888010435602464,
+          "contrastP99": 2.888010435602464,
+          "contrastMax": 3.6573664310763587
+        }
+      },
+      "consoleErrors": []
+    },
+    {
+      "id": "ending",
+      "variant": "mobile",
+      "request": {
+        "id": "ending",
+        "mode": "ending",
+        "section": 8,
+        "timestampMs": 346000
+      },
+      "url": "http://127.0.0.1:4175/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=ending&section=8",
+      "screenshot": {
+        "fileName": "ending-mobile.png",
+        "bytes": 14932,
+        "sha256": "d9b1d191875be234366a1b6fd29a5424297c718340ab07d7355e657ebfe711af"
+      },
+      "hook": {
+        "chapter": {
+          "mode": "ending",
+          "section": 8,
+          "phase": "IX"
+        },
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "framebufferHash": "ddacc7f07d4537b8c33d2431b123e5f01261d21e377044b446b193a4623d243c"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered",
+          "calibrated",
+          "ending"
+        ],
+        "anchor": {
+          "selector": "#endingAnchor",
+          "text": "IX",
+          "ariaHidden": "true",
+          "opacity": "0.4",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 844,
+            "top": 0,
+            "right": 390,
+            "bottom": 844,
+            "left": 0
+          }
+        },
+        "endingPhase": {
+          "selector": ".ending-anchor-phase",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 24,
+            "y": 409.6875,
+            "width": 28.578125,
+            "height": 24.625,
+            "top": 409.6875,
+            "right": 52.578125,
+            "bottom": 434.3125,
+            "left": 24
+          }
+        },
+        "endingTrack": {
+          "selector": ".ending-anchor-progress",
+          "text": "",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 24,
+            "y": 821,
+            "width": 342,
+            "height": 1,
+            "top": 821,
+            "right": 366,
+            "bottom": 822,
+            "left": 24
+          }
+        },
+        "ritual": {
+          "selector": "#ritualCaption",
+          "text": "I\n    听。\n    LISTEN.",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 24,
+            "y": 391.5,
+            "width": 342,
+            "height": 61,
+            "top": 391.5,
+            "right": 366,
+            "bottom": 452.5,
+            "left": 24
+          }
+        },
+        "phase": {
+          "selector": "#phaseNumber",
+          "text": "IX",
+          "ariaHidden": null,
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 40,
+            "y": 326.15625,
+            "width": 95.734375,
+            "height": 24.625,
+            "top": 326.15625,
+            "right": 135.734375,
+            "bottom": 350.78125,
+            "left": 40
+          }
+        },
+        "hud": {
+          "selector": ".hud",
+          "text": "hadal record / node ix\n        第九潮汐档案馆ARCHIVE OF THE NINTH TIDE\n      \n      \n        CORE DORMANT\n        FIELD UNLIT\n        DEPTH −003953 M\n        COORD 0.000 / 0.804\n        INDEX 09–9759\n      \n    \n\n    IX无岸长夜THE SHORELESS NIGHT\n    \n    拖动：环视　滚轮：潜航点击核心：开合　点击空间：发出声呐SPACE：播放 / 暂停　M：静音　F：全屏\n\n    \n      SIGNAL SYNTHETICMODE WITHDRAWALAUDIO STANDBY\n      05:46ARCHIVE OF THE NINTH TIDE05:54\n      LOWMIDHIGH",
+          "ariaHidden": "true",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 844,
+            "top": 0,
+            "right": 390,
+            "bottom": 844,
+            "left": 0
+          }
+        },
+        "epilogue": {
+          "selector": "#epilogue",
+          "text": "IX\n      归档。\n      灯灭以后，海仍在读。\n      再次下潜",
+          "ariaHidden": null,
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "animationName": "none",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 844,
+            "top": 0,
+            "right": 390,
+            "bottom": 844,
+            "left": 0
+          }
+        },
+        "progress": "97.601%",
+        "timeNow": "05:46",
+        "timeTotal": "05:54",
+        "messageClass": "",
+        "accessibility": {
+          "statusRoles": 1,
+          "progressbarRoles": 1,
+          "liveRegions": 1,
+          "runtimeStatus": "终幕退潮中 · 第 IX 章",
+          "progressNow": "97.6",
+          "progressText": "05:46 / 05:54"
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "scrollWidth": 390,
+          "scrollHeight": 844
+        }
+      },
+      "metrics": {
+        "focus": {
+          "width": 390,
+          "height": 844,
+          "rect": {
+            "x": 16,
+            "y": 401,
+            "width": 45,
+            "height": 42
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 1890,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 313,
+          "visiblePixelRatio": 0.16560846560846562,
+          "atLeast3PixelCount": 158,
+          "atLeast3Ratio": 0.0835978835978836,
+          "atLeast4_5PixelCount": 0,
+          "atLeast4_5Ratio": 0,
+          "contrastP90": 3.4165436177015183,
+          "contrastP99": 3.4165436177015183,
+          "contrastMax": 3.455147199328988
+        },
+        "fullFrame": {
+          "width": 390,
+          "height": 844,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 844
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 329160,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 1690,
+          "visiblePixelRatio": 0.005134281200631911,
+          "atLeast3PixelCount": 165,
+          "atLeast3Ratio": 0.0005012759752096245,
+          "atLeast4_5PixelCount": 0,
+          "atLeast4_5Ratio": 0,
+          "contrastP90": 2.937937568419937,
+          "contrastP99": 3.4165436177015183,
+          "contrastMax": 3.6573664310763587
+        },
+        "track": {
+          "width": 390,
+          "height": 844,
+          "rect": {
+            "x": 16,
+            "y": 813,
+            "width": 358,
+            "height": 17
+          },
+          "background": {
+            "red": 0,
+            "green": 0,
+            "blue": 0
+          },
+          "pixelCount": 6086,
+          "visibleContrastThreshold": 1.05,
+          "visiblePixelCount": 1016,
+          "visiblePixelRatio": 0.16694051922444955,
+          "atLeast3PixelCount": 7,
+          "atLeast3Ratio": 0.0011501807426881367,
+          "atLeast4_5PixelCount": 0,
+          "atLeast4_5Ratio": 0,
+          "contrastP90": 2.888010435602464,
+          "contrastP99": 2.888010435602464,
+          "contrastMax": 3.6573664310763587
+        }
+      },
+      "consoleErrors": []
+    }
+  ],
+  "buildUrl": "http://127.0.0.1:4175/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html",
+  "transitionAudit": {
+    "mainExit": {
+      "opacity": "0",
+      "visibility": "hidden"
+    },
+    "openingExit": {
+      "opacity": "0",
+      "visibility": "hidden"
+    },
+    "endedExit": {
+      "opacity": "0",
+      "visibility": "hidden"
+    }
+  }
+}

@@ -1,0 +1,746 @@
+{
+  "schemaVersion": 1,
+  "ticket": "T-NT-04",
+  "sourceRevision": "58a38116f4fe211a34f608a4e795f05de8106f82",
+  "baseUrl": "https://hitsuki-ban.github.io/ShaderDemoRoom",
+  "capturedAt": "2026-07-21T03:53:29.970Z",
+  "browser": {
+    "playwright": "1.60.0",
+    "engine": "bundled Chromium / SwANGLE SwiftShader"
+  },
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "states": [
+    {
+      "id": "opening-5750",
+      "mode": "opening",
+      "section": 0,
+      "timestampMs": 5750,
+      "url": "https://hitsuki-ban.github.io/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=opening&section=0",
+      "hook": {
+        "mode": "opening",
+        "section": 0,
+        "timestampMs": 5750,
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "stateDigest": "8daa14782cba1f7c8b6f93083b3b105c7adc73c91d1a473c134ad4b3568b8730",
+        "framebuffer": {
+          "width": 1440,
+          "height": 900,
+          "hash": "3200649e961d7db4d5ba67e3bce61ea361b4ca6508adae5ec9141f2c5481af59"
+        },
+        "renderer": {
+          "raw": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "debugInfoAvailable": true,
+          "contextAttributes": {
+            "alpha": true,
+            "antialias": true,
+            "depth": true,
+            "desynchronized": false,
+            "failIfMajorPerformanceCaveat": false,
+            "powerPreference": "high-performance",
+            "premultipliedAlpha": true,
+            "preserveDrawingBuffer": true,
+            "stencil": false,
+            "xrCompatible": false
+          }
+        },
+        "chapter": {
+          "mode": "opening",
+          "section": 0,
+          "phase": "I"
+        },
+        "chapterNumber": 1
+      },
+      "staging": {
+        "transientMessageExpired": true,
+        "reason": "Deterministic capture suppresses the production message timeout; removing only .show reproduces the existing post-timeout gap."
+      },
+      "screenshot": {
+        "path": "output\\playwright\\t-nt-04-before\\opening-5750.png",
+        "bytes": 151864,
+        "sha256": "25e5201f6b2e1180b9be3dfa362ca7b45b2172e697c2c9caded6c269a22c0aae"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered"
+        ],
+        "variables": {
+          "blackout": "0.2435",
+          "progress": "0.005%",
+          "ritualCaption": "1.000"
+        },
+        "hud": {
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "ariaHidden": "true",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900
+          }
+        },
+        "phase": {
+          "text": "I",
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 32,
+            "y": 398,
+            "width": 102,
+            "height": 72
+          }
+        },
+        "activeTick": {
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "index": 0,
+          "rect": {
+            "x": 1381,
+            "y": 405,
+            "width": 49,
+            "height": 18
+          }
+        },
+        "progress": {
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 269,
+            "y": 867,
+            "width": 862,
+            "height": 21
+          },
+          "before": {
+            "backgroundColor": "rgb(131, 234, 219)",
+            "width": "0.03125px"
+          },
+          "after": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "left": "0.03125px"
+          }
+        },
+        "ritual": {
+          "text": "IX 它先看见了我们。 IT SAW US FIRST.",
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 382,
+            "y": 404,
+            "width": 676,
+            "height": 92
+          }
+        },
+        "message": {
+          "text": "FIRST LIGHT",
+          "className": "",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgba(209, 249, 240, 0.72)",
+          "rect": {
+            "x": 670,
+            "y": 153,
+            "width": 100,
+            "height": 41
+          }
+        },
+        "blackout": {
+          "opacity": "0.2435",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)"
+        },
+        "epilogue": {
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "color": "rgb(222, 249, 241)"
+        },
+        "transport": {
+          "timeNow": "00:00",
+          "timeTotal": "05:54"
+        },
+        "accessibility": {
+          "statusRoles": 0,
+          "progressbarRoles": 0,
+          "liveRegions": 0
+        },
+        "viewport": {
+          "innerWidth": 1440,
+          "innerHeight": 900,
+          "scrollWidth": 1440,
+          "scrollHeight": 900
+        }
+      },
+      "pixels": {
+        "phase": {
+          "pixelCount": 7344,
+          "nonBlack": 62,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1.0091215929096098,
+          "maxRgb": [
+            0,
+            2,
+            1
+          ],
+          "meanLumaCode": 0.0065285403050108935
+        },
+        "activeTick": {
+          "pixelCount": 882,
+          "nonBlack": 29,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1.0091215929096098,
+          "maxRgb": [
+            0,
+            2,
+            1
+          ],
+          "meanLumaCode": 0.025718140589569165
+        },
+        "progress": {
+          "pixelCount": 18102,
+          "nonBlack": 1885,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1.0095598858738541,
+          "maxRgb": [
+            0,
+            2,
+            2
+          ],
+          "meanLumaCode": 0.09743293558722721
+        },
+        "ritual": {
+          "pixelCount": 62192,
+          "nonBlack": 22824,
+          "contrast3": 1565,
+          "contrast45": 1376,
+          "maxContrast": 18.926366509401902,
+          "maxRgb": [
+            222,
+            249,
+            241
+          ],
+          "meanLumaCode": 6.09973143490959
+        },
+        "message": {
+          "pixelCount": 4100,
+          "nonBlack": 0,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1,
+          "maxRgb": [
+            0,
+            0,
+            0
+          ],
+          "meanLumaCode": 0
+        }
+      },
+      "ariaSnapshot": "- main \"第九潮汐档案馆三维交互光场\"\n- text: FIRST LIGHT"
+    },
+    {
+      "id": "section-8",
+      "mode": "main",
+      "section": 8,
+      "timestampMs": 342276.2,
+      "url": "https://hitsuki-ban.github.io/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=main&section=8",
+      "hook": {
+        "mode": "main",
+        "section": 8,
+        "timestampMs": 342276.2,
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "stateDigest": "12b526068cfb132471930d3081f72a8bdbf68f40112ed0721e0ea5acddf9e1a4",
+        "framebuffer": {
+          "width": 1440,
+          "height": 900,
+          "hash": "15855092a7dc382ec3c41d90478787c7b3d44f9d80767dd5e07192b36a39a496"
+        },
+        "renderer": {
+          "raw": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "debugInfoAvailable": true,
+          "contextAttributes": {
+            "alpha": true,
+            "antialias": true,
+            "depth": true,
+            "desynchronized": false,
+            "failIfMajorPerformanceCaveat": false,
+            "powerPreference": "high-performance",
+            "premultipliedAlpha": true,
+            "preserveDrawingBuffer": true,
+            "stencil": false,
+            "xrCompatible": false
+          }
+        },
+        "chapter": {
+          "mode": "main",
+          "section": 8,
+          "phase": "IX"
+        },
+        "chapterNumber": 9
+      },
+      "staging": {
+        "transientMessageExpired": true,
+        "reason": "Deterministic capture suppresses the production message timeout; removing only .show reproduces the existing post-timeout gap."
+      },
+      "screenshot": {
+        "path": "output\\playwright\\t-nt-04-before\\section-8.png",
+        "bytes": 485797,
+        "sha256": "9b1a2e5a1f0e3a18b2e26b594df24ce178b75ea795087117ba3f9229298d4cf3"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered",
+          "calibrated"
+        ],
+        "variables": {
+          "blackout": "0.0000",
+          "progress": "0.569%",
+          "ritualCaption": "0"
+        },
+        "hud": {
+          "opacity": "0.68",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "ariaHidden": "true",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900
+          }
+        },
+        "phase": {
+          "text": "IX",
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 32,
+            "y": 398,
+            "width": 112,
+            "height": 72
+          }
+        },
+        "activeTick": {
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "index": 8,
+          "rect": {
+            "x": 1381,
+            "y": 477,
+            "width": 49,
+            "height": 18
+          }
+        },
+        "progress": {
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 269,
+            "y": 867,
+            "width": 862,
+            "height": 21
+          },
+          "before": {
+            "backgroundColor": "rgb(131, 234, 219)",
+            "width": "4.78125px"
+          },
+          "after": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "left": "4.78125px"
+          }
+        },
+        "ritual": {
+          "text": "I 听。 LISTEN.",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 382,
+            "y": 404,
+            "width": 676,
+            "height": 92
+          }
+        },
+        "message": {
+          "text": "",
+          "className": "",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgba(209, 249, 240, 0.72)",
+          "rect": {
+            "x": 700,
+            "y": 153,
+            "width": 40,
+            "height": 33
+          }
+        },
+        "blackout": {
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)"
+        },
+        "epilogue": {
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "color": "rgb(222, 249, 241)"
+        },
+        "transport": {
+          "timeNow": "00:02",
+          "timeTotal": "05:54"
+        },
+        "accessibility": {
+          "statusRoles": 0,
+          "progressbarRoles": 0,
+          "liveRegions": 0
+        },
+        "viewport": {
+          "innerWidth": 1440,
+          "innerHeight": 900,
+          "scrollWidth": 1440,
+          "scrollHeight": 900
+        }
+      },
+      "pixels": {
+        "phase": {
+          "pixelCount": 8064,
+          "nonBlack": 7457,
+          "contrast3": 1043,
+          "contrast45": 957,
+          "maxContrast": 8.609074528138644,
+          "maxRgb": [
+            151,
+            170,
+            165
+          ],
+          "meanLumaCode": 25.17205176091324
+        },
+        "activeTick": {
+          "pixelCount": 882,
+          "nonBlack": 878,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 2.0784129246831227,
+          "maxRgb": [
+            42,
+            71,
+            66
+          ],
+          "meanLumaCode": 7.667303401360565
+        },
+        "progress": {
+          "pixelCount": 18102,
+          "nonBlack": 4417,
+          "contrast3": 22,
+          "contrast45": 22,
+          "maxContrast": 9.542921511805984,
+          "maxRgb": [
+            174,
+            175,
+            174
+          ],
+          "meanLumaCode": 1.4777483703457865
+        },
+        "ritual": {
+          "pixelCount": 62192,
+          "nonBlack": 41964,
+          "contrast3": 70,
+          "contrast45": 20,
+          "maxContrast": 21,
+          "maxRgb": [
+            255,
+            255,
+            255
+          ],
+          "meanLumaCode": 3.5608863551594303
+        },
+        "message": {
+          "pixelCount": 1320,
+          "nonBlack": 0,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1,
+          "maxRgb": [
+            0,
+            0,
+            0
+          ],
+          "meanLumaCode": 0
+        }
+      },
+      "ariaSnapshot": "- main \"第九潮汐档案馆三维交互光场\""
+    },
+    {
+      "id": "ending-gap",
+      "mode": "ending",
+      "section": 8,
+      "timestampMs": 346000,
+      "url": "https://hitsuki-ban.github.io/ShaderDemoRoom/exhibits/ninth-tide-archive/index.html?preview=ending&section=8",
+      "hook": {
+        "mode": "ending",
+        "section": 8,
+        "timestampMs": 346000,
+        "frameRenders": 1,
+        "queuedAnimationFrames": 0,
+        "stateDigest": "0b0334736abaecb0c17ec99bb4eee76c6b18a1753bb1f46f3656db7bcd8620c8",
+        "framebuffer": {
+          "width": 1440,
+          "height": 900,
+          "hash": "8e2dda6c06aa84f7cb6357fd5d4108bffcfa747a3a1fb2a1dd7baedabbf9c97f"
+        },
+        "renderer": {
+          "raw": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "debugInfoAvailable": true,
+          "contextAttributes": {
+            "alpha": true,
+            "antialias": true,
+            "depth": true,
+            "desynchronized": false,
+            "failIfMajorPerformanceCaveat": false,
+            "powerPreference": "high-performance",
+            "premultipliedAlpha": true,
+            "preserveDrawingBuffer": true,
+            "stencil": false,
+            "xrCompatible": false
+          }
+        },
+        "chapter": {
+          "mode": "ending",
+          "section": 8,
+          "phase": "IX"
+        },
+        "chapterNumber": 9
+      },
+      "staging": {
+        "transientMessageExpired": true,
+        "reason": "Deterministic capture suppresses the production message timeout; removing only .show reproduces the existing post-timeout gap."
+      },
+      "screenshot": {
+        "path": "output\\playwright\\t-nt-04-before\\ending-gap.png",
+        "bytes": 65163,
+        "sha256": "7312168bc89dee0a38bec736155c39c64d598801adf2b73cb946da67e079c036"
+      },
+      "dom": {
+        "bodyClasses": [
+          "entered",
+          "calibrated",
+          "ending"
+        ],
+        "variables": {
+          "blackout": "0.0000",
+          "progress": "0.005%",
+          "ritualCaption": "0"
+        },
+        "hud": {
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "ariaHidden": "true",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 900
+          }
+        },
+        "phase": {
+          "text": "IX",
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 32,
+            "y": 398,
+            "width": 112,
+            "height": 72
+          }
+        },
+        "activeTick": {
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "index": 8,
+          "rect": {
+            "x": 1381,
+            "y": 477,
+            "width": 49,
+            "height": 18
+          }
+        },
+        "progress": {
+          "opacity": "1",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 269,
+            "y": 867,
+            "width": 862,
+            "height": 21
+          },
+          "before": {
+            "backgroundColor": "rgb(131, 234, 219)",
+            "width": "0.03125px"
+          },
+          "after": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "left": "0.03125px"
+          }
+        },
+        "ritual": {
+          "text": "I 听。 LISTEN.",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)",
+          "rect": {
+            "x": 382,
+            "y": 404,
+            "width": 676,
+            "height": 92
+          }
+        },
+        "message": {
+          "text": "THE ECHO REVERSES",
+          "className": "",
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgba(209, 249, 240, 0.72)",
+          "rect": {
+            "x": 654,
+            "y": 153,
+            "width": 132,
+            "height": 41
+          }
+        },
+        "blackout": {
+          "opacity": "0",
+          "visibility": "visible",
+          "display": "block",
+          "color": "rgb(222, 249, 241)"
+        },
+        "epilogue": {
+          "opacity": "0",
+          "visibility": "hidden",
+          "display": "grid",
+          "color": "rgb(222, 249, 241)"
+        },
+        "transport": {
+          "timeNow": "00:00",
+          "timeTotal": "05:54"
+        },
+        "accessibility": {
+          "statusRoles": 0,
+          "progressbarRoles": 0,
+          "liveRegions": 0
+        },
+        "viewport": {
+          "innerWidth": 1440,
+          "innerHeight": 900,
+          "scrollWidth": 1440,
+          "scrollHeight": 900
+        }
+      },
+      "pixels": {
+        "phase": {
+          "pixelCount": 8064,
+          "nonBlack": 29,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1.0091215929096098,
+          "maxRgb": [
+            0,
+            2,
+            1
+          ],
+          "meanLumaCode": 0.0029625992063492053
+        },
+        "activeTick": {
+          "pixelCount": 882,
+          "nonBlack": 0,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1,
+          "maxRgb": [
+            0,
+            0,
+            0
+          ],
+          "meanLumaCode": 0
+        },
+        "progress": {
+          "pixelCount": 18102,
+          "nonBlack": 0,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1,
+          "maxRgb": [
+            0,
+            0,
+            0
+          ],
+          "meanLumaCode": 0
+        },
+        "ritual": {
+          "pixelCount": 62192,
+          "nonBlack": 2783,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1.193316024124114,
+          "maxRgb": [
+            13,
+            28,
+            20
+          ],
+          "meanLumaCode": 0.11029058399793985
+        },
+        "message": {
+          "pixelCount": 5412,
+          "nonBlack": 0,
+          "contrast3": 0,
+          "contrast45": 0,
+          "maxContrast": 1,
+          "maxRgb": [
+            0,
+            0,
+            0
+          ],
+          "meanLumaCode": 0
+        }
+      },
+      "ariaSnapshot": "- main \"第九潮汐档案馆三维交互光场\"\n- text: THE ECHO REVERSES"
+    }
+  ]
+}
