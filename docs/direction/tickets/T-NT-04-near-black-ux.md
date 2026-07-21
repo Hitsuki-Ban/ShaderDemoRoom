@@ -68,4 +68,4 @@
 - reduced motion: desktop ending と screenshot SHA-256 が完全一致（`ee31c8380e9b8f676223c388cb9c07377a6a0640419f0b083152a0c16cfa00d2`）。
 - Canvas 不変: opening / section IX / ending framebuffer hash は before と after でそれぞれ `3200649e…` / `15855092…` / `8e2dda6c…` のまま。既存 3×11 deterministic matrix も通過。
 - 証拠: before `t-nt-04-ending-before.png`（SHA-256 `7312168b…`）、desktop after `t-nt-04-ending-after.png`（`ee31c838…`）、mobile after `t-nt-04-ending-mobile-after.png`（`d9b1d191…`）、5 capture manifest `t-nt-04-near-black-qa-2026-07-21.json`。
-- gates: `pnpm lint`、`pnpm typecheck`、`pnpm test`（41 files / 340 tests）、`pnpm build` が再通過。生成 snapshot と browser QA は blocker 修正 commit 後に再検証する。
+- gates: blocker 修正後に `pnpm lint`、`pnpm typecheck`、`pnpm test`（41 files / 340 tests）、`pnpm build`、`pnpm exhibits:check`、`pnpm qa:ninth-tide`、`pnpm qa:ninth-tide-near-black`（5 captures）を再通過。初回実装 head では `pnpm qa:exhibits` と `pnpm qa:visual` も通過しており、現 head は PR CI で全組を再実行する。
