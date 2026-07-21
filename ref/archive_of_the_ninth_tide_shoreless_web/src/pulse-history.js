@@ -1,10 +1,6 @@
 export const MODE_LIFETIMES = Object.freeze([5.35, 4.1, 4.35, 4.0, 4.9, 4.5, 4.2, 4.05, 4.3]);
 
 const QUEUE_ADVANCE_SECONDS = 0.1;
-const TIER_CAPACITIES = Object.freeze({
-  desktop: Object.freeze({ system: 5, user: 3 }),
-  mobile: Object.freeze({ system: 2, user: 2 }),
-});
 const SOURCES = new Set(['auto', 'system', 'user']);
 const histories = new WeakMap();
 
@@ -20,6 +16,17 @@ function assertNonNegativeFinite(value, name) {
 function assertMode(mode) {
   if (!Number.isInteger(mode) || mode < 0 || mode >= MODE_LIFETIMES.length) {
     throw new RangeError(`mode must be an integer from 0 through ${MODE_LIFETIMES.length - 1}.`);
+  }
+}
+
+function assertCapacities(capacities) {
+  if (!capacities || typeof capacities !== 'object' || Array.isArray(capacities)) {
+    throw new TypeError('Pulse history capacities are required.');
+  }
+  for (const name of ['systemCapacity', 'userCapacity']) {
+    if (!Number.isInteger(capacities[name]) || capacities[name] <= 0) {
+      throw new RangeError(`${name} must be a positive integer.`);
+    }
   }
 }
 
@@ -87,12 +94,30 @@ function assertSnapshotSlot(slot, ring, clockSeconds, nextSerial, index) {
   }
 }
 
+function assertSnapshotRingLayout(slots, cursor, ring) {
+  const firstEmptyIndex = slots.indexOf(null);
+  if (firstEmptyIndex !== -1) {
+    if (cursor !== firstEmptyIndex || slots.slice(firstEmptyIndex).some((slot) => slot !== null)) {
+      throw new RangeError(`${ring}Slots and ${ring}Cursor do not form a valid ring.`);
+    }
+  }
+  const chronological = firstEmptyIndex === -1
+    ? [...slots.slice(cursor), ...slots.slice(0, cursor)]
+    : slots.slice(0, cursor);
+  for (let index = 1; index < chronological.length; index++) {
+    if (chronological[index - 1].serial >= chronological[index].serial) {
+      throw new RangeError(`${ring}Slots are not ordered by pulse serial.`);
+    }
+  }
+}
+
 function assertSnapshot(snapshot, state) {
   if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
     throw new TypeError('A pulse history snapshot is required.');
   }
-  if (snapshot.tier !== state.tier) {
-    throw new RangeError(`Snapshot tier must be '${state.tier}'.`);
+  if (snapshot.systemCapacity !== state.systemCapacity
+    || snapshot.userCapacity !== state.userCapacity) {
+    throw new RangeError('Snapshot ring capacities do not match the pulse history.');
   }
   assertNonNegativeFinite(snapshot.clockSeconds, 'snapshot.clockSeconds');
   if (!Number.isInteger(snapshot.nextSerial) || snapshot.nextSerial < 1) {
@@ -112,7 +137,7 @@ function assertSnapshot(snapshot, state) {
     || snapshot.systemSlots.length !== state.systemCapacity
     || !Array.isArray(snapshot.userSlots)
     || snapshot.userSlots.length !== state.userCapacity) {
-    throw new RangeError('Snapshot ring capacities do not match the pulse history tier.');
+    throw new RangeError('Snapshot ring capacities do not match the pulse history.');
   }
   snapshot.systemSlots.forEach((slot, index) => {
     assertSnapshotSlot(slot, 'system', snapshot.clockSeconds, snapshot.nextSerial, index);
@@ -120,6 +145,14 @@ function assertSnapshot(snapshot, state) {
   snapshot.userSlots.forEach((slot, index) => {
     assertSnapshotSlot(slot, 'user', snapshot.clockSeconds, snapshot.nextSerial, index);
   });
+  assertSnapshotRingLayout(snapshot.systemSlots, snapshot.systemCursor, 'system');
+  assertSnapshotRingLayout(snapshot.userSlots, snapshot.userCursor, 'user');
+  const serials = [...snapshot.systemSlots, ...snapshot.userSlots]
+    .filter((slot) => slot !== null)
+    .map((slot) => slot.serial);
+  if (new Set(serials).size !== serials.length) {
+    throw new RangeError('Snapshot pulse serials must be unique.');
+  }
   if (snapshot.queueAdvanceStartedAt === null) {
     if (snapshot.queueAdvanceSerial !== 0) {
       throw new RangeError('An inactive queue advance must have serial 0.');
@@ -134,6 +167,9 @@ function assertSnapshot(snapshot, state) {
       || snapshot.queueAdvanceSerial >= snapshot.nextSerial) {
       throw new RangeError('snapshot.queueAdvanceSerial is invalid.');
     }
+    if (!serials.includes(snapshot.queueAdvanceSerial)) {
+      throw new RangeError('snapshot.queueAdvanceSerial must identify a retained pulse.');
+    }
   }
 }
 
@@ -145,22 +181,20 @@ export function lifeEnvelope(age, mode) {
   return 1 - smoothProgress;
 }
 
-export function createPulseHistory(tier) {
-  const capacities = TIER_CAPACITIES[tier];
-  if (!capacities) throw new RangeError("tier must be 'desktop' or 'mobile'.");
+export function createPulseHistory(capacities) {
+  assertCapacities(capacities);
+  const { systemCapacity, userCapacity } = capacities;
 
   const history = Object.freeze({
-    tier,
-    systemCapacity: capacities.system,
-    userCapacity: capacities.user,
-    totalCapacity: capacities.system + capacities.user,
+    systemCapacity,
+    userCapacity,
+    totalCapacity: systemCapacity + userCapacity,
   });
   histories.set(history, {
-    tier,
-    systemCapacity: capacities.system,
-    userCapacity: capacities.user,
-    systemSlots: Array(capacities.system).fill(null),
-    userSlots: Array(capacities.user).fill(null),
+    systemCapacity,
+    userCapacity,
+    systemSlots: Array(systemCapacity).fill(null),
+    userSlots: Array(userCapacity).fill(null),
     systemCursor: 0,
     userCursor: 0,
     clockSeconds: 0,
@@ -308,7 +342,8 @@ export function selectNewestArtifactPulse(history) {
 export function capturePulseHistory(history) {
   const state = getState(history);
   return Object.freeze({
-    tier: state.tier,
+    systemCapacity: state.systemCapacity,
+    userCapacity: state.userCapacity,
     clockSeconds: state.clockSeconds,
     nextSerial: state.nextSerial,
     systemCursor: state.systemCursor,
@@ -331,4 +366,37 @@ export function restorePulseHistory(history, snapshot) {
   state.queueAdvanceSerial = snapshot.queueAdvanceSerial;
   state.systemSlots = snapshot.systemSlots.map(cloneSlot);
   state.userSlots = snapshot.userSlots.map(cloneSlot);
+}
+
+function projectRing(slots, capacity) {
+  const retained = slots
+    .filter((slot) => slot !== null)
+    .sort((left, right) => right.serial - left.serial)
+    .slice(0, capacity)
+    .sort((left, right) => left.serial - right.serial)
+    .map(cloneSlot);
+  return {
+    cursor: retained.length % capacity,
+    slots: [...retained, ...Array(capacity - retained.length).fill(null)],
+  };
+}
+
+export function projectPulseHistory(history, capacities) {
+  const source = getState(history);
+  assertCapacities(capacities);
+  const projected = createPulseHistory(capacities);
+  const target = getState(projected);
+  const system = projectRing(source.systemSlots, target.systemCapacity);
+  const user = projectRing(source.userSlots, target.userCapacity);
+
+  target.clockSeconds = source.clockSeconds;
+  target.nextSerial = source.nextSerial;
+  target.systemCursor = system.cursor;
+  target.userCursor = user.cursor;
+  target.queueAdvanceStartedAt = source.queueAdvanceStartedAt;
+  target.queueAdvanceSerial = source.queueAdvanceSerial;
+  target.systemSlots = system.slots;
+  target.userSlots = user.slots;
+  assertSnapshot(capturePulseHistory(projected), target);
+  return projected;
 }

@@ -260,8 +260,8 @@ async function auditSourceOwnership() {
     'main.js must instantiate DitheredOutputPass exactly once.');
   assert(!mainSource.includes('new OutputPass(') && !mainSource.includes('postprocessing/OutputPass.js'),
     'main.js still owns the legacy OutputPass path.');
-  assert(mainSource.includes('composer.addPass(ditheredOutputPass);'),
-    'main.js does not add the owned DitheredOutputPass to the composer.');
+  assert(mainSource.includes('nextComposer.addPass(nextDitheredOutputPass);'),
+    'main.js does not add the generation-owned DitheredOutputPass to its composer.');
   assert(!passSource.includes('.replace('),
     'DitheredOutputPass must not rewrite a three shader string.');
   assert(passSource.includes("three/src/renderers/shaders/ShaderChunk/tonemapping_pars_fragment.glsl.js")

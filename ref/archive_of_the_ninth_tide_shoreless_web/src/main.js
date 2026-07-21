@@ -5,6 +5,8 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { DitheredOutputPass } from './dithered-output-pass.js';
+import { resolveQualityProfile, qualityProfilesEqual } from './quality-profile.js';
+import { createStylePropertyWriter } from './style-property-writer.js';
 import {
   mapMediaTimeToVisualScore,
   mapVisualScoreTimeToEndingShutdown,
@@ -20,6 +22,7 @@ import {
   getLivePulses,
   getPulseUniformSnapshot,
   insertPulse,
+  projectPulseHistory,
   resetPulseHistory,
   restorePulseHistory,
   selectNewestArtifactPulse,
@@ -51,21 +54,32 @@ const ui = {
   runtimeStatus: $('#runtimeStatus'), archiveProgress: $('#archiveProgress'),
   cursor: $('#cursor'), message: $('#message'), audio: $('#audio'), unsupported: $('#unsupported')
 };
+const rootStyleWriter = createStylePropertyWriter(document.documentElement.style);
+const bandStyleWriters = Object.freeze({
+  low: createStylePropertyWriter(ui.low.style),
+  mid: createStylePropertyWriter(ui.mid.style),
+  high: createStylePropertyWriter(ui.high.style),
+});
 
-const isCoarse = matchMedia('(pointer: coarse)').matches;
-const isMobile = isCoarse || innerWidth < 820;
+const coarsePointerQuery = matchMedia('(pointer: coarse)');
+let qualityProfile = resolveQualityProfile({
+  width: innerWidth,
+  height: innerHeight,
+  dpr: devicePixelRatio,
+  coarse: coarsePointerQuery.matches,
+});
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const previewParams = new URLSearchParams(location.search);
 const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
 const deterministicCaptureRequested = previewParams.has('preview') || forcedPreview !== undefined;
 const defaultMainPreviewSection = 7;
-const pulseHistory = createPulseHistory(isMobile ? 'mobile' : 'desktop');
-const pulseSlotCount = isMobile ? 4 : 8;
-const pulseVectors = Array.from({ length: pulseSlotCount }, () => new THREE.Vector4());
-const pulseMetaVectors = Array.from({ length: pulseSlotCount }, () => new THREE.Vector4());
-const pulseHistoryShaderHeader = /* glsl */`
-  uniform vec4 uPulses[${pulseSlotCount}];
-  uniform vec4 uPulseMeta[${pulseSlotCount}];
+let pulseHistory = createPulseHistory(qualityProfile.pulse);
+let pulseSlotCount = qualityProfile.pulse.maxPulses;
+let pulseVectors = Array.from({ length: pulseSlotCount }, () => new THREE.Vector4());
+let pulseMetaVectors = Array.from({ length: pulseSlotCount }, () => new THREE.Vector4());
+const createPulseHistoryShaderHeader = (slotCount) => /* glsl */`
+  uniform vec4 uPulses[${slotCount}];
+  uniform vec4 uPulseMeta[${slotCount}];
   uniform float uPulseClock;
   float pulseLifetime(float mode) {
     if (mode < 0.5) return 5.35;
@@ -83,6 +97,7 @@ const pulseHistoryShaderHeader = /* glsl */`
       * exp(-age * 0.34);
   }
 `;
+let pulseHistoryShaderHeader = createPulseHistoryShaderHeader(pulseSlotCount);
 
 function mulberry32(seed) {
   let randomState = seed >>> 0;
@@ -166,25 +181,36 @@ const palettes = [
   { deep: 0x000405, fog: 0x091819, glow: 0xa9e8c9, accent: 0xfff1c7, secondary: 0x587964 }
 ].map((p) => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, new THREE.Color(v)])));
 
-let renderer;
-try {
-  renderer = new THREE.WebGLRenderer({
-    antialias: !isMobile,
-    powerPreference: 'high-performance',
-    alpha: false,
-    preserveDrawingBuffer: deterministicCaptureRequested
-  });
-} catch (error) {
-  console.error(error);
-  ui.unsupported.style.display = 'grid';
-  throw error;
+function createRenderer(profile) {
+  let nextRenderer;
+  try {
+    nextRenderer = new THREE.WebGLRenderer({
+      antialias: profile.antialias,
+      powerPreference: 'high-performance',
+      alpha: false,
+      preserveDrawingBuffer: deterministicCaptureRequested
+    });
+  } catch (error) {
+    console.error(error);
+    ui.unsupported.style.display = 'grid';
+    throw error;
+  }
+  const contextAttributes = nextRenderer.getContext().getContextAttributes();
+  if (!contextAttributes || contextAttributes.antialias !== profile.antialias) {
+    nextRenderer.forceContextLoss();
+    nextRenderer.dispose();
+    throw new Error(`Ninth Tide WebGL antialias mismatch for ${profile.tier} quality.`);
+  }
+  nextRenderer.setPixelRatio(profile.effectivePixelRatio);
+  nextRenderer.setSize(profile.width, profile.height);
+  nextRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  nextRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  nextRenderer.toneMappingExposure = 0.05;
+  nextRenderer.setClearColor(0x000304, 1);
+  return nextRenderer;
 }
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.15 : 1.6));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.05;
-renderer.setClearColor(0x000304, 1);
+
+let renderer = createRenderer(qualityProfile);
 $('#scene').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -203,6 +229,7 @@ const pointer = new THREE.Vector2();
 const pointerSmooth = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 const scratchVec3 = new THREE.Vector3();
+const cameraDesiredScratch = new THREE.Vector3();
 
 const spectrumSize = 64;
 const spectrumBytes = new Uint8Array(spectrumSize);
@@ -432,7 +459,8 @@ const perceptualField = new THREE.Mesh(new THREE.SphereGeometry(42, 64, 36), fie
 world.add(perceptualField);
 
 // ---------- Sonar floor: visible score for the acoustic wave ----------
-const floorMaterial = new THREE.ShaderMaterial({
+function createFloorMaterial() {
+  return new THREE.ShaderMaterial({
   transparent: true,
   depthWrite: false,
   blending: THREE.AdditiveBlending,
@@ -495,7 +523,9 @@ const floorMaterial = new THREE.ShaderMaterial({
       gl_FragColor = vec4(color * (0.22 + wave * 1.60 + wake * 0.18), alpha * 0.68);
     }
   `
-});
+  });
+}
+let floorMaterial = createFloorMaterial();
 const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 256), floorMaterial);
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -2.36;
@@ -522,8 +552,7 @@ for (const radius of [2.65, 3.55, 4.55]) {
 }
 
 // ---------- Archive lattice: wireframe cells containing dense spectral point clouds ----------
-function buildArchiveCells() {
-  const count = isMobile ? 45 : 81;
+function buildArchiveCells(count) {
   const cells = [];
   for (let i = 0; i < count; i++) {
     let tier;
@@ -552,7 +581,7 @@ function buildArchiveCells() {
   }
   return cells;
 }
-const archiveCells = buildArchiveCells();
+let archiveCells = buildArchiveCells(qualityProfile.assets.archiveCellCount);
 
 function transformCellPoint(cell, x, y, z) {
   const c = Math.cos(cell.rotation), s = Math.sin(cell.rotation);
@@ -597,7 +626,8 @@ function createArchiveWireGeometry(cells) {
   return geometry;
 }
 
-const archiveWireMaterial = new THREE.ShaderMaterial({
+function createArchiveWireMaterial() {
+  return new THREE.ShaderMaterial({
   transparent: true,
   depthWrite: false,
   blending: THREE.AdditiveBlending,
@@ -667,12 +697,13 @@ const archiveWireMaterial = new THREE.ShaderMaterial({
       gl_FragColor = vec4(color * (0.48 + vSpec * 1.25 + vResonance * 1.8), vAlpha);
     }
   `
-});
+  });
+}
+let archiveWireMaterial = createArchiveWireMaterial();
 const archiveWires = new THREE.LineSegments(createArchiveWireGeometry(archiveCells), archiveWireMaterial);
 world.add(archiveWires);
 
-function createArchivePointCloud(cells) {
-  const pointsPerCell = isMobile ? 72 : 156;
+function createArchivePointCloud(cells, pointsPerCell) {
   const count = cells.length * pointsPerCell;
   const positions = new Float32Array(count * 3);
   const centers = new Float32Array(count * 3);
@@ -797,7 +828,7 @@ function createArchivePointCloud(cells) {
   });
   return new THREE.Points(geometry, material);
 }
-const archivePoints = createArchivePointCloud(archiveCells);
+let archivePoints = createArchivePointCloud(archiveCells, qualityProfile.assets.archivePointsPerCell);
 world.add(archivePoints);
 
 // ---------- Kinetic resonator array: nine suspended light instruments ----------
@@ -805,7 +836,7 @@ const resonatorGroup = new THREE.Group();
 world.add(resonatorGroup);
 const resonators = [];
 const suspensionPositions = [];
-const beamGeometry = new THREE.CylinderGeometry(0.035, 1.18, 6.05, isMobile ? 20 : 40, 1, true);
+let beamGeometry = new THREE.CylinderGeometry(0.035, 1.18, 6.05, qualityProfile.assets.beamRadialSegments, 1, true);
 
 function createBeamMaterial(band, order, center, seed) {
   return new THREE.ShaderMaterial({
@@ -953,7 +984,7 @@ const sonarShellMaterial = new THREE.ShaderMaterial({
     }
   `
 });
-const sonarShell = new THREE.Mesh(new THREE.SphereGeometry(1, isMobile ? 36 : 64, isMobile ? 20 : 36), sonarShellMaterial);
+const sonarShell = new THREE.Mesh(new THREE.SphereGeometry(1, qualityProfile.assets.sonarShellWidthSegments, qualityProfile.assets.sonarShellHeightSegments), sonarShellMaterial);
 sonarShell.visible = false;
 world.add(sonarShell);
 
@@ -995,32 +1026,43 @@ const sonarCurtainMaterial = new THREE.ShaderMaterial({
     }
   `
 });
-const sonarCurtain = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, isMobile ? 48 : 96, 20, true), sonarCurtainMaterial);
+const sonarCurtain = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, qualityProfile.assets.sonarCurtainRadialSegments, 20, true), sonarCurtainMaterial);
 sonarCurtain.visible = false;
 sonarArtifacts.add(sonarCurtain);
 
-const sonarSpokeCount = isMobile ? 48 : 96;
-const sonarSpokePositions = new Float32Array(sonarSpokeCount * 2 * 3);
-const sonarSpokeGeometry = new THREE.BufferGeometry();
-sonarSpokeGeometry.setAttribute('position', new THREE.BufferAttribute(sonarSpokePositions, 3).setUsage(THREE.DynamicDrawUsage));
-const sonarSpokeMaterial = new THREE.LineBasicMaterial({ color: 0x8debdc, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
-const sonarSpokes = new THREE.LineSegments(sonarSpokeGeometry, sonarSpokeMaterial);
+function createSonarSpokeAssets(count) {
+  const positions = new Float32Array(count * 2 * 3);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+  const material = new THREE.LineBasicMaterial({ color: 0x8debdc, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  return { count, positions, geometry, material, object: new THREE.LineSegments(geometry, material) };
+}
+let {
+  count: sonarSpokeCount,
+  positions: sonarSpokePositions,
+  geometry: sonarSpokeGeometry,
+  material: sonarSpokeMaterial,
+  object: sonarSpokes,
+} = createSonarSpokeAssets(qualityProfile.assets.sonarSpokeCount);
 sonarSpokes.visible = false;
 sonarArtifacts.add(sonarSpokes);
 
-const sonarPillarCount = isMobile ? 28 : 48;
-const sonarPillars = new THREE.InstancedMesh(
-  new THREE.BoxGeometry(0.055, 1, 0.055),
-  new THREE.MeshBasicMaterial({ color: 0x79ddcf, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
-  sonarPillarCount
-);
-sonarPillars.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+function createSonarPillars(count) {
+  const pillars = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.055, 1, 0.055),
+    new THREE.MeshBasicMaterial({ color: 0x79ddcf, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+    count
+  );
+  pillars.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  return pillars;
+}
+let sonarPillarCount = qualityProfile.assets.sonarPillarCount;
+let sonarPillars = createSonarPillars(sonarPillarCount);
 sonarPillars.visible = false;
 sonarArtifacts.add(sonarPillars);
 const sonarDummy = new THREE.Object3D();
 
-function createSonarLattice() {
-  const side = isMobile ? 9 : 13;
+function createSonarLattice(side) {
   const count = side * side * side;
   const positions = new Float32Array(count * 3);
   const bands = new Float32Array(count);
@@ -1080,16 +1122,24 @@ function createSonarLattice() {
   });
   return new THREE.Points(geometry, material);
 }
-const sonarLattice = createSonarLattice();
+let sonarLattice = createSonarLattice(qualityProfile.assets.sonarLatticeSide);
 sonarLattice.visible = false;
 sonarArtifacts.add(sonarLattice);
 
-const helixSegments = isMobile ? 120 : 240;
-const helixPositions = new Float32Array(helixSegments * 2 * 3);
-const helixGeometry = new THREE.BufferGeometry();
-helixGeometry.setAttribute('position', new THREE.BufferAttribute(helixPositions, 3).setUsage(THREE.DynamicDrawUsage));
-const helixMaterial = new THREE.LineBasicMaterial({ color: 0x86e4d5, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
-const sonarHelix = new THREE.LineSegments(helixGeometry, helixMaterial);
+function createSonarHelixAssets(count) {
+  const positions = new Float32Array(count * 2 * 3);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+  const material = new THREE.LineBasicMaterial({ color: 0x86e4d5, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  return { count, positions, geometry, material, object: new THREE.LineSegments(geometry, material) };
+}
+let {
+  count: helixSegments,
+  positions: helixPositions,
+  geometry: helixGeometry,
+  material: helixMaterial,
+  object: sonarHelix,
+} = createSonarHelixAssets(qualityProfile.assets.helixSegments);
 sonarHelix.visible = false;
 sonarArtifacts.add(sonarHelix);
 
@@ -1107,12 +1157,12 @@ sonarArtifacts.add(sonarSlabs);
 
 const convergenceMaterial = sonarShellMaterial.clone();
 convergenceMaterial.uniforms = shaderUniforms(convergenceUniforms);
-const sonarConvergence = new THREE.Mesh(new THREE.SphereGeometry(1, isMobile ? 36 : 64, isMobile ? 20 : 36), convergenceMaterial);
+const sonarConvergence = new THREE.Mesh(new THREE.SphereGeometry(1, qualityProfile.assets.sonarConvergenceWidthSegments, qualityProfile.assets.sonarConvergenceHeightSegments), convergenceMaterial);
 sonarConvergence.visible = false;
 sonarArtifacts.add(sonarConvergence);
 
 const sonarNull = new THREE.Mesh(
-  new THREE.TorusGeometry(1, 0.025, 6, isMobile ? 96 : 192),
+  new THREE.TorusGeometry(1, 0.025, 6, qualityProfile.assets.nullRingTubularSegments),
   new THREE.MeshBasicMaterial({ color: 0xc6f0df, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
 );
 sonarNull.visible = false;
@@ -1193,7 +1243,7 @@ const coreMaterial = new THREE.ShaderMaterial({
     }
   `
 });
-const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.02, isMobile ? 4 : 5), coreMaterial);
+const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.02, qualityProfile.assets.coreDetail), coreMaterial);
 core.userData.interactive = 'core';
 coreGroup.add(core);
 
@@ -1214,8 +1264,9 @@ for (let i = 0; i < 9; i++) {
     color: i === 8 ? 0xe5efd1 : 0x72d9c9,
     transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
   });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, i % 3 === 0 ? 0.017 : 0.007, 5, isMobile ? 96 : 192), material);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, i % 3 === 0 ? 0.017 : 0.007, 5, qualityProfile.assets.coreRingTubularSegments), material);
   ring.rotation.set(rand(-1.1, 1.1), rand(-Math.PI, Math.PI), rand(-1.1, 1.1));
+  ring.userData.qualityBaseQuaternion = ring.quaternion.clone();
   ring.userData.speed = rand(0.032, 0.105) * (i % 2 ? -1 : 1);
   ring.userData.index = i;
   coreRings.push(ring);
@@ -1313,7 +1364,7 @@ function createForecastDust(count) {
   });
   return new THREE.Points(geometry, material);
 }
-const forecastDust = createForecastDust(isMobile ? 1200 : 2600);
+let forecastDust = createForecastDust(qualityProfile.assets.forecastDustCount);
 coreGroup.add(forecastDust);
 
 // The energy body is one data set interpreted nine different ways.  A section
@@ -1481,7 +1532,7 @@ function createEnergyBody(count) {
   });
   return new THREE.Points(geometry, material);
 }
-const energyBody = createEnergyBody(isMobile ? 4200 : 10500);
+let energyBody = createEnergyBody(qualityProfile.assets.energyBodyCount);
 energyBody.renderOrder = 4;
 coreGroup.add(energyBody);
 
@@ -1552,7 +1603,7 @@ function createMist(count) {
   });
   return new THREE.Points(geometry, material);
 }
-const mist = createMist(isMobile ? 1200 : 3300);
+let mist = createMist(qualityProfile.assets.mistCount);
 world.add(mist);
 
 // ---------- Bathypelagic depth layers ----------
@@ -1637,7 +1688,7 @@ function createNearSnow(count) {
   });
   return new THREE.Points(geometry, material);
 }
-const nearSnow = createNearSnow(isMobile ? 260 : 720);
+let nearSnow = createNearSnow(qualityProfile.assets.nearSnowCount);
 nearSnow.renderOrder = 8;
 world.add(nearSnow);
 
@@ -1723,7 +1774,7 @@ function createAbyssalSpines(count) {
   });
   return new THREE.LineSegments(geometry, material);
 }
-const abyssalSpines = createAbyssalSpines(isMobile ? 22 : 46);
+let abyssalSpines = createAbyssalSpines(qualityProfile.assets.abyssalSpineCount);
 world.add(abyssalSpines);
 
 const pressureStrata = [];
@@ -1732,9 +1783,10 @@ for (let i = 0; i < 7; i++) {
     color: 0x265b64, transparent: true, opacity: 0.012,
     blending: THREE.AdditiveBlending, depthWrite: false
   });
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(13 + i * 3.2, 0.018 + i * 0.002, 3, isMobile ? 128 : 256), material);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(13 + i * 3.2, 0.018 + i * 0.002, 3, qualityProfile.assets.pressureStrataTubularSegments), material);
   ring.position.y = -5.2 + i * 2.25;
   ring.rotation.set(Math.PI * 0.5 + rand(-0.16,0.16), rand(-0.35,0.35), rand(-0.12,0.12));
+  ring.userData.qualityBaseQuaternion = ring.quaternion.clone();
   ring.userData.seed = rand(0, 10);
   pressureStrata.push(ring);
   world.add(ring);
@@ -1751,15 +1803,22 @@ upperLight.position.set(0, 9, -5);
 scene.add(upperLight);
 
 // ---------- Post-processing: bloom, optical memory, peripheral dissolution ----------
-const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), isMobile ? 0.72 : 0.94, 0.72, 0.22);
-composer.addPass(bloom);
-const afterimage = new AfterimagePass(0.865);
-composer.addPass(afterimage);
+function createPostprocessRuntime(nextRenderer, profile) {
+  const nextComposer = new EffectComposer(nextRenderer);
+  let nextRenderPass = null;
+  let nextBloom = null;
+  let nextAfterimage = null;
+  let nextVeilPass = null;
+  let nextDitheredOutputPass = null;
+  try {
+    nextRenderPass = new RenderPass(scene, camera);
+    nextComposer.addPass(nextRenderPass);
+    nextBloom = new UnrealBloomPass(new THREE.Vector2(profile.width, profile.height), profile.bloomInitialStrength, 0.72, 0.22);
+    nextComposer.addPass(nextBloom);
+    nextAfterimage = new AfterimagePass(0.865);
+    nextComposer.addPass(nextAfterimage);
 
-const veilPass = new ShaderPass({
+    nextVeilPass = new ShaderPass({
   uniforms: {
     tDiffuse: { value: null },
     time: globals.time,
@@ -1874,10 +1933,562 @@ const veilPass = new ShaderPass({
       gl_FragColor = vec4(color, 1.0);
     }
   `
+  });
+  nextComposer.addPass(nextVeilPass);
+  nextDitheredOutputPass = new DitheredOutputPass(0);
+  nextComposer.addPass(nextDitheredOutputPass);
+  nextComposer.setPixelRatio(profile.effectivePixelRatio);
+  nextComposer.setSize(profile.width, profile.height);
+    return {
+      composer: nextComposer,
+      renderPass: nextRenderPass,
+      bloom: nextBloom,
+      afterimage: nextAfterimage,
+      veilPass: nextVeilPass,
+      ditheredOutputPass: nextDitheredOutputPass,
+    };
+  } catch (error) {
+    for (const pass of [nextBloom, nextAfterimage, nextVeilPass, nextDitheredOutputPass]) {
+      if (pass && typeof pass.dispose === 'function') pass.dispose();
+    }
+    nextComposer.dispose();
+    throw error;
+  }
+}
+
+let { composer, renderPass, bloom, afterimage, veilPass, ditheredOutputPass } = createPostprocessRuntime(renderer, qualityProfile);
+
+function createOwnedResourceSet(resources) {
+  const unique = new Set();
+  for (const resource of resources) {
+    if (!resource || typeof resource.dispose !== 'function') {
+      throw new TypeError('Ninth Tide tier-owned resources must expose dispose().');
+    }
+    if (unique.has(resource)) {
+      throw new Error('Ninth Tide tier-owned resource was registered more than once.');
+    }
+    unique.add(resource);
+  }
+  let disposed = false;
+  return Object.freeze({
+    size: unique.size,
+    dispose() {
+      if (disposed) throw new Error('Ninth Tide tier-owned resources were disposed more than once.');
+      disposed = true;
+      const errors = [];
+      for (const resource of [...unique].reverse()) {
+        try {
+          resource.dispose();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (errors.length > 0) throw new AggregateError(errors, 'Ninth Tide tier-owned resource disposal failed.');
+    },
+  });
+}
+
+function currentTierOwnedResources() {
+  return createOwnedResourceSet([
+    floorMaterial,
+    archiveWires.geometry,
+    archiveWireMaterial,
+    archivePoints.geometry,
+    archivePoints.material,
+    beamGeometry,
+    ...resonators.map(({ beam }) => beam.material),
+    sonarShell.geometry,
+    sonarCurtain.geometry,
+    sonarSpokeGeometry,
+    sonarSpokeMaterial,
+    sonarPillars,
+    sonarPillars.geometry,
+    sonarPillars.material,
+    sonarLattice.geometry,
+    sonarLattice.material,
+    helixGeometry,
+    helixMaterial,
+    sonarConvergence.geometry,
+    sonarNull.geometry,
+    core.geometry,
+    ...coreRings.map((ring) => ring.geometry),
+    forecastDust.geometry,
+    forecastDust.material,
+    energyBody.geometry,
+    energyBody.material,
+    mist.geometry,
+    mist.material,
+    nearSnow.geometry,
+    nearSnow.material,
+    abyssalSpines.geometry,
+    abyssalSpines.material,
+    ...pressureStrata.map((ring) => ring.geometry),
+  ]);
+}
+
+function disposePostprocessRuntime(runtime) {
+  for (const pass of [runtime.bloom, runtime.afterimage, runtime.veilPass, runtime.ditheredOutputPass]) {
+    if (!pass || typeof pass.dispose !== 'function') {
+      throw new TypeError('Ninth Tide postprocess passes must expose dispose().');
+    }
+    pass.dispose();
+  }
+  runtime.composer.dispose();
+}
+
+function disposeRetiredQualityGeneration(owner, postprocessRuntime, retiredRenderer) {
+  const errors = [];
+  for (const dispose of [
+    () => owner.dispose(),
+    () => disposePostprocessRuntime(postprocessRuntime),
+    () => retiredRenderer.forceContextLoss(),
+    () => retiredRenderer.dispose(),
+  ]) {
+    try {
+      dispose();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'Ninth Tide retired quality generation disposal failed.');
+  }
+}
+
+function capturePulseBinding() {
+  return { pulseHistory, pulseSlotCount, pulseVectors, pulseMetaVectors, pulseHistoryShaderHeader };
+}
+
+function activatePulseBinding(binding) {
+  pulseHistory = binding.pulseHistory;
+  pulseSlotCount = binding.pulseSlotCount;
+  pulseVectors = binding.pulseVectors;
+  pulseMetaVectors = binding.pulseMetaVectors;
+  pulseHistoryShaderHeader = binding.pulseHistoryShaderHeader;
+  globals.uPulses.value = pulseVectors;
+  globals.uPulseMeta.value = pulseMetaVectors;
+}
+
+function createProjectedPulseBinding(profile) {
+  const nextHistory = projectPulseHistory(pulseHistory, profile.pulse);
+  const slotCount = profile.pulse.maxPulses;
+  if (nextHistory.totalCapacity !== slotCount) {
+    throw new Error(`Ninth Tide projected ${nextHistory.totalCapacity} pulse slots; expected ${slotCount}.`);
+  }
+  return {
+    pulseHistory: nextHistory,
+    pulseSlotCount: slotCount,
+    pulseVectors: Array.from({ length: slotCount }, () => new THREE.Vector4()),
+    pulseMetaVectors: Array.from({ length: slotCount }, () => new THREE.Vector4()),
+    pulseHistoryShaderHeader: createPulseHistoryShaderHeader(slotCount),
+  };
+}
+
+function createResourceCollector() {
+  const resources = [];
+  const seen = new Set();
+  return {
+    own(resource) {
+      if (!resource || typeof resource.dispose !== 'function') {
+        throw new TypeError('Ninth Tide staged resources must expose dispose().');
+      }
+      if (seen.has(resource)) throw new Error('Ninth Tide staged resource was registered more than once.');
+      seen.add(resource);
+      resources.push(resource);
+      return resource;
+    },
+    finish() {
+      return createOwnedResourceSet(resources);
+    },
+    disposePartial() {
+      if (resources.length > 0) createOwnedResourceSet(resources).dispose();
+    },
+  };
+}
+
+function stageQualityGeneration(profile) {
+  const previousPulseBinding = capturePulseBinding();
+  const previousRandomState = random.getState();
+  const pulseBinding = createProjectedPulseBinding(profile);
+  const collector = createResourceCollector();
+  let nextRenderer = null;
+  let postprocess = null;
+  try {
+    activatePulseBinding(pulseBinding);
+    random.setState(0x91A7F4);
+
+    const floorMaterialNext = collector.own(createFloorMaterial());
+    const cells = buildArchiveCells(profile.assets.archiveCellCount);
+    const archiveWireGeometry = collector.own(createArchiveWireGeometry(cells));
+    const archiveWireMaterialNext = collector.own(createArchiveWireMaterial());
+    const archivePointCloud = createArchivePointCloud(cells, profile.assets.archivePointsPerCell);
+    collector.own(archivePointCloud.geometry);
+    collector.own(archivePointCloud.material);
+
+    const beamGeometryNext = collector.own(new THREE.CylinderGeometry(
+      0.035, 1.18, 6.05, profile.assets.beamRadialSegments, 1, true
+    ));
+    const beamSeeds = [];
+    const beamMaterials = resonators.map(({ root }) => {
+      const seed = rand(0, Math.PI * 2);
+      beamSeeds.push(seed);
+      return collector.own(createBeamMaterial(root.userData.band, root.userData.order, root.position, seed));
+    });
+
+    const sonarShellGeometry = collector.own(new THREE.SphereGeometry(
+      1, profile.assets.sonarShellWidthSegments, profile.assets.sonarShellHeightSegments
+    ));
+    const sonarCurtainGeometry = collector.own(new THREE.CylinderGeometry(
+      1, 1, 1, profile.assets.sonarCurtainRadialSegments, 20, true
+    ));
+    const spokeAssets = createSonarSpokeAssets(profile.assets.sonarSpokeCount);
+    collector.own(spokeAssets.geometry);
+    collector.own(spokeAssets.material);
+    const pillars = createSonarPillars(profile.assets.sonarPillarCount);
+    collector.own(pillars);
+    collector.own(pillars.geometry);
+    collector.own(pillars.material);
+    const lattice = createSonarLattice(profile.assets.sonarLatticeSide);
+    collector.own(lattice.geometry);
+    collector.own(lattice.material);
+    const helixAssetsNext = createSonarHelixAssets(profile.assets.helixSegments);
+    collector.own(helixAssetsNext.geometry);
+    collector.own(helixAssetsNext.material);
+    const sonarConvergenceGeometry = collector.own(new THREE.SphereGeometry(
+      1, profile.assets.sonarConvergenceWidthSegments, profile.assets.sonarConvergenceHeightSegments
+    ));
+    const sonarNullGeometry = collector.own(new THREE.TorusGeometry(
+      1, 0.025, 6, profile.assets.nullRingTubularSegments
+    ));
+    const coreGeometry = collector.own(new THREE.IcosahedronGeometry(1.02, profile.assets.coreDetail));
+    const coreRingStates = coreRings.map((ring, index) => {
+      const radius = 1.43 + index * 0.235;
+      const geometry = collector.own(new THREE.TorusGeometry(
+        radius, index % 3 === 0 ? 0.017 : 0.007, 5, profile.assets.coreRingTubularSegments
+      ));
+      const rotation = new THREE.Euler(rand(-1.1, 1.1), rand(-Math.PI, Math.PI), rand(-1.1, 1.1));
+      return {
+        geometry,
+        baseQuaternion: new THREE.Quaternion().setFromEuler(rotation),
+        speed: rand(0.032, 0.105) * (index % 2 ? -1 : 1),
+      };
+    });
+
+    const forecast = createForecastDust(profile.assets.forecastDustCount);
+    collector.own(forecast.geometry);
+    collector.own(forecast.material);
+    const energy = createEnergyBody(profile.assets.energyBodyCount);
+    collector.own(energy.geometry);
+    collector.own(energy.material);
+    const mistNext = createMist(profile.assets.mistCount);
+    collector.own(mistNext.geometry);
+    collector.own(mistNext.material);
+    const snow = createNearSnow(profile.assets.nearSnowCount);
+    collector.own(snow.geometry);
+    collector.own(snow.material);
+    const spines = createAbyssalSpines(profile.assets.abyssalSpineCount);
+    collector.own(spines.geometry);
+    collector.own(spines.material);
+    const pressureStates = pressureStrata.map((ring, index) => {
+      const geometry = collector.own(new THREE.TorusGeometry(
+        13 + index * 3.2, 0.018 + index * 0.002, 3, profile.assets.pressureStrataTubularSegments
+      ));
+      const rotation = new THREE.Euler(
+        Math.PI * 0.5 + rand(-0.16, 0.16), rand(-0.35, 0.35), rand(-0.12, 0.12)
+      );
+      return {
+        geometry,
+        baseQuaternion: new THREE.Quaternion().setFromEuler(rotation),
+        seed: rand(0, 10),
+      };
+    });
+
+    nextRenderer = createRenderer(profile);
+    postprocess = createPostprocessRuntime(nextRenderer, profile);
+    const nextRandomState = random.getState();
+    const owner = collector.finish();
+    activatePulseBinding(previousPulseBinding);
+    random.setState(previousRandomState);
+    return {
+      profile,
+      pulseBinding,
+      randomState: nextRandomState,
+      owner,
+      renderer: nextRenderer,
+      postprocess,
+      assets: {
+        floorMaterial: floorMaterialNext,
+        archiveCells: cells,
+        archiveWireGeometry,
+        archiveWireMaterial: archiveWireMaterialNext,
+        archivePoints: archivePointCloud,
+        beamGeometry: beamGeometryNext,
+        beamSeeds,
+        beamMaterials,
+        sonarShellGeometry,
+        sonarCurtainGeometry,
+        spokeAssets,
+        pillars,
+        lattice,
+        helixAssets: helixAssetsNext,
+        sonarConvergenceGeometry,
+        sonarNullGeometry,
+        coreGeometry,
+        coreRingStates,
+        forecastDust: forecast,
+        energyBody: energy,
+        mist: mistNext,
+        nearSnow: snow,
+        abyssalSpines: spines,
+        pressureStates,
+      },
+    };
+  } catch (error) {
+    if (postprocess) disposePostprocessRuntime(postprocess);
+    if (nextRenderer) {
+      nextRenderer.forceContextLoss();
+      nextRenderer.dispose();
+    }
+    collector.disposePartial();
+    activatePulseBinding(previousPulseBinding);
+    random.setState(previousRandomState);
+    throw error;
+  }
+}
+
+function replaceTierObject(current, replacement) {
+  const parent = current.parent;
+  if (!parent) throw new Error('Ninth Tide cannot replace a detached tier-owned object.');
+  const index = parent.children.indexOf(current);
+  if (index < 0) throw new Error('Ninth Tide tier-owned parent does not contain its object.');
+  replacement.position.copy(current.position);
+  replacement.quaternion.copy(current.quaternion);
+  replacement.scale.copy(current.scale);
+  replacement.visible = current.visible;
+  replacement.renderOrder = current.renderOrder;
+  replacement.frustumCulled = current.frustumCulled;
+  parent.remove(current);
+  parent.add(replacement);
+  const appendedIndex = parent.children.indexOf(replacement);
+  parent.children.splice(appendedIndex, 1);
+  parent.children.splice(index, 0, replacement);
+}
+
+function preserveAccumulatedPose(object, nextBaseQuaternion) {
+  const previousBase = object.userData.qualityBaseQuaternion;
+  if (!(previousBase instanceof THREE.Quaternion)) {
+    throw new Error('Ninth Tide tier-owned pose is missing its base quaternion.');
+  }
+  const delta = object.quaternion.clone().multiply(previousBase.clone().invert());
+  object.quaternion.copy(delta.multiply(nextBaseQuaternion));
+  object.userData.qualityBaseQuaternion = nextBaseQuaternion.clone();
+}
+
+let qualityGeneration = Object.freeze({
+  number: 1,
+  profile: qualityProfile,
+  owner: currentTierOwnedResources(),
 });
-composer.addPass(veilPass);
-const ditheredOutputPass = new DitheredOutputPass(0);
-composer.addPass(ditheredOutputPass);
+let lastDisposedQualityGeneration = null;
+let lastRejectedQualityGeneration = null;
+let qualityCommitFault = null;
+const qualitySizingOperations = {
+  rendererPixelRatio: 0,
+  rendererSize: 0,
+  composerPixelRatio: 0,
+  composerSize: 0,
+};
+
+function assertTierObjectAttached(object, label) {
+  if (!object.parent || !object.parent.children.includes(object)) {
+    throw new Error(`Ninth Tide ${label} is detached before quality commit.`);
+  }
+}
+
+function assertQualityCommitReady(staged) {
+  if (qualityCommitFault === 'before-live-swap') {
+    throw new Error('Ninth Tide injected quality commit failure before live swap.');
+  }
+  if (!staged || staged.owner === qualityGeneration.owner) {
+    throw new Error('Ninth Tide staged generation must have independent ownership.');
+  }
+  const next = staged.assets;
+  if (next.beamMaterials.length !== resonators.length
+    || next.coreRingStates.length !== coreRings.length
+    || next.pressureStates.length !== pressureStrata.length) {
+    throw new Error('Ninth Tide staged generation has incomplete tier-owned arrays.');
+  }
+  for (const [label, object] of [
+    ['archive points', archivePoints],
+    ['sonar spokes', sonarSpokes],
+    ['sonar pillars', sonarPillars],
+    ['sonar lattice', sonarLattice],
+    ['sonar helix', sonarHelix],
+    ['forecast dust', forecastDust],
+    ['energy body', energyBody],
+    ['mist', mist],
+    ['near snow', nearSnow],
+    ['abyssal spines', abyssalSpines],
+  ]) {
+    assertTierObjectAttached(object, label);
+  }
+  for (const object of [...coreRings, ...pressureStrata]) {
+    if (!(object.userData.qualityBaseQuaternion instanceof THREE.Quaternion)) {
+      throw new Error('Ninth Tide tier-owned pose is missing its base quaternion.');
+    }
+  }
+  if (next.pillars.instanceMatrix.usage !== THREE.DynamicDrawUsage) {
+    throw new Error('Ninth Tide staged sonar pillars must use dynamic instance matrices.');
+  }
+  const sceneElement = $('#scene');
+  if (renderer.domElement.parentNode !== sceneElement
+    || staged.renderer.domElement.parentNode !== null) {
+    throw new Error('Ninth Tide renderer canvases are not ready for atomic quality commit.');
+  }
+}
+
+function disposeStagedQualityGeneration(staged) {
+  const errors = [];
+  for (const dispose of [
+    () => staged.owner.dispose(),
+    () => disposePostprocessRuntime(staged.postprocess),
+    () => staged.renderer.forceContextLoss(),
+    () => staged.renderer.dispose(),
+  ]) {
+    try {
+      dispose();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'Ninth Tide staged quality generation cleanup failed.');
+  }
+  return Object.freeze({
+    resourceCount: staged.owner.size,
+    contextLost: staged.renderer.getContext().isContextLost(),
+  });
+}
+
+function commitQualityGeneration(staged) {
+  assertQualityCommitReady(staged);
+  const oldGeneration = qualityGeneration;
+  const oldRenderer = renderer;
+  const oldCanvas = oldRenderer.domElement;
+  const oldPostprocess = { composer, renderPass, bloom, afterimage, veilPass, ditheredOutputPass };
+  const next = staged.assets;
+
+  floor.material = next.floorMaterial;
+  floorMaterial = next.floorMaterial;
+  archiveCells = next.archiveCells;
+  archiveWires.geometry = next.archiveWireGeometry;
+  archiveWires.material = next.archiveWireMaterial;
+  archiveWireMaterial = next.archiveWireMaterial;
+  replaceTierObject(archivePoints, next.archivePoints);
+  archivePoints = next.archivePoints;
+  beamGeometry = next.beamGeometry;
+  resonators.forEach(({ root, beam }, index) => {
+    beam.geometry = beamGeometry;
+    beam.material = next.beamMaterials[index];
+    root.userData.seed = next.beamSeeds[index];
+  });
+  sonarShell.geometry = next.sonarShellGeometry;
+  sonarCurtain.geometry = next.sonarCurtainGeometry;
+
+  replaceTierObject(sonarSpokes, next.spokeAssets.object);
+  sonarSpokeCount = next.spokeAssets.count;
+  sonarSpokePositions = next.spokeAssets.positions;
+  sonarSpokeGeometry = next.spokeAssets.geometry;
+  sonarSpokeMaterial = next.spokeAssets.material;
+  sonarSpokes = next.spokeAssets.object;
+  replaceTierObject(sonarPillars, next.pillars);
+  sonarPillarCount = staged.profile.assets.sonarPillarCount;
+  sonarPillars = next.pillars;
+  replaceTierObject(sonarLattice, next.lattice);
+  sonarLattice = next.lattice;
+  replaceTierObject(sonarHelix, next.helixAssets.object);
+  helixSegments = next.helixAssets.count;
+  helixPositions = next.helixAssets.positions;
+  helixGeometry = next.helixAssets.geometry;
+  helixMaterial = next.helixAssets.material;
+  sonarHelix = next.helixAssets.object;
+
+  sonarConvergence.geometry = next.sonarConvergenceGeometry;
+  sonarNull.geometry = next.sonarNullGeometry;
+  core.geometry = next.coreGeometry;
+  coreRings.forEach((ring, index) => {
+    const ringState = next.coreRingStates[index];
+    preserveAccumulatedPose(ring, ringState.baseQuaternion);
+    ring.geometry = ringState.geometry;
+    ring.userData.speed = ringState.speed;
+  });
+  replaceTierObject(forecastDust, next.forecastDust);
+  forecastDust = next.forecastDust;
+  replaceTierObject(energyBody, next.energyBody);
+  energyBody = next.energyBody;
+  replaceTierObject(mist, next.mist);
+  mist = next.mist;
+  replaceTierObject(nearSnow, next.nearSnow);
+  nearSnow = next.nearSnow;
+  replaceTierObject(abyssalSpines, next.abyssalSpines);
+  abyssalSpines = next.abyssalSpines;
+  pressureStrata.forEach((ring, index) => {
+    const pressureState = next.pressureStates[index];
+    preserveAccumulatedPose(ring, pressureState.baseQuaternion);
+    ring.geometry = pressureState.geometry;
+    ring.userData.seed = pressureState.seed;
+  });
+
+  const sceneElement = $('#scene');
+  sceneElement.replaceChild(staged.renderer.domElement, oldCanvas);
+  activatePulseBinding(staged.pulseBinding);
+  qualityProfile = staged.profile;
+  random.setState(staged.randomState);
+  renderer = staged.renderer;
+  ({ composer, renderPass, bloom, afterimage, veilPass, ditheredOutputPass } = staged.postprocess);
+  camera.aspect = qualityProfile.width / qualityProfile.height;
+  camera.updateProjectionMatrix();
+  globals.pixelRatio.value = qualityProfile.effectivePixelRatio;
+  globals.resolution.value.set(
+    qualityProfile.width * qualityProfile.effectivePixelRatio,
+    qualityProfile.height * qualityProfile.effectivePixelRatio
+  );
+  syncPulseState();
+  qualityGeneration = Object.freeze({
+    number: oldGeneration.number + 1,
+    profile: qualityProfile,
+    owner: staged.owner,
+  });
+
+  lastDisposedQualityGeneration = Object.freeze({
+    number: oldGeneration.number,
+    resourceCount: oldGeneration.owner.size,
+  });
+  disposeRetiredQualityGeneration(oldGeneration.owner, oldPostprocess, oldRenderer);
+}
+
+function commitOrDisposeStagedQualityGeneration(staged) {
+  try {
+    commitQualityGeneration(staged);
+  } catch (error) {
+    if (qualityGeneration.owner !== staged.owner) {
+      try {
+        const cleanup = disposeStagedQualityGeneration(staged);
+        lastRejectedQualityGeneration = Object.freeze({
+          resourceCount: cleanup.resourceCount,
+          contextLost: cleanup.contextLost,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          'Ninth Tide quality commit and staged cleanup both failed.'
+        );
+      }
+    }
+    throw error;
+  }
+}
 
 // ---------- Audio graph ----------
 let audioContext = null;
@@ -1931,6 +2542,7 @@ let lifecycleAudioStartPending = false;
 let mediaTransition = Promise.resolve();
 let deterministicCaptureActive = false;
 let deterministicStepActive = false;
+let deterministicBaseline = null;
 let deterministicDitherScenarioActive = false;
 let deterministicDitherSeedOverride = null;
 let frameRenderCount = 0;
@@ -2223,7 +2835,7 @@ function resetExperienceState() {
   globals.sectionLocal.value = 0;
   globals.phaseTransition.value = 0;
   syncPulseState();
-  document.documentElement.style.setProperty('--phase-veil', '0');
+  rootStyleWriter.set('--phase-veil', '0');
   state.diveTarget = 0.12;
   state.yawTarget = 0;
   state.pitchTarget = 0.07;
@@ -2233,8 +2845,8 @@ function resetExperienceState() {
   ui.coreState.textContent = 'CALIBRATING';
   ui.fieldState.textContent = 'DARK ADAPTATION';
   ui.mode.textContent = 'CALIBRATION';
-  document.documentElement.style.setProperty('--blackout', '1');
-  document.documentElement.style.setProperty('--ritual-caption', '0');
+  rootStyleWriter.set('--blackout', '1');
+  rootStyleWriter.set('--ritual-caption', '0');
 }
 
 async function enterExperience(withAudio, restarting = false) {
@@ -2425,9 +3037,9 @@ function updateAudio(dt, elapsed) {
   globals.energy.value = state.energy;
   globals.transient.value = state.transient;
 
-  ui.low.style.setProperty('--v', clamp(state.low * 1.75, 0, 1).toFixed(3));
-  ui.mid.style.setProperty('--v', clamp(state.mid * 1.95, 0, 1).toFixed(3));
-  ui.high.style.setProperty('--v', clamp(state.high * 2.8, 0, 1).toFixed(3));
+  bandStyleWriters.low.set('--v', clamp(state.low * 1.75, 0, 1).toFixed(3));
+  bandStyleWriters.mid.set('--v', clamp(state.mid * 1.95, 0, 1).toFixed(3));
+  bandStyleWriters.high.set('--v', clamp(state.high * 2.8, 0, 1).toFixed(3));
 
   if (gainNode && audioContext) {
     const introGain = smoothstep(0.12, reducedMotion ? 0.55 : 1.75, state.ceremonyTime);
@@ -2580,7 +3192,7 @@ function updateRitualCaption(t) {
   ui.ritualMain.textContent = main;
   ui.ritualSub.textContent = sub;
   const opacity = smoothstep(0.18, 0.62, t) * (1 - smoothstep(8.0, 9.1, t));
-  document.documentElement.style.setProperty('--ritual-caption', opacity.toFixed(3));
+  rootStyleWriter.set('--ritual-caption', opacity.toFixed(3));
 }
 
 function updateCeremony(dt) {
@@ -2616,7 +3228,7 @@ function updateCeremony(dt) {
     ui.fieldState.textContent = 'LIVE / 64 BANDS';
     ui.mode.textContent = 'OBSERVATION';
     setRuntimeStatus('第 I 章 · 无月测深');
-    document.documentElement.style.setProperty('--ritual-caption', '0');
+    rootStyleWriter.set('--ritual-caption', '0');
   }
 }
 
@@ -2633,7 +3245,7 @@ function finishEnding() {
   ui.audioState.textContent = 'CLOSED';
   ui.coreState.textContent = 'EXTINGUISHED';
   ui.fieldState.textContent = 'NO RETURN';
-  document.documentElement.style.setProperty('--blackout', '1');
+  rootStyleWriter.set('--blackout', '1');
 }
 
 function updateEnding(visualScoreTime) {
@@ -2733,8 +3345,8 @@ function updateTide(musicTime, dt) {
 
   state.phaseTransition = state.pendingTide >= 0 ? Math.pow(Math.sin(transitionProgress * Math.PI), 1.18) : 0;
   globals.phaseTransition.value = state.phaseTransition;
-  document.documentElement.style.setProperty('--phase-veil', (state.phaseTransition * 0.72).toFixed(3));
-  document.documentElement.style.setProperty('--phase-turn', state.phaseTransition.toFixed(3));
+  rootStyleWriter.set('--phase-veil', (state.phaseTransition * 0.72).toFixed(3));
+  rootStyleWriter.set('--phase-turn', state.phaseTransition.toFixed(3));
 
   const startTime = sectionBoundaries[state.tideIndex];
   const endTime = sectionBoundaries[state.tideIndex + 1];
@@ -2789,12 +3401,12 @@ function updateCamera(dt) {
   const pitch = state.pitch + pointerSmooth.y * (state.dragging ? 0.01 : 0.05) - state.shutdown * 0.035;
   const targetY = 0.17 + state.dive * 0.22;
   const horizontal = Math.cos(pitch) * radius;
-  const desired = new THREE.Vector3(
+  cameraDesiredScratch.set(
     Math.sin(yaw) * horizontal,
     targetY + Math.sin(pitch) * radius * 0.67,
     Math.cos(yaw) * horizontal
   );
-  camera.position.lerp(desired, 1 - Math.exp(-dt * 4.2));
+  camera.position.lerp(cameraDesiredScratch, 1 - Math.exp(-dt * 4.2));
   camera.lookAt(0, targetY, 0);
   camera.rotation.z = damp(camera.rotation.z, -pointerSmooth.x * 0.007 - state.transient * 0.003, 4.0, dt);
   const depthMeters = Math.round(3860 + state.dive * 740);
@@ -3166,7 +3778,7 @@ function updateWorld(dt, elapsed) {
   upperLight.intensity = 0.55 * state.ritual * (1 - state.shutdown) + state.high * 1.6 + state.phaseTransition * 1.8;
   hemi.intensity = 0.035 + state.ritual * 0.115;
   const bloomProfiles = [0.52,0.64,0.58,0.49,0.68,0.60,0.50,0.72,0.38];
-  bloom.strength = ((isMobile ? 0.42 : bloomProfiles[state.tideIndex]) + state.energy * 0.54 + state.archiveOpen * 0.05 + state.phaseTransition * 0.65) * (0.22 + state.lightLevel * 0.78) * (1 - smoothstep(0.78, 1.0, state.shutdown) * 0.72);
+  bloom.strength = ((qualityProfile.tier === 'mobile' ? 0.42 : bloomProfiles[state.tideIndex]) + state.energy * 0.54 + state.archiveOpen * 0.05 + state.phaseTransition * 0.65) * (0.22 + state.lightLevel * 0.78) * (1 - smoothstep(0.78, 1.0, state.shutdown) * 0.72);
   bloom.radius = 0.64 + state.high * 0.10 + state.phaseTransition * 0.15 + state.shutdown * 0.08;
   const memoryProfile = state.tideIndex === 5 ? 0.905 : state.tideIndex === 7 ? 0.925 : state.tideIndex === 8 ? 0.94 : 0.86;
   afterimage.uniforms.damp.value = state.shutdown > 0.45 ? lerp(0.90, 0.982, smoothstep(0.45, 0.9, state.shutdown)) : memoryProfile + state.high * 0.018 + state.phaseTransition * 0.035;
@@ -3175,11 +3787,11 @@ function updateWorld(dt, elapsed) {
 
   const finalBlack = smoothstep(0.72, 1.0, state.shutdown);
   const blackout = Math.max(1 - state.lightLevel, finalBlack);
-  document.documentElement.style.setProperty('--blackout', blackout.toFixed(4));
+  rootStyleWriter.set('--blackout', blackout.toFixed(4));
 }
 
 function updateHover() {
-  if (isCoarse || state.dragging || !state.calibrated || state.ending) return;
+  if (qualityProfile.coarse || state.dragging || !state.calibrated || state.ending) return;
   raycaster.setFromCamera(pointer, camera);
   const hit = raycaster.intersectObject(core, false).length > 0;
   if (hit !== state.coreHovered) {
@@ -3193,7 +3805,7 @@ function updateTransport(visualScoreTime, duration) {
   const current = state.audioReady ? progress * duration : visualScoreTime;
   ui.timeNow.textContent = formatTime(current);
   ui.timeTotal.textContent = formatTime(duration);
-  document.documentElement.style.setProperty('--progress', `${(progress * 100).toFixed(3)}%`);
+  rootStyleWriter.set('--progress', `${(progress * 100).toFixed(3)}%`);
   ui.index.textContent = `09–${String(Math.floor(progress * 9999)).padStart(4, '0')}`;
   ui.archiveProgress.setAttribute('aria-valuenow', (progress * 100).toFixed(1));
   ui.archiveProgress.setAttribute('aria-valuetext', `${formatTime(current)} / ${formatTime(duration)}`);
@@ -3241,6 +3853,7 @@ function renderFrame(dt, elapsed) {
 function animate(timestamp) {
   animationFrameId = null;
   if (runtimePaused || deterministicCaptureActive || deterministicStepActive) return;
+  reconcileQualityIfNeeded();
   timer.update(timestamp);
   const dt = clamp(timer.getDelta(), 0, 0.05);
   const elapsed = timer.getElapsed();
@@ -3249,19 +3862,243 @@ function animate(timestamp) {
   requestNextFrame();
 }
 
-function resize() {
-  const width = innerWidth;
-  const height = innerHeight;
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
-  const ratio = Math.min(devicePixelRatio, isMobile ? 1.15 : 1.6);
-  renderer.setPixelRatio(ratio);
-  renderer.setSize(width, height);
-  composer.setSize(width, height);
-  globals.pixelRatio.value = ratio;
-  globals.resolution.value.set(width * ratio, height * ratio);
+let qualityReconcilePending = false;
+let dprResolutionQuery = null;
+
+function readCurrentQualityProfile() {
+  return resolveQualityProfile({
+    width: innerWidth,
+    height: innerHeight,
+    dpr: devicePixelRatio,
+    coarse: coarsePointerQuery.matches,
+  });
 }
-window.addEventListener('resize', resize);
+
+function scheduleQualityReconcile() {
+  qualityReconcilePending = true;
+  requestNextFrame();
+}
+
+function bindDprResolutionQuery() {
+  if (dprResolutionQuery) {
+    dprResolutionQuery.removeEventListener('change', scheduleQualityReconcile);
+  }
+  dprResolutionQuery = matchMedia(`(resolution: ${qualityProfile.devicePixelRatio}dppx)`);
+  dprResolutionQuery.addEventListener('change', scheduleQualityReconcile);
+}
+
+function applySameTierQualityProfile(nextProfile) {
+  if (nextProfile.tier !== qualityProfile.tier) {
+    throw new Error('Ninth Tide same-tier resize received a different quality tier.');
+  }
+  const pixelRatioChanged = nextProfile.effectivePixelRatio !== qualityProfile.effectivePixelRatio;
+  const sizeChanged = nextProfile.width !== qualityProfile.width
+    || nextProfile.height !== qualityProfile.height;
+  if (pixelRatioChanged) {
+    qualitySizingOperations.rendererPixelRatio += 1;
+    renderer.setPixelRatio(nextProfile.effectivePixelRatio);
+    qualitySizingOperations.composerPixelRatio += 1;
+    composer.setPixelRatio(nextProfile.effectivePixelRatio);
+    globals.pixelRatio.value = nextProfile.effectivePixelRatio;
+  }
+  if (sizeChanged) {
+    qualitySizingOperations.rendererSize += 1;
+    renderer.setSize(nextProfile.width, nextProfile.height);
+    qualitySizingOperations.composerSize += 1;
+    composer.setSize(nextProfile.width, nextProfile.height);
+    camera.aspect = nextProfile.width / nextProfile.height;
+    camera.updateProjectionMatrix();
+  }
+  if (pixelRatioChanged || sizeChanged) {
+    globals.resolution.value.set(
+      nextProfile.width * nextProfile.effectivePixelRatio,
+      nextProfile.height * nextProfile.effectivePixelRatio
+    );
+  }
+  qualityProfile = nextProfile;
+  qualityGeneration = Object.freeze({
+    number: qualityGeneration.number,
+    profile: nextProfile,
+    owner: qualityGeneration.owner,
+  });
+}
+
+function assertAppliedQualityProfile() {
+  if (renderer.getPixelRatio() !== qualityProfile.effectivePixelRatio) {
+    throw new Error('Ninth Tide renderer pixel ratio diverged from the quality profile.');
+  }
+  const gl = renderer.getContext();
+  const attributes = gl.getContextAttributes();
+  if (!attributes || attributes.antialias !== qualityProfile.antialias) {
+    throw new Error('Ninth Tide renderer context diverged from the quality profile.');
+  }
+  const expectedWidth = Math.floor(qualityProfile.width * qualityProfile.effectivePixelRatio);
+  const expectedHeight = Math.floor(qualityProfile.height * qualityProfile.effectivePixelRatio);
+  const expectedComposerWidth = qualityProfile.width * qualityProfile.effectivePixelRatio;
+  const expectedComposerHeight = qualityProfile.height * qualityProfile.effectivePixelRatio;
+  if (gl.drawingBufferWidth !== expectedWidth || gl.drawingBufferHeight !== expectedHeight
+    || composer.readBuffer.width !== expectedComposerWidth || composer.readBuffer.height !== expectedComposerHeight
+    || composer.writeBuffer.width !== expectedComposerWidth || composer.writeBuffer.height !== expectedComposerHeight) {
+    throw new Error('Ninth Tide renderer/composer dimensions diverged from the quality profile.');
+  }
+}
+
+function reconcileQualityIfNeeded(force = false) {
+  if (!qualityReconcilePending && !force) return false;
+  if (deterministicStepActive || deterministicDitherScenarioActive) {
+    throw new Error('Ninth Tide quality reconcile cannot overlap deterministic capture.');
+  }
+  qualityReconcilePending = false;
+  const nextProfile = readCurrentQualityProfile();
+  if (qualityProfilesEqual(nextProfile, qualityProfile)) {
+    bindDprResolutionQuery();
+    assertAppliedQualityProfile();
+    return false;
+  }
+  if (deterministicCaptureRequested) restoreDeterministicBaseline();
+  if (nextProfile.tier === qualityProfile.tier) {
+    applySameTierQualityProfile(nextProfile);
+  } else {
+    const staged = stageQualityGeneration(nextProfile);
+    commitOrDisposeStagedQualityGeneration(staged);
+  }
+  if (deterministicCaptureRequested) deterministicBaseline = captureDeterministicBaseline();
+  bindDprResolutionQuery();
+  assertAppliedQualityProfile();
+  return true;
+}
+
+function inspectQualityRuntime() {
+  const gl = renderer.getContext();
+  return Object.freeze({
+    generation: qualityGeneration.number,
+    profile: qualityProfile,
+    pulseSlots: pulseSlotCount,
+    canvasCount: $('#scene').querySelectorAll('canvas').length,
+    contextAntialias: gl.getContextAttributes()?.antialias,
+    rendererPixelRatio: renderer.getPixelRatio(),
+    drawingBuffer: Object.freeze({ width: gl.drawingBufferWidth, height: gl.drawingBufferHeight }),
+    composerReadBuffer: Object.freeze({ width: composer.readBuffer.width, height: composer.readBuffer.height }),
+    composerWriteBuffer: Object.freeze({ width: composer.writeBuffer.width, height: composer.writeBuffer.height }),
+    counts: Object.freeze({
+      archiveCellCount: archiveCells.length,
+      archivePointCount: archivePoints.geometry.getAttribute('position').count,
+      beamRadialSegments: beamGeometry.parameters.radialSegments,
+      sonarShellWidthSegments: sonarShell.geometry.parameters.widthSegments,
+      sonarShellHeightSegments: sonarShell.geometry.parameters.heightSegments,
+      sonarCurtainRadialSegments: sonarCurtain.geometry.parameters.radialSegments,
+      sonarSpokeCount,
+      sonarPillarCount,
+      sonarLatticePointCount: sonarLattice.geometry.getAttribute('position').count,
+      helixSegments,
+      sonarConvergenceWidthSegments: sonarConvergence.geometry.parameters.widthSegments,
+      sonarConvergenceHeightSegments: sonarConvergence.geometry.parameters.heightSegments,
+      nullRingTubularSegments: sonarNull.geometry.parameters.tubularSegments,
+      coreDetail: core.geometry.parameters.detail,
+      coreRingTubularSegments: Object.freeze(coreRings.map((ring) => ring.geometry.parameters.tubularSegments)),
+      forecastDustCount: forecastDust.geometry.getAttribute('position').count,
+      energyBodyCount: energyBody.geometry.getAttribute('position').count,
+      mistCount: mist.geometry.getAttribute('position').count,
+      nearSnowCount: nearSnow.geometry.getAttribute('position').count,
+      abyssalSpineVertices: abyssalSpines.geometry.getAttribute('position').count,
+      pressureStrataTubularSegments: Object.freeze(
+        pressureStrata.map((ring) => ring.geometry.parameters.tubularSegments)
+      ),
+    }),
+    memory: Object.freeze({ ...renderer.info.memory }),
+    currentOwnedResources: qualityGeneration.owner.size,
+    lastDisposedGeneration: lastDisposedQualityGeneration,
+    lastRejectedGeneration: lastRejectedQualityGeneration,
+    sonarPillarDynamic: sonarPillars.instanceMatrix.usage === THREE.DynamicDrawUsage,
+    sizingOperations: Object.freeze({ ...qualitySizingOperations }),
+  });
+}
+
+function renderStaticQualityFrames(count) {
+  if (!Number.isInteger(count) || count < 1 || count > 120) {
+    throw new RangeError('Ninth Tide static quality frame count must be an integer from 1 through 120.');
+  }
+  if (deterministicCaptureActive || deterministicStepActive) {
+    throw new Error('Ninth Tide static quality frames cannot overlap deterministic capture.');
+  }
+  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+  animationFrameId = null;
+  deterministicStepActive = true;
+  const elapsed = globals.time.value;
+  const before = frameRenderCount;
+  try {
+    for (let index = 0; index < count; index++) renderFrame(0, elapsed);
+  } finally {
+    deterministicStepActive = false;
+    requestNextFrame();
+  }
+  const rendered = frameRenderCount - before;
+  if (rendered !== count) {
+    throw new Error(`Ninth Tide static quality audit rendered ${rendered} frames; expected ${count}.`);
+  }
+  return Object.freeze({ rendered, elapsed });
+}
+
+function auditRejectedQualityCommit() {
+  if (deterministicStepActive || deterministicDitherScenarioActive || qualityCommitFault !== null) {
+    throw new Error('Ninth Tide rejected-commit audit cannot overlap another lifecycle operation.');
+  }
+  const before = {
+    generation: qualityGeneration,
+    renderer,
+    composer,
+    pulse: capturePulseBinding(),
+    randomState: random.getState(),
+  };
+  const auditProfile = resolveQualityProfile({
+    width: qualityProfile.tier === 'desktop' ? 819 : 820,
+    height: qualityProfile.height,
+    dpr: qualityProfile.devicePixelRatio,
+    coarse: false,
+  });
+  const staged = stageQualityGeneration(auditProfile);
+  let injectedError = null;
+  qualityCommitFault = 'before-live-swap';
+  try {
+    commitOrDisposeStagedQualityGeneration(staged);
+  } catch (error) {
+    injectedError = error;
+  } finally {
+    qualityCommitFault = null;
+  }
+  if (!(injectedError instanceof Error)
+    || injectedError.message !== 'Ninth Tide injected quality commit failure before live swap.') {
+    throw new Error('Ninth Tide rejected-commit audit did not observe the injected failure.');
+  }
+  const pulse = capturePulseBinding();
+  if (qualityGeneration !== before.generation
+    || renderer !== before.renderer
+    || composer !== before.composer
+    || pulse.pulseHistory !== before.pulse.pulseHistory
+    || pulse.pulseVectors !== before.pulse.pulseVectors
+    || pulse.pulseMetaVectors !== before.pulse.pulseMetaVectors
+    || random.getState() !== before.randomState) {
+    throw new Error('Ninth Tide rejected quality commit changed the live generation.');
+  }
+  return Object.freeze({
+    message: injectedError.message,
+    generation: qualityGeneration.number,
+    rejection: lastRejectedQualityGeneration,
+  });
+}
+
+window.addEventListener('resize', scheduleQualityReconcile);
+coarsePointerQuery.addEventListener('change', scheduleQualityReconcile);
+bindDprResolutionQuery();
+window.__NINTH_TIDE_QUALITY__ = Object.freeze({
+  inspect: inspectQualityRuntime,
+  reconcile() {
+    qualityReconcilePending = true;
+    return reconcileQualityIfNeeded(true);
+  },
+  staticFrames: renderStaticQualityFrames,
+  auditRejectedCommit: auditRejectedQualityCommit,
+});
 
 function applyPreview(mode, section) {
   if (!['opening', 'main', 'ending'].includes(mode)) {
@@ -3307,7 +4144,7 @@ function applyPreview(mode, section) {
   document.body.classList.toggle('calibrated', state.calibrated);
   document.body.classList.toggle('ending', mode === 'ending');
   document.body.classList.remove('ended');
-  document.documentElement.style.setProperty('--blackout', mode === 'opening' ? '0.28' : '0');
+  rootStyleWriter.set('--blackout', mode === 'opening' ? '0.28' : '0');
   const meta = tideMeta[section];
   ui.phaseNumber.textContent = meta[0];
   ui.phaseName.textContent = meta[1];
@@ -3649,11 +4486,11 @@ function inspectRenderer(gl) {
 }
 
 function inspectPulseUniformBudget() {
-  const systemSlots = isMobile ? 2 : 5;
-  const userSlots = isMobile ? 2 : 3;
+  const systemSlots = qualityProfile.pulse.systemCapacity;
+  const userSlots = qualityProfile.pulse.userCapacity;
   const addedVectorsPerStage = pulseSlotCount * 2;
   return {
-    tier: isMobile ? 'mobile' : 'desktop',
+    tier: qualityProfile.tier,
     systemSlots,
     userSlots,
     totalSlots: pulseSlotCount,
@@ -3672,36 +4509,40 @@ if (deterministicCaptureRequested) {
   assertAfterimageTargets();
   if (core.geometry.boundingSphere === null) core.geometry.computeBoundingSphere();
 }
-const deterministicBaseline = deterministicCaptureRequested ? Object.freeze({
-  state: captureRecord(state),
-  pulseHistory: capturePulseHistory(pulseHistory),
-  globals: captureRecord(Object.fromEntries(Object.entries(globals).map(([key, uniform]) => [key, uniform.value]))),
-  scene: captureSceneBaseline(),
-  dom: captureDomBaseline(),
-  pointer: Object.freeze(pointer.toArray()),
-  pointerSmooth: Object.freeze(pointerSmooth.toArray()),
-  spectrum: new Uint8Array(spectrumBytes),
-  randomState: random.getState(),
-  lastTide,
-  frameStats: Object.freeze({ ...frameStats }),
-  audioContext,
-  analyser,
-  frequencyData,
-  timeData,
-  rendererTarget: renderer.getRenderTarget(),
-  rendererExposure: renderer.toneMappingExposure,
-  fogDensity: scene.fog.density,
-  bloomStrength: bloom.strength,
-  bloomRadius: bloom.radius,
-  bloomThreshold: bloom.threshold,
-  afterimageDamp: afterimage.uniforms.damp.value,
-  composerReadBuffer: composer.readBuffer,
-  composerWriteBuffer: composer.writeBuffer,
-  afterimageTextureComp: afterimage._textureComp,
-  afterimageTextureOld: afterimage._textureOld,
-  drawingBufferWidth: renderer.getContext().drawingBufferWidth,
-  drawingBufferHeight: renderer.getContext().drawingBufferHeight
-}) : null;
+function captureDeterministicBaseline() {
+  return Object.freeze({
+    state: captureRecord(state),
+    pulseHistory: capturePulseHistory(pulseHistory),
+    globals: captureRecord(Object.fromEntries(Object.entries(globals).map(([key, uniform]) => [key, uniform.value]))),
+    scene: captureSceneBaseline(),
+    dom: captureDomBaseline(),
+    pointer: Object.freeze(pointer.toArray()),
+    pointerSmooth: Object.freeze(pointerSmooth.toArray()),
+    spectrum: new Uint8Array(spectrumBytes),
+    randomState: random.getState(),
+    lastTide,
+    frameStats: Object.freeze({ ...frameStats }),
+    audioContext,
+    analyser,
+    frequencyData,
+    timeData,
+    rendererTarget: renderer.getRenderTarget(),
+    rendererExposure: renderer.toneMappingExposure,
+    fogDensity: scene.fog.density,
+    bloomStrength: bloom.strength,
+    bloomRadius: bloom.radius,
+    bloomThreshold: bloom.threshold,
+    afterimageDamp: afterimage.uniforms.damp.value,
+    composerReadBuffer: composer.readBuffer,
+    composerWriteBuffer: composer.writeBuffer,
+    afterimageTextureComp: afterimage._textureComp,
+    afterimageTextureOld: afterimage._textureOld,
+    drawingBufferWidth: renderer.getContext().drawingBufferWidth,
+    drawingBufferHeight: renderer.getContext().drawingBufferHeight
+  });
+}
+
+if (deterministicCaptureRequested) deterministicBaseline = captureDeterministicBaseline();
 
 function restoreDeterministicBaseline() {
   if (!deterministicBaseline) throw new Error('Ninth Tide deterministic baseline is unavailable.');
@@ -4132,10 +4973,14 @@ if (!deterministicCaptureRequested) requestNextFrame();
 window.addEventListener('beforeunload', () => {
   document.removeEventListener('visibilitychange', handleVisibilityChange);
   window.removeEventListener('message', handleBridgeMessage);
+  window.removeEventListener('resize', scheduleQualityReconcile);
+  coarsePointerQuery.removeEventListener('change', scheduleQualityReconcile);
+  if (dprResolutionQuery) dprResolutionQuery.removeEventListener('change', scheduleQualityReconcile);
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   timer.dispose();
-  ditheredOutputPass.dispose();
-  composer.dispose();
+  qualityGeneration.owner.dispose();
+  disposePostprocessRuntime({ composer, renderPass, bloom, afterimage, veilPass, ditheredOutputPass });
+  renderer.forceContextLoss();
   renderer.dispose();
 });
