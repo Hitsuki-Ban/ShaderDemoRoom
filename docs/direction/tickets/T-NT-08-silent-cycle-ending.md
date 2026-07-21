@@ -59,3 +59,8 @@
 - 修复后的独立 delta review 在 [exact-head ReviewReport](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/42#issuecomment-5037630741) 给出 `APPROVE`，P0–P3 blocker 与 non-blocking finding 均为 0；审查者独立复跑 35/35 focused tests、完整 cycle gate、一步跳跃回归、真实音频 early-native-ended smoke 与 ref/public hash sync。
 - PR CI [run 29856897335](https://github.com/Hitsuki-Ban/ShaderDemoRoom/actions/runs/29856897335) 在 exact head 上通过 lint、typecheck、43 files / 402 tests、build、exhibit sync 及完整 production visual QA；PR 分支的 Pages deploy 按 workflow 条件正常跳过。
 - 2026-07-22 squash merge 到 `main`，merge commit `a92e8f1b3f71716ce97ed4104e5b6c7cbd37faee`。本票的产品实现、自动化门禁、独立审查与合并闭环均已完成；线上 Pages 验证记录在本段后续部署报告中。
+
+## 最终部署报告 (2026-07-22)
+
+- 收口文档 commit `c2cd42b0b8ed6e6ae8470fe1d455544aa97a0a70` 的 Pages [run 29859039640](https://github.com/Hitsuki-Ban/ShaderDemoRoom/actions/runs/29859039640) 首次在 `desktop-dpr-2` 的 renderer-memory plateau 采样中出现一次环境抖动；同一产品 head 已在 PR CI 与本地门禁通过，因此只重跑失败 job，未改代码或阈值。
+- attempt 2 通过 lint、typecheck、43 files / 402 tests、build、exhibit sync、完整 production visual QA、artifact upload 与 Pages deploy。线上根页、Ninth Tide exhibit 与 app 资源均返回 HTTP 200；live app SHA-256 精确为 `298e24c8871701120a63974673465dece5697da1e9ac710f4fbadca02012affb`，与已审查候选一致。

@@ -2,7 +2,7 @@
 
 - 分類: UX / TA
 - 優先度: P3
-- 状態: **実装中 (2026-07-22)**
+- 状態: **完了 (2026-07-22; PR #43)**
 - 評価軸: モデル一貫性 / インタラクション
 - 依存: T-NT-05
 
@@ -53,3 +53,9 @@ click/hover は可視 `core` 自体を raycast する。第VIII章 `[1.46,0.62,0
 - 新增 `qa:ninth-tide-hit-target` 并接入 Pages production visual QA。固定 1440×900 / DPR 1 下，9 章 81 点的 production hook、可信真实 desktop hover/cursor 与真实 click core branch 全部一致；positive 全部 toggle archive 且最新 user pulse origin 为 `(0,0)`，negative 全部保持 archive/core UI 且不发 core-origin pulse。VIII/IX 各完成 desktop→819px mobile tier→desktop quality generation 往返后再复验，并在独立 819×900 mobile/coarse context 通过 trusted touch tap smoke；console/page error 0，`archive.mp3` 请求 0。修复后 manifest SHA-256 `87ea9a6957f71cdf7b2244457ab29e97a9ca19f2d80cc9a89b483cddb8b402a8`。
 - candidate app SHA-256 `6fe0b3420c92c7a798297a3706336d010bf2e355f0ffcd735647fe50d15714a8`，ref dist 与 public exhibit 字节一致。production `qa:ninth-tide` 的 opening、I..IX、ending 共 11 个 framebuffer hash 与 T-NT-08 基线逐项完全一致，manifest SHA-256 `04cc0acc5f5d395ce3d1314cfb575eb2f07dd5ae9b7d1977b7a9696e069cba68`，证明 proxy 未进入绘制结果。
 - gates: `pnpm test`（43 files / 403 tests）、`pnpm lint`、`pnpm typecheck`、`pnpm build`、`qa:ninth-tide`（3 fresh browsers）、`qa:ninth-tide-hit-target`、`qa:ninth-tide-cycle`、`qa:ninth-tide-near-black` 全通过；cycle manifest SHA-256 `61a62712e3ed6c23f5c11ea6b5b211f9bb00b5388e9907c9093b13daee846050`，near-black manifest SHA-256 `9aa1c58deb16a9c9471dc10c3ac74207b2ef13dc1eee8d3fdb053aea63bf3d48`。
+
+## PR・审查・合并报告 (2026-07-22)
+
+- PR [#43](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/43) 以 exact head `c246fe9964f7ad07e7329f46ef49cf726ad058e3` 完成。独立 [ReviewReport](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/43#issuecomment-5038328975) 给出 `APPROVE`，P0–P3 finding 均为 0；审查者独立复跑 9章/81点及 VIII/IX trusted touch 门禁、3 runs/99 hooks 的11状态捕获、focused tests、bundle/source 同步与文档 delta。
+- PR CI [run 29862702075](https://github.com/Hitsuki-Ban/ShaderDemoRoom/actions/runs/29862702075) attempt 1 在共享 `qa:visual` 的 URL-state hash 等待中遇到一次 runner 低帧率超时，尚未进入本票专项门禁；exact bundle 本地复跑该共享门禁通过，且改动不涉及 URL state。无代码/阈值变化的 attempt 2 随后通过 lint、typecheck、43 files / 403 tests、build、exhibit sync 与全部 production visual QA，包括新增 hit-target gate；PR deploy 按 workflow 条件正常跳过。
+- 2026-07-22 squash merge 到 `main`，merge commit `2a9992ab4c451b56a97a222d0d89a6bc54575e02`。最终 Pages run、HTTP 与 live app hash 记录在同一 PR 的 [Final deployment report](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/43#issuecomment-5038736027)，该评论在部署完成后原位更新。
