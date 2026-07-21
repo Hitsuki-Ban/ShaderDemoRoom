@@ -92,6 +92,7 @@ jobs:
           pnpm qa:ninth-tide-near-black
           pnpm qa:ninth-tide-quality
           pnpm qa:ninth-tide-cycle
+          pnpm qa:ninth-tide-hit-target
 
       - name: Upload QA artifacts
         if: ${{ !cancelled() && steps.visual_qa.outcome != 'skipped' }}

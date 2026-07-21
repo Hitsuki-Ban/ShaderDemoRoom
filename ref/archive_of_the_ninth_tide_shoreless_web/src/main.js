@@ -230,7 +230,9 @@ const timer = new THREE.Timer();
 timer.connect(document);
 const pointer = new THREE.Vector2();
 const pointerSmooth = new THREE.Vector2();
+const deterministicHitPointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
+const deterministicHitRaycaster = new THREE.Raycaster();
 const scratchVec3 = new THREE.Vector3();
 const cameraDesiredScratch = new THREE.Vector3();
 
@@ -1199,6 +1201,34 @@ sonarArtifacts.add(sonarNull);
 const coreGroup = new THREE.Group();
 coreGroup.position.y = 0.34;
 world.add(coreGroup);
+
+const coreShapes = Object.freeze([
+  Object.freeze([1, 1, 1]),
+  Object.freeze([1.05, 1.28, 1.05]),
+  Object.freeze([1.08, 1.08, 1.08]),
+  Object.freeze([0.56, 1.72, 0.56]),
+  Object.freeze([1.18, 0.92, 1.18]),
+  Object.freeze([0.82, 1.38, 0.82]),
+  Object.freeze([1.42, 1.20, 0.28]),
+  Object.freeze([1.46, 0.62, 0.34]),
+  Object.freeze([0.48, 0.48, 0.48]),
+]);
+const coreHitExpansions = Object.freeze([
+  Object.freeze([1.05, 1.05, 1.05]),
+  Object.freeze([1.05, 1.05, 1.05]),
+  Object.freeze([1.05, 1.05, 1.05]),
+  Object.freeze([1.05, 1.05, 1.05]),
+  Object.freeze([1.05, 1.05, 1.05]),
+  Object.freeze([1.05, 1.05, 1.05]),
+  Object.freeze([1.05, 1.05, 1.05]),
+  Object.freeze([1.45, 1.30, 1.45]),
+  Object.freeze([2.40, 1.35, 2.40]),
+]);
+const coreHitProxy = new THREE.Object3D();
+coreGroup.add(coreHitProxy);
+const coreHitSphere = new THREE.Sphere(new THREE.Vector3(), 1.02);
+const coreHitInverse = new THREE.Matrix4();
+const coreHitRay = new THREE.Ray();
 
 const coreMaterial = new THREE.ShaderMaterial({
   transparent: true,
@@ -3130,9 +3160,33 @@ function updateAudio(dt, elapsed) {
 }
 
 // ---------- Interaction ----------
+function setPointerFromClient(target, clientX, clientY) {
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+    throw new TypeError('Ninth Tide pointer coordinates must be finite numbers.');
+  }
+  const rect = renderer.domElement.getBoundingClientRect();
+  if (!(rect.width > 0) || !(rect.height > 0)) {
+    throw new Error('Ninth Tide pointer mapping requires a visible renderer canvas.');
+  }
+  target.set(
+    (clientX - rect.left) / rect.width * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1,
+  );
+  return target;
+}
+
+function intersectsCoreHitProxy(worldRay) {
+  if (!(worldRay instanceof THREE.Ray)) {
+    throw new TypeError('Ninth Tide core hit testing requires a THREE.Ray.');
+  }
+  coreHitProxy.updateWorldMatrix(true, false);
+  coreHitInverse.copy(coreHitProxy.matrixWorld).invert();
+  coreHitRay.copy(worldRay).applyMatrix4(coreHitInverse);
+  return coreHitRay.intersectsSphere(coreHitSphere);
+}
+
 function updatePointer(event) {
-  pointer.x = event.clientX / innerWidth * 2 - 1;
-  pointer.y = -(event.clientY / innerHeight) * 2 + 1;
+  setPointerFromClient(pointer, event.clientX, event.clientY);
   ui.cursor.style.transform = `translate3d(${event.clientX}px,${event.clientY}px,0)`;
 }
 window.addEventListener('pointermove', (event) => {
@@ -3144,6 +3198,7 @@ window.addEventListener('pointermove', (event) => {
     state.pitchTarget = clamp(state.pitchTarget + dy * 0.0026, -0.3, 0.5);
     state.dragDistance += Math.hypot(dx, dy);
   }
+  if (!state.dragging) updateHover();
   state.lastPointerX = event.clientX;
   state.lastPointerY = event.clientY;
 });
@@ -3161,6 +3216,7 @@ window.addEventListener('pointerup', (event) => {
   state.dragging = false;
   ui.cursor.classList.remove('active');
   if (state.dragDistance < 8) handleSceneClick(event);
+  updateHover();
 });
 window.addEventListener('pointercancel', () => { state.dragging = false; ui.cursor.classList.remove('active'); });
 window.addEventListener('wheel', (event) => {
@@ -3169,11 +3225,9 @@ window.addEventListener('wheel', (event) => {
 
 function handleSceneClick(event) {
   if (!state.calibrated || state.ending) return;
-  pointer.x = event.clientX / innerWidth * 2 - 1;
-  pointer.y = -(event.clientY / innerHeight) * 2 + 1;
+  setPointerFromClient(pointer, event.clientX, event.clientY);
   raycaster.setFromCamera(pointer, camera);
-  const coreHit = raycaster.intersectObject(core, false)[0];
-  if (coreHit) {
+  if (intersectsCoreHitProxy(raycaster.ray)) {
     state.archiveOpenTarget = state.archiveOpenTarget > 0.5 ? 0 : 1;
     ui.mode.textContent = state.archiveOpenTarget ? 'DECODING' : 'OBSERVATION';
     ui.coreState.textContent = state.archiveOpenTarget ? 'UNSEALED' : 'RESONANT';
@@ -3621,13 +3675,15 @@ function updateCore(dt, elapsed) {
   const audioWeights = [state.low, state.high, state.mid, state.low, state.mid, state.mid, state.high, state.transient, state.low];
   const modeEnergy = audioWeights[mode];
   const breathing = 1 + modeEnergy * 0.09 + state.transient * 0.025 + transition * 0.08;
-  const shapes = [
-    [1,1,1], [1.05,1.28,1.05], [1.08,1.08,1.08], [0.56,1.72,0.56], [1.18,0.92,1.18],
-    [0.82,1.38,0.82], [1.42,1.20,0.28], [1.46,0.62,0.34], [0.48,0.48,0.48]
-  ];
-  const shape = shapes[mode];
+  const shape = coreShapes[mode];
   scratchVec3.set(shape[0] * breathing, shape[1] * breathing, shape[2] * breathing);
   core.scale.lerp(scratchVec3, 1 - Math.exp(-dt * (4.0 + transition * 8.0)));
+  const hitExpansion = coreHitExpansions[mode];
+  coreHitProxy.scale.set(
+    core.scale.x * hitExpansion[0],
+    core.scale.y * hitExpansion[1],
+    core.scale.z * hitExpansion[2],
+  );
 
   const shutdownCollapse = 1 - smoothstep(0.76, 0.98, state.shutdown) * 0.78;
   const wireBase = mode === 6 ? 0.85 : mode === 7 ? 0.9 : mode === 8 ? 0.46 : 1;
@@ -3926,11 +3982,9 @@ function updateWorld(dt, elapsed) {
 function updateHover() {
   if (qualityProfile.coarse || state.dragging || !state.calibrated || state.ending) return;
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObject(core, false).length > 0;
-  if (hit !== state.coreHovered) {
-    state.coreHovered = hit;
-    ui.cursor.classList.toggle('active', hit);
-  }
+  const hit = intersectsCoreHitProxy(raycaster.ray);
+  state.coreHovered = hit;
+  ui.cursor.classList.toggle('active', hit);
 }
 
 function updateTransport(visualScoreTime, duration) {
@@ -5063,17 +5117,31 @@ function hitTestDeterministicPreview(request) {
     || !Number.isFinite(request.clientY)) {
     throw new Error('Ninth Tide hit test requires finite clientX and clientY values.');
   }
-  const rect = renderer.domElement.getBoundingClientRect();
-  if (!(rect.width > 0) || !(rect.height > 0)) {
-    throw new Error('Ninth Tide hit test requires a visible renderer canvas.');
-  }
-  const point = new THREE.Vector2(
-    (request.clientX - rect.left) / rect.width * 2 - 1,
-    -((request.clientY - rect.top) / rect.height) * 2 + 1
+  setPointerFromClient(deterministicHitPointer, request.clientX, request.clientY);
+  deterministicHitRaycaster.setFromCamera(deterministicHitPointer, camera);
+  return intersectsCoreHitProxy(deterministicHitRaycaster.ray);
+}
+
+function inspectDeterministicInteraction() {
+  const userPulses = getLivePulses(pulseHistory).filter((pulse) => pulse.source === 'user');
+  const latestUserPulse = userPulses.reduce(
+    (latest, pulse) => latest === null || pulse.serial > latest.serial ? pulse : latest,
+    null,
   );
-  const queryRaycaster = new THREE.Raycaster();
-  queryRaycaster.setFromCamera(point, camera);
-  return queryRaycaster.intersectObject(core, false).length > 0;
+  return Object.freeze({
+    archiveOpenTarget: state.archiveOpenTarget,
+    coreHovered: state.coreHovered,
+    userPulseCount: userPulses.length,
+    latestUserPulse: latestUserPulse === null
+      ? null
+      : Object.freeze({
+        serial: latestUserPulse.serial,
+        source: latestUserPulse.source,
+        originX: latestUserPulse.originX,
+        originZ: latestUserPulse.originZ,
+        mode: latestUserPulse.mode,
+      }),
+  });
 }
 
 // Preview modes are used only for still capture/testing.
@@ -5099,6 +5167,7 @@ if (deterministicCaptureRequested) {
   applyPreview(mode, section);
   window.__NINTH_TIDE_STEP__ = stepDeterministicPreview;
   window.__NINTH_TIDE_HIT_TEST__ = hitTestDeterministicPreview;
+  window.__NINTH_TIDE_INTERACTION_AUDIT__ = Object.freeze({ inspect: inspectDeterministicInteraction });
   window.__NINTH_TIDE_PULSE_SCENARIO__ = runDeterministicPulseScenario;
   window.__NINTH_TIDE_DITHER_SCENARIO__ = runDeterministicDitherScenario;
 }

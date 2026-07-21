@@ -6,6 +6,7 @@ import {
   measureRgba8,
   NINTH_TIDE_BROWSER_LAUNCH_OPTIONS,
   NINTH_TIDE_CONTEXT_OPTIONS,
+  NINTH_TIDE_HIT_FIXTURE_PATH,
   parseNinthTideConfig,
   readHitFixture,
   sha256Hex,
@@ -30,7 +31,7 @@ function makeFixture() {
     ['negative', 'left'],
   ];
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
     canvasBox: { x: 0, y: 0, width: 1440, height: 900 },
     sections: Array.from({ length: 9 }, (_, section) => ({
@@ -41,9 +42,12 @@ function makeFixture() {
         axis,
         clientX: 700 + index,
         clientY: 440 + index,
-        beforeHit: section >= 7 && kind === 'edge-positive' && axis === 'right'
+        beforeHit: section >= 7
+          && kind === 'edge-positive'
+          && (axis === 'left' || axis === 'right')
           ? false
           : kind !== 'negative',
+        expectedHit: kind !== 'negative',
       })),
     })),
   };
@@ -57,7 +61,7 @@ describe('Ninth Tide QA configuration', () => {
     expect(parseNinthTideConfig({ SHOWROOM_URL: 'http://127.0.0.1:4173/base/' })).toEqual({
       baseUrl: 'http://127.0.0.1:4173/base',
       buildUrl: 'http://127.0.0.1:4173/base/exhibits/ninth-tide-archive/index.html',
-      fixturePath: 'docs/direction/hit-targets-v1.json',
+      fixturePath: 'docs/direction/hit-targets-v2.json',
       outputDir: 'output/playwright/ninth-tide',
     });
   });
@@ -192,12 +196,12 @@ describe('Ninth Tide canonical pixels and policy', () => {
 });
 
 describe('Ninth Tide committed hit fixture', () => {
-  it('accepts the exact nine-section schema including the section 7/8 misses', () => {
+  it('accepts the exact v2 schema with historical and expected hit results', () => {
     const fixture = makeFixture();
     expect(validateHitFixture(fixture)).toBe(fixture);
   });
 
-  it('fails fast on schema, viewport, and known-miss drift', () => {
+  it('fails fast on schema, viewport, historical-result, and expected-result drift', () => {
     const extraKey = makeFixture();
     extraKey.unexpected = true;
     expect(() => validateHitFixture(extraKey)).toThrow(/exactly/);
@@ -206,23 +210,35 @@ describe('Ninth Tide committed hit fixture', () => {
     wrongViewport.viewport.width = 1280;
     expect(() => validateHitFixture(wrongViewport)).toThrow(/viewport\/DPR/);
 
-    const missingKnownMiss = makeFixture();
-    for (const point of missingKnownMiss.sections[7].points) {
-      if (point.kind === 'edge-positive') point.beforeHit = true;
-    }
-    expect(() => validateHitFixture(missingKnownMiss)).toThrow(/horizontal edge miss/);
+    const oldSchema = makeFixture();
+    oldSchema.schemaVersion = 1;
+    expect(() => validateHitFixture(oldSchema)).toThrow(/schemaVersion must be 2/);
 
-    const falseCenter = makeFixture();
-    falseCenter.sections[0].points[0].beforeHit = false;
-    expect(() => validateHitFixture(falseCenter)).toThrow(/center must hit/);
+    const missingHistoricalMiss = makeFixture();
+    missingHistoricalMiss.sections[7].points[2].beforeHit = true;
+    expect(() => validateHitFixture(missingHistoricalMiss)).toThrow(/preserve the historical result false/);
 
-    const trueNegative = makeFixture();
-    trueNegative.sections[0].points.at(-1).beforeHit = true;
-    expect(() => validateHitFixture(trueNegative)).toThrow(/negative points must miss/);
+    const falseExpectedEdge = makeFixture();
+    falseExpectedEdge.sections[8].points[2].expectedHit = false;
+    expect(() => validateHitFixture(falseExpectedEdge)).toThrow(/expectedHit must be true/);
 
-    const falseEarlyEdge = makeFixture();
-    falseEarlyEdge.sections[6].points[1].beforeHit = false;
-    expect(() => validateHitFixture(falseEarlyEdge)).toThrow(/edge-positive points must hit/);
+    const trueExpectedNegative = makeFixture();
+    trueExpectedNegative.sections[0].points.at(-1).expectedHit = true;
+    expect(() => validateHitFixture(trueExpectedNegative)).toThrow(/expectedHit must be false/);
+
+    const missingExpectedHit = makeFixture();
+    delete missingExpectedHit.sections[0].points[0].expectedHit;
+    expect(() => validateHitFixture(missingExpectedHit)).toThrow(/exactly/);
+  });
+
+  it('loads only the committed v2 fixture as the canonical gate input', async () => {
+    expect(NINTH_TIDE_HIT_FIXTURE_PATH).toBe('docs/direction/hit-targets-v2.json');
+    const fixture = await readHitFixture();
+    expect(fixture.schemaVersion).toBe(2);
+    expect(fixture.sections[7].points.find(({ id }) => id === 'edge-positive-right'))
+      .toMatchObject({ beforeHit: false, expectedHit: true });
+    expect(fixture.sections[8].points.find(({ id }) => id === 'edge-positive-left'))
+      .toMatchObject({ beforeHit: false, expectedHit: true });
   });
 
   it('does not regenerate a missing fixture online', async () => {
