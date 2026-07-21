@@ -2,7 +2,7 @@
 
 - 分類: TA
 - 優先度: P3
-- 状態: **実装・ローカル検証完了 (2026-07-21; PR 待ち)**
+- 状態: **完了 (2026-07-21; PR #41)**
 - 評価軸: 対応環境 / フレームバジェット
 - 依存: T-NT-05
 
@@ -60,3 +60,10 @@
 - 独立 review 首轮提出 4 项：commit 拒绝清理、deterministic 并发、pillar dynamic usage、cap 后无效 resize。全部修复并机械化后，delta reviewer 给出 **APPROVE，无剩余 P0–P3**。
 - gates: `pnpm lint`、`pnpm typecheck`、`pnpm test`（43 files / 381 tests）、`pnpm build`、`pnpm qa:ninth-tide`（11 状态）、`pnpm qa:ninth-tide-pulses`、`pnpm qa:ninth-tide-dither`、`pnpm qa:ninth-tide-near-black`（5 captures）、`pnpm qa:ninth-tide-quality`、`pnpm qa:exhibits`、隔离 `pnpm qa:visual` 全通过。`exhibits:check` 在未提交 public bundle 时按 dirty-tree 契约失败，但 `ref/.../dist/app.js` 与 `public/.../app.js` 字节一致；提交后复跑。
 - QA manifests: 11-state `0bd098d58225548a1c9a3b6c5a299b21414476774d7332e29b454d7092aa6329`；pulse `9192bda49721587a9e72cdedf8d0480b625da2c7b7fb4664a6f31b4f04df5908`（manifest 内 app SHA `ae65b19d…`）；dither `80947c4803a34573af37dff992063f2d87e30ad6e7a32bc07c9eb8289e0dd9ef`。
+
+## PR・审查・合并报告 (2026-07-21)
+
+- PR [#41](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/41) 将 `codex/t-nt-07-responsive-quality@d96e01976dfe709d083f0742236dd783106eade9` 合入 `main@9c91f3a5b59eee0f76462ae269621e11c8aa66bb`；合并前远端 head、独立审查 head 与 CI head 完全一致。
+- GitHub Actions [run 29847745750](https://github.com/Hitsuki-Ban/ShaderDemoRoom/actions/runs/29847745750) 在 24m22s 内通过 lint、typecheck、381 tests、production build、exhibit sync 与完整 production visual QA，并成功上传 QA artifacts。
+- 隔离 worktree reviewer 对资源 generation、WebGL context/composer 更换、pulse 8↔4 投影、deterministic concurrency、证据 SHA 与生成物同步做独立复核，并在 [ReviewReport](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/41#issuecomment-5036654299) 对精确 head 给出 **APPROVE / blockers: none**；独立 36-step runtime gate 再次通过，generation `1→33`、拒绝提交 context loss、并发拒绝、console/page error `0`。
+- reviewer 留下一个非阻塞证据范围疑问：辅助 deterministic-concurrency page 使用 `capturePageErrors(page, false)`，因此该页的 `console.error` 不计入主质量 manifest 的 `consoleErrors: 0`。该辅助页的 `pageerror` 仍被捕获，主 36-step page 与 CI 全套浏览器门禁均独立通过，故不影响本票产品行为、受け入れ基準或合并结论；后续若把 manifest 的 `consoleErrors` 定义扩展为所有辅助 page 的聚合指标，应先在相应 QA 工单中明确 schema 与所有权，不能默默改变既有证据语义。
