@@ -9,6 +9,18 @@ import {
   createMediaTimeDeltaTracker,
   createSpectralFluxOnsetDetector,
 } from './spectral-flux-onset.js';
+import {
+  advancePulseHistory,
+  capturePulseHistory,
+  createPulseHistory,
+  getLivePulses,
+  getPulseUniformSnapshot,
+  insertPulse,
+  resetPulseHistory,
+  restorePulseHistory,
+  selectNewestArtifactPulse,
+  selectVeilPulse,
+} from './pulse-history.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -42,6 +54,30 @@ const previewParams = new URLSearchParams(location.search);
 const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
 const deterministicCaptureRequested = previewParams.has('preview') || forcedPreview !== undefined;
 const defaultMainPreviewSection = 7;
+const pulseHistory = createPulseHistory(isMobile ? 'mobile' : 'desktop');
+const pulseSlotCount = isMobile ? 4 : 8;
+const pulseVectors = Array.from({ length: pulseSlotCount }, () => new THREE.Vector4());
+const pulseMetaVectors = Array.from({ length: pulseSlotCount }, () => new THREE.Vector4());
+const pulseHistoryShaderHeader = /* glsl */`
+  uniform vec4 uPulses[${pulseSlotCount}];
+  uniform vec4 uPulseMeta[${pulseSlotCount}];
+  uniform float uPulseClock;
+  float pulseLifetime(float mode) {
+    if (mode < 0.5) return 5.35;
+    if (mode < 1.5) return 4.10;
+    if (mode < 2.5) return 4.35;
+    if (mode < 3.5) return 4.00;
+    if (mode < 4.5) return 4.90;
+    if (mode < 5.5) return 4.50;
+    if (mode < 6.5) return 4.20;
+    if (mode < 7.5) return 4.05;
+    return 4.30;
+  }
+  float pulseStrengthAt(int pulseIndex, float age) {
+    return uPulseMeta[pulseIndex].x * uPulseMeta[pulseIndex].z * uPulseMeta[pulseIndex].w
+      * exp(-age * 0.34);
+  }
+`;
 
 function mulberry32(seed) {
   let randomState = seed >>> 0;
@@ -188,10 +224,6 @@ const state = {
   audioFailed: false,
   archiveOpen: 0,
   archiveOpenTarget: 0,
-  pulseAge: 99,
-  pulseStrength: 0,
-  pulseOrigin: new THREE.Vector2(0, 0),
-  pulseSourceY: 0.35,
   pulseCooldown: 0,
   low: 0,
   mid: 0,
@@ -208,9 +240,6 @@ const state = {
   phaseTransition: 0,
   transitionClock: 99,
   transitionSwitched: false,
-  pulseMode: 0,
-  pulseSerial: 0,
-  pulseScreen: new THREE.Vector2(0.5, 0.5),
   dive: 0.12,
   diveTarget: 0.12,
   yaw: 0,
@@ -237,16 +266,14 @@ const globals = {
   ritual: { value: 0 },
   ignite: { value: 0 },
   shutdown: { value: 0 },
-  pulseAge: { value: 99 },
-  pulseStrength: { value: 0 },
-  pulseOrigin: { value: state.pulseOrigin },
-  pulseScreen: { value: state.pulseScreen },
+  uPulseClock: { value: 0 },
+  uPulses: { value: pulseVectors },
+  uPulseMeta: { value: pulseMetaVectors },
   open: { value: 0 },
   tide: { value: 0 },
   section: { value: 0 },
   sectionLocal: { value: 0 },
   phaseTransition: { value: 0 },
-  sonarMode: { value: 0 },
   pixelRatio: { value: renderer.getPixelRatio() },
   resolution: { value: new THREE.Vector2(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()) },
   spectrum: { value: spectrumTexture },
@@ -257,6 +284,55 @@ const globals = {
   secondaryColor: { value: palettes[0].secondary.clone() }
 };
 const shaderUniforms = (extra = {}) => ({ ...globals, ...extra });
+const artifactPulseUniforms = {
+  pulseAge: { value: 99 },
+  pulseStrength: { value: 0 },
+};
+const veilPulseUniforms = {
+  pulseAge: { value: 99 },
+  pulseStrength: { value: 0 },
+  pulseScreen: { value: new THREE.Vector2(0.5, 0.5) },
+  sonarMode: { value: 0 },
+};
+const convergenceUniforms = {
+  pulseAge: { value: 99 },
+  pulseStrength: { value: 0 },
+};
+
+function pulseMixScale(liveCount) {
+  if (!Number.isInteger(liveCount) || liveCount < 0 || liveCount > pulseSlotCount) {
+    throw new RangeError(`Ninth Tide live pulse count must be an integer from 0 through ${pulseSlotCount}.`);
+  }
+  return 1 / (1 + Math.max(0, liveCount - 1) * 0.55);
+}
+
+function syncPulseState() {
+  const snapshot = getPulseUniformSnapshot(pulseHistory);
+  if (snapshot.slots.length !== pulseSlotCount) {
+    throw new Error(`Ninth Tide pulse history exposed ${snapshot.slots.length} slots; expected ${pulseSlotCount}.`);
+  }
+  globals.uPulseClock.value = snapshot.clockSeconds;
+  const mixScale = pulseMixScale(snapshot.slots.reduce((count, slot) => count + slot.active, 0));
+  snapshot.slots.forEach((slot, index) => {
+    pulseVectors[index].set(slot.originX, slot.sourceY, slot.originZ, slot.startTime);
+    pulseMetaVectors[index].set(slot.strength, slot.mode, slot.contributionScale, slot.active * mixScale);
+  });
+
+  const artifactPulse = state.shutdown > 0.5 ? null : selectNewestArtifactPulse(pulseHistory);
+  artifactPulseUniforms.pulseAge.value = artifactPulse?.age ?? 99;
+  artifactPulseUniforms.pulseStrength.value = artifactPulse
+    ? artifactPulse.strength * artifactPulse.contributionScale * Math.exp(-artifactPulse.age * 0.34)
+    : 0;
+
+  const veilPulse = state.shutdown > 0.5 ? null : selectVeilPulse(pulseHistory);
+  veilPulseUniforms.pulseAge.value = veilPulse?.age ?? 99;
+  veilPulseUniforms.pulseStrength.value = veilPulse
+    ? veilPulse.strength * veilPulse.contributionScale * Math.exp(-veilPulse.age * 0.34)
+    : 0;
+  veilPulseUniforms.pulseScreen.value.set(veilPulse?.screenX ?? 0.5, veilPulse?.screenY ?? 0.5);
+  veilPulseUniforms.sonarMode.value = veilPulse?.mode ?? 0;
+  return artifactPulse;
+}
 
 function createGlowTexture() {
   const canvas = document.createElement('canvas');
@@ -364,14 +440,12 @@ const floorMaterial = new THREE.ShaderMaterial({
     uniform float time;
     uniform float low;
     uniform float mid;
-    uniform float pulseAge;
-    uniform float pulseStrength;
     uniform float ritual;
     uniform float shutdown;
     uniform float tide;
-    uniform vec2 pulseOrigin;
     uniform vec3 glowColor;
     uniform vec3 secondaryColor;
+    ${pulseHistoryShaderHeader}
     varying vec2 vPlane;
 
     float lineBand(float x, float width) {
@@ -388,10 +462,20 @@ const floorMaterial = new THREE.ShaderMaterial({
       rings += lineBand(nr * 8.0 + time * 0.009, 0.010) * 0.48;
       float spokes = lineBand(angle * 72.0, 0.006) * smoothstep(0.16, 0.78, nr) * 0.26;
       float nine = lineBand(angle * 9.0 - tide * 0.012, 0.012) * 0.58;
-      float localRadius = length(p - pulseOrigin);
-      float waveRadius = pulseAge * (4.15 + low * 1.7);
-      float wave = exp(-abs(localRadius - waveRadius) * 1.55) * smoothstep(5.2, 0.0, pulseAge) * pulseStrength;
-      float wake = step(localRadius, waveRadius) * exp(-(waveRadius - localRadius) * 0.23) * exp(-pulseAge * 0.12) * pulseStrength;
+      float wave = 0.0;
+      float wake = 0.0;
+      for (int pulseIndex = 0; pulseIndex < ${pulseSlotCount}; pulseIndex++) {
+        if (uPulseMeta[pulseIndex].w > 0.0) {
+        float pulseAge = max(0.0, uPulseClock - uPulses[pulseIndex].w);
+        float pulseStrength = pulseStrengthAt(pulseIndex, pulseAge) * (1.0 - step(0.5, shutdown));
+        float pulseWaveStrength = pulseStrength * smoothstep(pulseLifetime(uPulseMeta[pulseIndex].y), 0.0, pulseAge);
+        vec2 pulseOrigin = vec2(uPulses[pulseIndex].x, uPulses[pulseIndex].z);
+        float localRadius = length(p - pulseOrigin);
+        float waveRadius = pulseAge * (4.15 + low * 1.7);
+        wave += exp(-abs(localRadius - waveRadius) * 1.55) * pulseWaveStrength;
+        wake += step(localRadius, waveRadius) * exp(-(waveRadius - localRadius) * 0.23) * exp(-pulseAge * 0.12) * pulseStrength;
+        }
+      }
       float center = exp(-nr * 7.0) * (0.08 + low * 0.14);
       float scan = 0.5 + 0.5 * sin(radius * 8.5 - time * 0.75 + mid * 3.0);
       float edgeFade = smoothstep(1.0, 0.69, nr) * smoothstep(0.01, 0.07, nr);
@@ -520,9 +604,7 @@ const archiveWireMaterial = new THREE.ShaderMaterial({
     uniform float high;
     uniform float ritual;
     uniform float shutdown;
-    uniform float pulseAge;
-    uniform float pulseStrength;
-    uniform vec2 pulseOrigin;
+    ${pulseHistoryShaderHeader}
     varying float vAlpha;
     varying float vSpec;
     varying float vResonance;
@@ -535,10 +617,19 @@ const archiveWireMaterial = new THREE.ShaderMaterial({
       float off = smoothstep(offStart, offStart + 0.22, shutdown);
       vec3 radial = normalize(vec3(aCenter.x, 0.22 + fract(aSeed * 0.13) * 0.32, aCenter.z) + vec3(0.0001));
       vec3 p = position + radial * (1.0 - activation) * (2.1 + aOrder * 7.5);
-      float waveRadius = pulseAge * (4.15 + low * 1.7);
-      float distanceToPulse = length(aCenter.xz - pulseOrigin);
-      float front = exp(-abs(distanceToPulse - waveRadius) * 1.46) * pulseStrength;
-      float memory = step(distanceToPulse, waveRadius) * exp(-(waveRadius - distanceToPulse) * 0.105) * exp(-pulseAge * 0.055) * pulseStrength;
+      float front = 0.0;
+      float memory = 0.0;
+      for (int pulseIndex = 0; pulseIndex < ${pulseSlotCount}; pulseIndex++) {
+        if (uPulseMeta[pulseIndex].w > 0.0) {
+        float pulseAge = max(0.0, uPulseClock - uPulses[pulseIndex].w);
+        float pulseStrength = pulseStrengthAt(pulseIndex, pulseAge) * (1.0 - step(0.5, shutdown));
+        vec2 pulseOrigin = vec2(uPulses[pulseIndex].x, uPulses[pulseIndex].z);
+        float waveRadius = pulseAge * (4.15 + low * 1.7);
+        float distanceToPulse = length(aCenter.xz - pulseOrigin);
+        front += exp(-abs(distanceToPulse - waveRadius) * 1.46) * pulseStrength;
+        memory += step(distanceToPulse, waveRadius) * exp(-(waveRadius - distanceToPulse) * 0.105) * exp(-pulseAge * 0.055) * pulseStrength;
+        }
+      }
       vec3 fromCenter = p - aCenter;
       p += normalize(fromCenter + vec3(0.0001)) * (spec * 0.018 + front * 0.095);
       p.y += sin(time * 0.35 + aSeed + aCenter.x * 0.2) * (0.005 + spec * 0.014);
@@ -626,9 +717,7 @@ function createArchivePointCloud(cells) {
       uniform float transient;
       uniform float ritual;
       uniform float shutdown;
-      uniform float pulseAge;
-      uniform float pulseStrength;
-      uniform vec2 pulseOrigin;
+      ${pulseHistoryShaderHeader}
       uniform float pixelRatio;
       varying float vAlpha;
       varying float vSpec;
@@ -645,10 +734,19 @@ function createArchivePointCloud(cells) {
         vec3 radial = normalize(vec3(aCenter.x, 0.18 + aSeed * 0.4, aCenter.z) + vec3(0.001));
         vec3 scattered = position + radial * (2.8 + aOrder * 9.2) + vec3(sin(aSeed * 43.0), cos(aSeed * 37.0), sin(aSeed * 29.0)) * 0.75;
         vec3 p = mix(scattered, position, activation);
-        float waveRadius = pulseAge * (4.15 + low * 1.7);
-        float distanceToPulse = length(aCenter.xz - pulseOrigin);
-        float front = exp(-abs(distanceToPulse - waveRadius) * 1.42) * pulseStrength;
-        float memory = step(distanceToPulse, waveRadius) * exp(-(waveRadius - distanceToPulse) * 0.095) * exp(-pulseAge * 0.052) * pulseStrength;
+        float front = 0.0;
+        float memory = 0.0;
+        for (int pulseIndex = 0; pulseIndex < ${pulseSlotCount}; pulseIndex++) {
+          if (uPulseMeta[pulseIndex].w > 0.0) {
+          float pulseAge = max(0.0, uPulseClock - uPulses[pulseIndex].w);
+          float pulseStrength = pulseStrengthAt(pulseIndex, pulseAge) * (1.0 - step(0.5, shutdown));
+          vec2 pulseOrigin = vec2(uPulses[pulseIndex].x, uPulses[pulseIndex].z);
+          float waveRadius = pulseAge * (4.15 + low * 1.7);
+          float distanceToPulse = length(aCenter.xz - pulseOrigin);
+          front += exp(-abs(distanceToPulse - waveRadius) * 1.42) * pulseStrength;
+          memory += step(distanceToPulse, waveRadius) * exp(-(waveRadius - distanceToPulse) * 0.095) * exp(-pulseAge * 0.052) * pulseStrength;
+          }
+        }
         vec3 relDir = normalize(rel + vec3(0.0001));
         p += relDir * (spec * (0.035 + high * 0.035) + front * 0.22);
         p.y += sin(time * (0.42 + aBand * 0.54) + aSeed * 31.0) * (0.012 + spec * 0.045);
@@ -728,9 +826,7 @@ function createBeamMaterial(band, order, center, seed) {
       uniform float high;
       uniform float ritual;
       uniform float shutdown;
-      uniform float pulseAge;
-      uniform float pulseStrength;
-      uniform vec2 pulseOrigin;
+      ${pulseHistoryShaderHeader}
       uniform float band;
       uniform float order;
       uniform float seed;
@@ -751,9 +847,17 @@ function createBeamMaterial(band, order, center, seed) {
         float survive = 1.0 - smoothstep(offStart, offStart + 0.19, shutdown);
         float edge = pow(max(0.0, sin(vUv.x * 3.1415926)), 2.5);
         float lengthFade = smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.43, vUv.y);
-        float waveRadius = pulseAge * 4.65;
-        float d = length(centerXZ - pulseOrigin);
-        float resonance = exp(-abs(d - waveRadius) * 1.48) * pulseStrength;
+        float resonance = 0.0;
+        for (int pulseIndex = 0; pulseIndex < ${pulseSlotCount}; pulseIndex++) {
+          if (uPulseMeta[pulseIndex].w > 0.0) {
+          float pulseAge = max(0.0, uPulseClock - uPulses[pulseIndex].w);
+          float pulseStrength = pulseStrengthAt(pulseIndex, pulseAge) * (1.0 - step(0.5, shutdown));
+          vec2 pulseOrigin = vec2(uPulses[pulseIndex].x, uPulses[pulseIndex].z);
+          float waveRadius = pulseAge * 4.65;
+          float d = length(centerXZ - pulseOrigin);
+          resonance += exp(-abs(d - waveRadius) * 1.48) * pulseStrength;
+          }
+        }
         float filament = pow(abs(sin(vUv.y * 54.0 + time * (0.16 + band * 0.26) + seed)), 16.0);
         float grain = hash21(gl_FragCoord.xy + seed * 71.0);
         float alpha = edge * lengthFade * (0.008 + spec * 0.042 + resonance * 0.095 + high * 0.008);
@@ -810,7 +914,7 @@ const sonarShellMaterial = new THREE.ShaderMaterial({
   depthWrite: false,
   side: THREE.DoubleSide,
   blending: THREE.AdditiveBlending,
-  uniforms: shaderUniforms(),
+  uniforms: shaderUniforms(artifactPulseUniforms),
   vertexShader: /* glsl */`
     varying vec3 vNormalW;
     varying vec3 vWorld;
@@ -850,7 +954,7 @@ world.add(sonarArtifacts);
 
 const sonarCurtainMaterial = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
-  uniforms: shaderUniforms(),
+  uniforms: shaderUniforms(artifactPulseUniforms),
   vertexShader: /* glsl */`
     varying vec3 vLocal;
     varying vec3 vWorld;
@@ -927,7 +1031,7 @@ function createSonarLattice() {
   geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
   const material = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: shaderUniforms(),
+    uniforms: shaderUniforms(artifactPulseUniforms),
     vertexShader: /* glsl */`
       attribute float aBand;
       attribute float aSeed;
@@ -993,7 +1097,7 @@ sonarSlabs.visible = false;
 sonarArtifacts.add(sonarSlabs);
 
 const convergenceMaterial = sonarShellMaterial.clone();
-convergenceMaterial.uniforms = shaderUniforms();
+convergenceMaterial.uniforms = shaderUniforms(convergenceUniforms);
 const sonarConvergence = new THREE.Mesh(new THREE.SphereGeometry(1, isMobile ? 36 : 64, isMobile ? 20 : 36), convergenceMaterial);
 sonarConvergence.visible = false;
 sonarArtifacts.add(sonarConvergence);
@@ -1475,9 +1579,7 @@ function createNearSnow(count) {
       uniform sampler2D spectrum;
       uniform float time;
       uniform float high;
-      uniform float pulseAge;
-      uniform float pulseStrength;
-      uniform vec2 pulseOrigin;
+      ${pulseHistoryShaderHeader}
       uniform float ritual;
       uniform float shutdown;
       uniform float pixelRatio;
@@ -1489,9 +1591,18 @@ function createNearSnow(count) {
         p.x += sin(time * 0.047 + aSeed) * 0.55;
         p.z += cos(time * 0.039 + aSeed * 1.7) * 0.42;
         float spec = texture2D(spectrum, vec2(aBand, 0.5)).r;
-        float waveRadius = pulseAge * 4.8;
-        float waveDistance = abs(length(p.xz - pulseOrigin) - waveRadius);
-        float scatter = exp(-waveDistance * 0.68) * pulseStrength * smoothstep(5.2, 0.0, pulseAge);
+        float scatter = 0.0;
+        for (int pulseIndex = 0; pulseIndex < ${pulseSlotCount}; pulseIndex++) {
+          if (uPulseMeta[pulseIndex].w > 0.0) {
+          float pulseAge = max(0.0, uPulseClock - uPulses[pulseIndex].w);
+          float pulseStrength = pulseStrengthAt(pulseIndex, pulseAge) * (1.0 - step(0.5, shutdown))
+            * smoothstep(pulseLifetime(uPulseMeta[pulseIndex].y), 0.0, pulseAge);
+          vec2 pulseOrigin = vec2(uPulses[pulseIndex].x, uPulses[pulseIndex].z);
+          float waveRadius = pulseAge * 4.8;
+          float waveDistance = abs(length(p.xz - pulseOrigin) - waveRadius);
+          scatter += exp(-waveDistance * 0.68) * pulseStrength;
+          }
+        }
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
         float depth = max(0.8, -mv.z);
@@ -1561,9 +1672,7 @@ function createAbyssalSpines(count) {
       attribute float aBand;
       uniform sampler2D spectrum;
       uniform float time;
-      uniform float pulseAge;
-      uniform float pulseStrength;
-      uniform vec2 pulseOrigin;
+      ${pulseHistoryShaderHeader}
       uniform float section;
       uniform float ritual;
       uniform float shutdown;
@@ -1574,8 +1683,17 @@ function createAbyssalSpines(count) {
         p.x += sin(time * 0.012 + aSeed) * 0.17;
         p.z += cos(time * 0.009 + aSeed * 1.3) * 0.14;
         float spec = texture2D(spectrum, vec2(aBand, 0.5)).r;
-        float waveRadius = pulseAge * 4.8;
-        float resonance = exp(-abs(length(aCenter.xz - pulseOrigin) - waveRadius) * 0.52) * pulseStrength * smoothstep(5.5, 0.0, pulseAge);
+        float resonance = 0.0;
+        for (int pulseIndex = 0; pulseIndex < ${pulseSlotCount}; pulseIndex++) {
+          if (uPulseMeta[pulseIndex].w > 0.0) {
+          float pulseAge = max(0.0, uPulseClock - uPulses[pulseIndex].w);
+          float pulseStrength = pulseStrengthAt(pulseIndex, pulseAge) * (1.0 - step(0.5, shutdown))
+            * smoothstep(pulseLifetime(uPulseMeta[pulseIndex].y), 0.0, pulseAge);
+          vec2 pulseOrigin = vec2(uPulses[pulseIndex].x, uPulses[pulseIndex].z);
+          float waveRadius = pulseAge * 4.8;
+          resonance += exp(-abs(length(aCenter.xz - pulseOrigin) - waveRadius) * 0.52) * pulseStrength;
+          }
+        }
         float distanceFade = 1.0 - smoothstep(21.0, 43.0, distance(cameraPosition, aCenter));
         float phaseLift = 0.018 + step(6.5, section) * 0.018;
         vAlpha = (phaseLift + resonance * 0.62 + spec * 0.018) * distanceFade * ritual * (1.0 - shutdown);
@@ -1640,13 +1758,13 @@ const veilPass = new ShaderPass({
     high: globals.high,
     ritual: globals.ritual,
     shutdown: globals.shutdown,
-    pulseAge: globals.pulseAge,
-    pulseStrength: globals.pulseStrength,
-    pulseScreen: globals.pulseScreen,
+    pulseAge: veilPulseUniforms.pulseAge,
+    pulseStrength: veilPulseUniforms.pulseStrength,
+    pulseScreen: veilPulseUniforms.pulseScreen,
     section: globals.section,
     sectionLocal: globals.sectionLocal,
     phaseTransition: globals.phaseTransition,
-    sonarMode: globals.sonarMode,
+    sonarMode: veilPulseUniforms.sonarMode,
     deepColor: globals.deepColor,
     fogColor: globals.fogColor,
     glowColor: globals.glowColor
@@ -2067,6 +2185,7 @@ async function prepareAudio() {
 
 function resetExperienceState() {
   resetOnsetDetector();
+  resetPulseHistory(pulseHistory);
   state.calibrated = false;
   state.ceremonyTime = 0;
   state.ceremonyCue = 0;
@@ -2079,11 +2198,7 @@ function resetExperienceState() {
   state.endingCue = 0;
   state.archiveOpen = 0;
   state.archiveOpenTarget = 0;
-  state.pulseAge = 99;
-  state.pulseStrength = 0;
   state.pulseCooldown = 0;
-  state.pulseMode = 0;
-  state.pulseSerial = 0;
   state.tideIndex = 0;
   state.transitionFrom = 0;
   state.pendingTide = -1;
@@ -2094,7 +2209,7 @@ function resetExperienceState() {
   globals.section.value = 0;
   globals.sectionLocal.value = 0;
   globals.phaseTransition.value = 0;
-  globals.sonarMode.value = 0;
+  syncPulseState();
   document.documentElement.style.setProperty('--phase-veil', '0');
   state.diveTarget = 0.12;
   state.yawTarget = 0;
@@ -2309,7 +2424,14 @@ function updateAudio(dt, elapsed) {
 
   state.pulseCooldown = Math.max(0, state.pulseCooldown - dt);
   if (state.calibrated && !state.ending && state.playing && onset.onset && state.pulseCooldown <= 0) {
-    triggerPulse(new THREE.Vector2(0, 0), 0.48 + onset.strength * 0.7, 0.32, false);
+    triggerPulse({
+      origin: new THREE.Vector2(0, 0),
+      strength: 0.48 + onset.strength * 0.7,
+      sourceY: 0.32,
+      announce: false,
+      mode: state.tideIndex,
+      source: 'auto',
+    });
     state.pulseCooldown = 1.15 + (1 - state.low) * 0.7;
   }
 }
@@ -2362,34 +2484,36 @@ function handleSceneClick(event) {
     state.archiveOpenTarget = state.archiveOpenTarget > 0.5 ? 0 : 1;
     ui.mode.textContent = state.archiveOpenTarget ? 'DECODING' : 'OBSERVATION';
     ui.coreState.textContent = state.archiveOpenTarget ? 'UNSEALED' : 'RESONANT';
-    triggerPulse(new THREE.Vector2(0, 0), 1.35, 0.34, true);
+    triggerPulse({ origin: new THREE.Vector2(0, 0), strength: 1.35, sourceY: 0.34, announce: true, mode: state.tideIndex, source: 'user' });
     showMessage(state.archiveOpenTarget ? 'OPEN' : 'SEALED', 850);
     return;
   }
   const floorHit = raycaster.intersectObject(floor, false)[0];
   if (floorHit) {
-    triggerPulse(new THREE.Vector2(floorHit.point.x, floorHit.point.z), 1.05, -2.28, true);
+    triggerPulse({ origin: new THREE.Vector2(floorHit.point.x, floorHit.point.z), strength: 1.05, sourceY: -2.28, announce: true, mode: state.tideIndex, source: 'user' });
     showMessage(['PRESSURE','CURTAIN','QUARTZ','PILLARS','FORECAST','COUNTERTIDE','CODEX','GAZE','NULL'][state.tideIndex], 760);
   } else {
-    triggerPulse(new THREE.Vector2(pointer.x * 5, -pointer.y * 5), 0.7, 0.1, true);
+    triggerPulse({ origin: new THREE.Vector2(pointer.x * 5, -pointer.y * 5), strength: 0.7, sourceY: 0.1, announce: true, mode: state.tideIndex, source: 'user' });
   }
 }
 
-function triggerPulse(origin = new THREE.Vector2(0, 0), strength = 1, sourceY = 0.34, announce = false, modeOverride = null) {
-  state.pulseAge = 0;
-  state.pulseStrength = strength;
-  state.pulseOrigin.copy(origin);
-  state.pulseSourceY = sourceY;
-  state.pulseMode = modeOverride == null ? state.tideIndex : modeOverride;
-  state.pulseSerial++;
+function triggerPulse({ origin, strength, sourceY, announce, mode, source }) {
+  camera.updateMatrixWorld(true);
   const screenPoint = scratchVec3.set(origin.x, sourceY, origin.y).project(camera);
-  state.pulseScreen.set(screenPoint.x * 0.5 + 0.5, screenPoint.y * 0.5 + 0.5);
-  globals.pulseAge.value = 0;
-  globals.pulseStrength.value = strength;
-  globals.sonarMode.value = state.pulseMode;
+  insertPulse(pulseHistory, {
+    originX: origin.x,
+    originZ: origin.y,
+    sourceY,
+    screenX: screenPoint.x * 0.5 + 0.5,
+    screenY: screenPoint.y * 0.5 + 0.5,
+    strength,
+    mode,
+    source,
+  });
+  syncPulseState();
   sonarShell.position.set(origin.x, sourceY, origin.y);
   sonarShell.scale.setScalar(0.001);
-  sonarShell.visible = state.pulseMode === 0;
+  sonarShell.visible = mode === 0;
   if (announce) state.pulseCooldown = 0.95;
 }
 
@@ -2464,7 +2588,7 @@ function updateCeremony(dt) {
 
   while (state.ceremonyCue < openingCues.length && t >= openingCues[state.ceremonyCue].time) {
     const cue = openingCues[state.ceremonyCue++];
-    triggerPulse(new THREE.Vector2(0, 0), cue.strength, cue.y, false, cue.mode);
+    triggerPulse({ origin: new THREE.Vector2(0, 0), strength: cue.strength, sourceY: cue.y, announce: false, mode: cue.mode, source: 'system' });
     showMessage(cue.text, 1300);
   }
   if (t >= (reducedMotion ? 4.2 : 8.65)) {
@@ -2522,7 +2646,7 @@ function updateEnding() {
   }
   if (state.endingCue === 1 && state.shutdown > 0.41) {
     state.endingCue = 2;
-    triggerPulse(new THREE.Vector2(0, 0), 0.82, 0.34, false, 8);
+    triggerPulse({ origin: new THREE.Vector2(0, 0), strength: 0.82, sourceY: 0.34, announce: false, mode: 8, source: 'system' });
     showMessage('THE ECHO REVERSES', 1550);
   }
   if (state.endingCue === 2 && state.shutdown > 0.76) {
@@ -2576,7 +2700,9 @@ function updateTide(elapsed, dt) {
       state.tideIndex = state.pendingTide;
       globals.section.value = state.tideIndex;
       // The new chapter announces itself in its own sonar dialect.
-      if (state.calibrated && !state.ending) triggerPulse(new THREE.Vector2(0, 0), 0.58, 0.34, false, state.tideIndex);
+      if (state.calibrated && !state.ending) {
+        triggerPulse({ origin: new THREE.Vector2(0, 0), strength: 0.58, sourceY: 0.34, announce: false, mode: state.tideIndex, source: 'system' });
+      }
     }
     if (transitionProgress >= 1) {
       state.tideIndex = state.pendingTide;
@@ -2800,20 +2926,26 @@ function updateCore(dt, elapsed) {
 
 function updateResonators(dt, elapsed) {
   const active = smoothstep(0.18, 0.78, state.ritual);
+  const livePulses = state.shutdown > 0.5 ? [] : getLivePulses(pulseHistory);
+  const mixScale = pulseMixScale(livePulses.length);
   suspensionMaterial.opacity = 0.04 * active * (1 - state.shutdown);
   for (const item of resonators) {
     const { root, ring, crossRing, aperture, index } = item;
     const bandIndex = clamp(Math.floor(root.userData.band * (spectrumSize - 1)), 0, spectrumSize - 1);
     const spec = spectrumBytes[bandIndex] / 255;
     const a = root.userData.angle;
-    const d = Math.hypot(root.position.x - state.pulseOrigin.x, root.position.z - state.pulseOrigin.y);
-    let waveRadius = state.pulseAge * (4.15 + state.low * 1.7);
-    if (state.pulseMode === 1) waveRadius = state.pulseAge * (2.2 + state.high * 0.8);
-    else if (state.pulseMode === 3) waveRadius = state.pulseAge * 2.5;
-    else if (state.pulseMode === 7) waveRadius = lerp(18.0, 0.15, smootherstep(0, 4.05, state.pulseAge));
-    else if (state.pulseMode === 8) waveRadius = lerp(10.5, 0.15, smootherstep(0, 4.3, state.pulseAge));
-    const resonanceWidth = state.pulseMode === 6 ? 0.55 : state.pulseMode >= 7 ? 0.82 : 1.35;
-    const resonance = Math.exp(-Math.abs(d - waveRadius) * resonanceWidth) * state.pulseStrength;
+    let resonance = 0;
+    for (const pulse of livePulses) {
+      const d = Math.hypot(root.position.x - pulse.originX, root.position.z - pulse.originZ);
+      let waveRadius = pulse.age * (4.15 + state.low * 1.7);
+      if (pulse.mode === 1) waveRadius = pulse.age * (2.2 + state.high * 0.8);
+      else if (pulse.mode === 3) waveRadius = pulse.age * 2.5;
+      else if (pulse.mode === 7) waveRadius = lerp(18.0, 0.15, smootherstep(0, 4.05, pulse.age));
+      else if (pulse.mode === 8) waveRadius = lerp(10.5, 0.15, smootherstep(0, 4.3, pulse.age));
+      const resonanceWidth = pulse.mode === 6 ? 0.55 : pulse.mode >= 7 ? 0.82 : 1.35;
+      resonance += Math.exp(-Math.abs(d - waveRadius) * resonanceWidth)
+        * pulse.strength * pulse.contributionScale * Math.exp(-pulse.age * 0.34) * mixScale;
+    }
     const activation = smoothstep(index / 9 * 0.55, index / 9 * 0.55 + 0.28, state.ritual);
     const offStart = 0.18 + (1 - index / 8) * 0.46;
     const survive = 1 - smoothstep(offStart, offStart + 0.19, state.shutdown);
@@ -2834,10 +2966,8 @@ function updateResonators(dt, elapsed) {
 }
 
 function updatePulse(dt) {
-  state.pulseAge += dt;
-  globals.pulseAge.value = state.pulseAge;
-  state.pulseStrength = damp(state.pulseStrength, 0, 0.34, dt);
-  globals.pulseStrength.value = state.pulseStrength;
+  advancePulseHistory(pulseHistory, dt);
+  const pulse = syncPulseState();
 
   sonarShell.visible = false;
   sonarCurtain.visible = false;
@@ -2852,26 +2982,29 @@ function updatePulse(dt) {
   sonarPillars.material.opacity = 0;
   helixMaterial.opacity = 0;
   for (const slab of sonarSlabs.children) slab.material.opacity = 0;
+  convergenceUniforms.pulseAge.value = 99;
+  convergenceUniforms.pulseStrength.value = 0;
 
   if (state.shutdown > 0.5) {
     const p = smoothstep(0.5, 0.92, state.shutdown);
     sonarConvergence.visible = true;
     sonarConvergence.position.set(0, 0.34, 0);
     sonarConvergence.scale.setScalar(lerp(22.0, 0.035, p));
-    globals.pulseStrength.value = Math.max(globals.pulseStrength.value, (1 - p) * 1.08);
+    convergenceUniforms.pulseAge.value = p * 5.35;
+    convergenceUniforms.pulseStrength.value = (1 - p) * 1.08;
     return;
   }
 
-  const mode = state.pulseMode;
-  const lifetimes = [5.35, 4.1, 4.35, 4.0, 4.9, 4.5, 4.2, 4.05, 4.3];
-  const life = lifetimes[mode] || 4.5;
-  if (state.pulseAge >= life || state.pulseStrength <= 0.008) return;
-  const p = clamp(state.pulseAge / life, 0, 1);
-  const decay = Math.pow(1 - p, 0.62) * state.pulseStrength;
-  const ox = state.pulseOrigin.x, oy = state.pulseSourceY, oz = state.pulseOrigin.y;
+  if (!pulse) return;
+  const { mode } = pulse;
+  const p = clamp(pulse.age / pulse.lifetime, 0, 1);
+  const decay = Math.pow(1 - p, 0.62) * pulse.strength * pulse.contributionScale
+    * Math.exp(-pulse.age * 0.34);
+  if (decay <= 0.008) return;
+  const ox = pulse.originX, oy = pulse.sourceY, oz = pulse.originZ;
 
   if (mode === 0) {
-    const radius = Math.max(0.01, state.pulseAge * (4.15 + state.low * 1.7));
+    const radius = Math.max(0.01, pulse.age * (4.15 + state.low * 1.7));
     sonarShell.visible = true;
     sonarShell.position.set(ox, oy, oz);
     sonarShell.scale.setScalar(radius);
@@ -2879,11 +3012,11 @@ function updatePulse(dt) {
     sonarCurtain.visible = true;
     sonarCurtain.position.set(ox, -0.2 + oy * 0.2, oz);
     sonarCurtain.rotation.y = globals.time.value * 0.11;
-    const radius = 0.2 + state.pulseAge * (2.2 + state.high * 0.8);
-    sonarCurtain.scale.set(radius, 5.2 + state.pulseAge * 1.3, radius);
+    const radius = 0.2 + pulse.age * (2.2 + state.high * 0.8);
+    sonarCurtain.scale.set(radius, 5.2 + pulse.age * 1.3, radius);
   } else if (mode === 2) {
     sonarSpokes.visible = true;
-    const inner = Math.max(0.05, state.pulseAge * 2.0);
+    const inner = Math.max(0.05, pulse.age * 2.0);
     for (let i = 0; i < sonarSpokeCount; i++) {
       const u = i / sonarSpokeCount;
       const a = u * Math.PI * 2;
@@ -2902,7 +3035,7 @@ function updatePulse(dt) {
     sonarSpokeMaterial.opacity = decay * (0.28 + state.high * 0.45);
   } else if (mode === 3) {
     sonarPillars.visible = true;
-    const ringRadius = 0.35 + state.pulseAge * 2.5;
+    const ringRadius = 0.35 + pulse.age * 2.5;
     for (let i = 0; i < sonarPillarCount; i++) {
       const u = i / sonarPillarCount;
       const a = u * Math.PI * 2;
@@ -2921,16 +3054,16 @@ function updatePulse(dt) {
     sonarLattice.position.set(ox, oy, oz);
     sonarLattice.rotation.y = globals.time.value * 0.18;
     sonarLattice.rotation.x = Math.sin(globals.time.value * 0.11) * 0.22;
-    sonarLattice.scale.setScalar(0.45 + state.pulseAge * 1.02);
+    sonarLattice.scale.setScalar(0.45 + pulse.age * 1.02);
   } else if (mode === 5) {
     sonarHelix.visible = true;
     for (let i = 0; i < helixSegments; i++) {
       const u = i / (helixSegments - 1);
       const strand = i % 2;
-      const y = (u - 0.5) * (4.2 + state.pulseAge * 0.7);
+      const y = (u - 0.5) * (4.2 + pulse.age * 0.7);
       const a = u * Math.PI * 8 + globals.time.value * (strand ? -1.1 : 0.9) + strand * Math.PI;
       const spec = spectrumBytes[Math.floor(u * (spectrumSize - 1))] / 255;
-      const radius = 0.6 + state.pulseAge * 0.62 + spec * 0.38;
+      const radius = 0.6 + pulse.age * 0.62 + spec * 0.38;
       const nextA = a + 0.13;
       const o = i * 6;
       helixPositions[o] = ox + Math.cos(a) * radius;
@@ -2949,14 +3082,16 @@ function updatePulse(dt) {
     for (const slab of sonarSlabs.children) {
       const i = slab.userData.index;
       const delayed = smoothstep(i / 12, i / 12 + 0.32, p) * (1 - smoothstep(0.62 + i / 30, 1, p));
-      const z = (i - 4) * (0.18 + state.pulseAge * 0.12);
-      slab.position.set(Math.sin(i * 1.7) * state.pulseAge * 0.08, (i - 4) * 0.12, z);
+      const z = (i - 4) * (0.18 + pulse.age * 0.12);
+      slab.position.set(Math.sin(i * 1.7) * pulse.age * 0.08, (i - 4) * 0.12, z);
       slab.rotation.z = (i - 4) * 0.035 + Math.sin(globals.time.value * 0.4 + i) * 0.02;
-      slab.scale.setScalar(0.62 + state.pulseAge * 0.52 + i * 0.025);
+      slab.scale.setScalar(0.62 + pulse.age * 0.52 + i * 0.025);
       slab.material.opacity = delayed * decay * (0.25 + state.high * 0.42);
     }
   } else if (mode === 7) {
     sonarConvergence.visible = true;
+    convergenceUniforms.pulseAge.value = pulse.age;
+    convergenceUniforms.pulseStrength.value = pulse.strength * pulse.contributionScale * Math.exp(-pulse.age * 0.34);
     sonarConvergence.position.set(ox, oy, oz);
     const radius = lerp(18.0 + state.high * 3.0, 0.18, smootherstep(0, 1, p));
     sonarConvergence.scale.set(radius * 1.15, radius * 0.58, radius);
@@ -2975,6 +3110,8 @@ function updateWorld(dt, elapsed) {
   mist.rotation.y += dt * 0.0018;
   nearSnow.rotation.y -= dt * 0.0032;
   abyssalSpines.rotation.y += dt * 0.0007;
+  const livePulses = state.shutdown > 0.5 ? [] : getLivePulses(pulseHistory);
+  const mixScale = pulseMixScale(livePulses.length);
 
   const fogProfiles = [0.0185,0.0205,0.019,0.024,0.018,0.021,0.023,0.026,0.030];
   scene.fog.density = damp(scene.fog.density, fogProfiles[state.tideIndex] + state.dive * 0.0035 + state.phaseTransition * 0.0025, 1.8, dt);
@@ -2984,7 +3121,13 @@ function updateWorld(dt, elapsed) {
     ring.rotation.z += dt * (0.0014 + i * 0.00024) * (i % 2 ? -1 : 1);
     ring.rotation.y += dt * 0.0008;
     ring.material.color.copy(i % 3 === 0 ? globals.glowColor.value : globals.secondaryColor.value);
-    const sonarLift = state.pulseAge < 4.5 ? state.pulseStrength * Math.exp(-Math.abs(i - state.pulseAge * 1.15) * 0.72) : 0;
+    let sonarLift = 0;
+    for (const pulse of livePulses) {
+      sonarLift += pulse.age < 4.5
+        ? pulse.strength * pulse.contributionScale
+          * Math.exp(-pulse.age * 0.34) * Math.exp(-Math.abs(i - pulse.age * 1.15) * 0.72) * mixScale
+        : 0;
+    }
     ring.material.opacity = (0.005 + state.high * 0.007 + sonarLift * 0.055 + state.phaseTransition * 0.025) * state.ritual * (1 - state.shutdown);
   }
 
@@ -2993,7 +3136,12 @@ function updateWorld(dt, elapsed) {
   platformMaterial.opacity = 0.34 + state.ritual * 0.28;
   platformRings.forEach((ring, i) => {
     ring.rotation.z += dt * (0.004 + i * 0.002) * (i % 2 ? -1 : 1);
-    ring.material.opacity = (0.018 + state.high * 0.06 + (state.pulseAge < 3 ? state.pulseStrength * 0.075 : 0)) * state.ritual * (1 - state.shutdown);
+    const pulseGlow = livePulses.reduce((total, pulse) => total + (pulse.age < 3
+      ? pulse.strength * pulse.contributionScale * 0.075
+        * Math.exp(-pulse.age * 0.34)
+        * mixScale
+      : 0), 0);
+    ring.material.opacity = (0.018 + state.high * 0.06 + pulseGlow) * state.ritual * (1 - state.shutdown);
   });
 
   upperLight.intensity = 0.55 * state.ritual * (1 - state.shutdown) + state.high * 1.6 + state.phaseTransition * 1.8;
@@ -3096,6 +3244,8 @@ function applyPreview(mode, section) {
     throw new RangeError(`Ninth Tide preview section must be an integer from 0 through 8; received ${String(section)}.`);
   }
 
+  resetPulseHistory(pulseHistory);
+  syncPulseState();
   state.previewMode = mode;
   state.previewSection = section;
   state.tideIndex = section;
@@ -3136,7 +3286,14 @@ function applyPreview(mode, section) {
   ui.phaseName.textContent = meta[1];
   ui.phaseSub.textContent = meta[2];
   ui.sideTicks.forEach((tick, index) => tick.classList.toggle('active', index === section));
-  triggerPulse(new THREE.Vector2(0, 0), mode === 'ending' ? 0.45 : 1.15, 0.34, false);
+  triggerPulse({
+    origin: new THREE.Vector2(0, 0),
+    strength: mode === 'ending' ? 0.45 : 1.15,
+    sourceY: 0.34,
+    announce: false,
+    mode: section,
+    source: 'system',
+  });
 }
 
 const baselineMaterialScalarKeys = Object.freeze([
@@ -3423,6 +3580,25 @@ function inspectRenderer(gl) {
   return { raw, debugInfoAvailable: true, contextAttributes: { ...contextAttributes } };
 }
 
+function inspectPulseUniformBudget() {
+  const systemSlots = isMobile ? 2 : 5;
+  const userSlots = isMobile ? 2 : 3;
+  const addedVectorsPerStage = pulseSlotCount * 2;
+  return {
+    tier: isMobile ? 'mobile' : 'desktop',
+    systemSlots,
+    userSlots,
+    totalSlots: pulseSlotCount,
+    addedVectorsPerStage,
+    minimumFragmentVectors: 224,
+    minimumVertexVectors: 256,
+    remainingMinimumFragmentVectors: 224 - addedVectorsPerStage,
+    remainingMinimumVertexVectors: 256 - addedVectorsPerStage,
+    actualFragmentVectors: renderer.capabilities.maxFragmentUniforms,
+    actualVertexVectors: renderer.capabilities.maxVertexUniforms,
+  };
+}
+
 // URL/forced preview is the only capture mode. Live embedded preview commands keep the runtime loop.
 if (deterministicCaptureRequested) {
   assertAfterimageTargets();
@@ -3430,6 +3606,7 @@ if (deterministicCaptureRequested) {
 }
 const deterministicBaseline = deterministicCaptureRequested ? Object.freeze({
   state: captureRecord(state),
+  pulseHistory: capturePulseHistory(pulseHistory),
   globals: captureRecord(Object.fromEntries(Object.entries(globals).map(([key, uniform]) => [key, uniform.value]))),
   scene: captureSceneBaseline(),
   dom: captureDomBaseline(),
@@ -3475,6 +3652,8 @@ function restoreDeterministicBaseline() {
   }
   ui.audio.pause();
   restoreRecord(state, deterministicBaseline.state, 'state');
+  restorePulseHistory(pulseHistory, deterministicBaseline.pulseHistory);
+  syncPulseState();
   const globalValues = Object.fromEntries(Object.entries(globals).map(([key, uniform]) => [key, uniform.value]));
   restoreRecord(globalValues, deterministicBaseline.globals, 'globals');
   for (const [key, value] of Object.entries(globalValues)) globals[key].value = value;
@@ -3513,8 +3692,6 @@ function canonicalStateForDigest(mode, section, timestampMs) {
       lightLevel: state.lightLevel,
       shutdown: state.shutdown,
       archiveOpen: state.archiveOpen,
-      pulseAge: state.pulseAge,
-      pulseStrength: state.pulseStrength,
       low: state.low,
       mid: state.mid,
       high: state.high,
@@ -3537,9 +3714,9 @@ function canonicalStateForDigest(mode, section, timestampMs) {
       sectionLocal: globals.sectionLocal.value,
       tide: globals.tide.value,
       open: globals.open.value,
-      pulseAge: globals.pulseAge.value,
-      pulseStrength: globals.pulseStrength.value
+      pulseClock: globals.uPulseClock.value
     },
+    pulseHistory: capturePulseHistory(pulseHistory),
     camera: {
       position: camera.position.toArray(),
       quaternion: camera.quaternion.toArray()
@@ -3631,6 +3808,137 @@ async function stepDeterministicPreview(request) {
   }
 }
 
+function validatePulseScenarioRequest(request) {
+  if (!hasExactKeys(request, ['scenario', 'section', 'timestampMs'])) {
+    throw new Error('Ninth Tide pulse scenario requires exactly scenario, section, and timestampMs.');
+  }
+  if (![
+    'zero-pulse',
+    'user-then-auto',
+    'user-epsilon-then-auto',
+    'ending-convergence',
+    'ending-convergence-empty',
+  ].includes(request.scenario)) {
+    throw new TypeError(`Unknown Ninth Tide pulse scenario: ${String(request.scenario)}.`);
+  }
+  if (!Number.isInteger(request.section) || request.section < 0 || request.section > 8) {
+    throw new RangeError(`Ninth Tide pulse scenario section must be an integer from 0 through 8; received ${String(request.section)}.`);
+  }
+  if (typeof request.timestampMs !== 'number'
+    || !Number.isFinite(request.timestampMs)
+    || request.timestampMs < 0
+    || request.timestampMs > 6000) {
+    throw new RangeError(`Ninth Tide pulse scenario timestampMs must be finite from 0 through 6000; received ${String(request.timestampMs)}.`);
+  }
+}
+
+async function runDeterministicPulseScenario(request) {
+  if (deterministicStepActive) throw new Error('Ninth Tide deterministic step is already running.');
+  validatePulseScenarioRequest(request);
+  deterministicStepActive = true;
+  try {
+    if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+    restoreDeterministicBaseline();
+    const ending = request.scenario.startsWith('ending-convergence');
+    applyPreview(ending ? 'ending' : 'main', ending ? 8 : request.section);
+    if (!ending || request.scenario === 'ending-convergence-empty') {
+      resetPulseHistory(pulseHistory);
+      syncPulseState();
+    }
+    if (request.scenario === 'ending-convergence-empty') state.endingCue = 2;
+    if (request.scenario === 'user-then-auto' || request.scenario === 'user-epsilon-then-auto') {
+      triggerPulse({
+        origin: new THREE.Vector2(3.25, -1.6),
+        strength: request.scenario === 'user-then-auto' ? 1.05 : 0.000001,
+        sourceY: -2.28,
+        announce: false,
+        mode: request.section,
+        source: 'user',
+      });
+    }
+
+    const dt = 1 / 60;
+    const targetSeconds = request.timestampMs / 1000;
+    let elapsedSeconds = 0;
+    let autoInserted = false;
+    while (elapsedSeconds + 1e-9 < targetSeconds) {
+      const stepSeconds = Math.min(dt, targetSeconds - elapsedSeconds);
+      if ((request.scenario === 'user-then-auto' || request.scenario === 'user-epsilon-then-auto')
+        && !autoInserted
+        && elapsedSeconds < 1
+        && elapsedSeconds + stepSeconds >= 1) {
+        const beforeEvent = 1 - elapsedSeconds;
+        if (beforeEvent > 0) advanceFrameState(beforeEvent, 1);
+        elapsedSeconds = 1;
+        triggerPulse({
+          origin: new THREE.Vector2(0, 0),
+          strength: 0.72,
+          sourceY: 0.32,
+          announce: false,
+          mode: request.section,
+          source: 'auto',
+        });
+        autoInserted = true;
+        const afterEvent = stepSeconds - beforeEvent;
+        if (afterEvent > 0) {
+          elapsedSeconds += afterEvent;
+          advanceFrameState(afterEvent, elapsedSeconds);
+        }
+      } else {
+        elapsedSeconds += stepSeconds;
+        advanceFrameState(stepSeconds, elapsedSeconds);
+      }
+    }
+    if ((request.scenario === 'user-then-auto' || request.scenario === 'user-epsilon-then-auto')
+      && !autoInserted
+      && targetSeconds >= 1) {
+      throw new Error('Ninth Tide pulse scenario failed to insert the scheduled auto pulse.');
+    }
+
+    const beforeFrameRenders = frameRenderCount;
+    renderer.info.reset();
+    renderer.setRenderTarget(null);
+    renderFrame(0, targetSeconds);
+    const frameRenders = frameRenderCount - beforeFrameRenders;
+    if (frameRenders !== 1 || animationFrameId !== null) {
+      throw new Error('Ninth Tide pulse scenario must render exactly one top-level frame without scheduling RAF.');
+    }
+    const gl = renderer.getContext();
+    const rendererAudit = inspectRenderer(gl);
+    gl.finish();
+    const framebuffer = await readCanonicalFramebuffer(gl);
+    const livePulses = getLivePulses(pulseHistory).map((pulse) => ({ ...pulse }));
+    return {
+      scenario: request.scenario,
+      section: ending ? 8 : request.section,
+      timestampMs: request.timestampMs,
+      frameRenders,
+      queuedAnimationFrames: 0,
+      framebuffer,
+      renderer: rendererAudit,
+      uniformBudget: inspectPulseUniformBudget(),
+      livePulses,
+      artifacts: {
+        shell: sonarShell.visible,
+        curtain: sonarCurtain.visible,
+        spokes: sonarSpokes.visible,
+        pillars: sonarPillars.visible,
+        lattice: sonarLattice.visible,
+        helix: sonarHelix.visible,
+        slabs: sonarSlabs.visible,
+        convergence: sonarConvergence.visible,
+        null: sonarNull.visible,
+      },
+    };
+  } finally {
+    if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+    renderer.setRenderTarget(deterministicBaseline.rendererTarget);
+    deterministicStepActive = false;
+  }
+}
+
 function hitTestDeterministicPreview(request) {
   if (!hasExactKeys(request, ['clientX', 'clientY'])
     || typeof request.clientX !== 'number'
@@ -3675,6 +3983,7 @@ if (deterministicCaptureRequested) {
   applyPreview(mode, section);
   window.__NINTH_TIDE_STEP__ = stepDeterministicPreview;
   window.__NINTH_TIDE_HIT_TEST__ = hitTestDeterministicPreview;
+  window.__NINTH_TIDE_PULSE_SCENARIO__ = runDeterministicPulseScenario;
 }
 
 initializeRuntimeControl();
