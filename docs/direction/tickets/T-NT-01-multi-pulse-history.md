@@ -55,3 +55,48 @@ research-audio-reactive.md §2.2 案A(uniform 配列リングバッファ)を第
 - veilPass は最大寄与 pulse 1本という上記の契約を守る。全 pulse の加算や最新 pulse への読み替えは本票の仕様外。
 - オートソナー発火条件(:2206–2210)は T-NT-03(スペクトラルフラックス化)と同一箇所。両票を続けて実施する場合は T-NT-03 を先にして発火イベント列を安定させてから多重化の検収をすると比較が楽になる。
 - 参照: research-audio-reactive.md §2.2(uniform 上限・Pulse Room 仕様の出典リンク含む)
+
+## 完了報告 (2026-07-21)
+
+- `pulse-history.js` を新設し、desktop は system 5 + user 3、mobile は system 2 + user 2 の
+  独立 ring とした。`auto/system` と `user` は相互に slot を借りず、各 ring の最古だけを上書きする。
+  未知 tier/source、非有限座標、範囲外 mode、負の時刻差は fallback せず例外にする。
+- 上書き時だけ、上書き前から存続する trace を 100 ms / 0.5 倍にする。新規 pulse は減光せず、
+  pause の `dt=0` では clock と dip window を進めない。capture/restore は slot、cursor、clock、serial、
+  dip state を独立して深く保存し、決定論 baseline の `Vector4[]` reference 問題を回避した。
+- `uPulses[N] = vec4(originX, sourceY, originZ, startTime)` と
+  `uPulseMeta[N] = vec4(strength, mode, queueScale, activeMixScale)` を共有し、floor、archive wire/points、
+  resonator beams、near snow、abyssal spines と CPU resonator/pressure consumers を固定上限 loop の
+  複数 pulse 加算へ置換した。inactive slot は loop 内 branch で高価な `exp/smoothstep` を実行しない。
+- 多数 pulse が同じ opening cue で重なっても既存 exposure を壊さないよう、加算 consumer だけを
+  `1 / (1 + 0.55 * (liveCount - 1))` で energy-normalize する。単一 pulse、veil の選択値、単件 artifact
+  は正規化しない。既存の `exp(-0.34 * age)` 強度減衰と consumer 固有の寿命 fade は維持した。
+- 単件 sonar artifact は最新の生存 pulse を選ぶ。veil は仕様通り全通常 pulse の
+  `strength * lifeEnvelope(age, mode)` 最大値を選び、同値は新しい `startTime`、同時刻は serial で決める。
+  convergence は専用 uniform に分離し、shutdown が共有 pulse strength を書き換える経路を削除した。
+  `shutdown > 0.5` では通常 history の shader/CPU contribution を明示的に 0 にする。
+- preview 限定の strict `__NINTH_TIDE_PULSE_SCENARIO__({ scenario, section, timestampMs })` と
+  `qa:ninth-tide-pulses` を追加した。desktop/mobile の容量と shader link、zero-pulse、user→1秒後auto、
+  ordinary pulse を保持した ending convergence を SwiftShader で検査する。zero は固定 golden、user は
+  同じ ring/liveCount/mixScale の epsilon-strength control、ending は history 有無の paired framebuffer と比較する。
+- 基点 `e6ba0d8` と変更後の zero-pulse RGBA8 は 1280×720 / RTX 4070 Ti ANGLE で同じ
+  `872ac01bbf4e0bd5e6412938cb4e94b78083222cd90a238e49a763511c92bfc5` となり pixel-equivalent。
+  user pulse は mode 0 の 5.35 s lifetime に対して 4.5 s 時点でも残り、1 s 後の center auto pulse と
+  同時に live であることを browser hook で確認した。
+- uniform 配列増分は desktop 16 vec4 / mobile 8 vec4。最低保証に対する残量は fragment 208 / 216、
+  vertex 240 / 248 vec4。実測上限は fragment 1024 / vertex 4095。配列は program ごとの active uniform
+  であり、材質数を跨いで累積する予算ではない。
+- 同じ埋め込み runtime telemetry の 5 sample 中央値で frame time は改修前 10.5167 ms、改修後
+  8.6810 ms (`-17.45%`)。最初の inactive branch なし実装は 11.9093 ms (`+13.2%`) で gate を失敗し、
+  空 slot の高価な shader path を除去してから再取得した。
+- 最終 bundle SHA-256 は
+  `457e40a7e6eebf0cce993884b7d403f141dafbe801fd661d1ddc3326a000c944` で ref dist / public / root dist が一致。
+  `qa:ninth-tide` manifest は
+  `ab98542812ca64ce602c6e7a65712a3a2655d137b6e85ce442fa992514c7bf96`、pulse QA manifest は
+  `78570a3cda464ac0dbaa674b34b314604ae64d29d403a653f2ba7b66dfb69010`。
+- 独立 review で発見した veil shutdown 漏れと queue dip を winner の比較値へ混入する不具合を修正した。
+  最終 pulse QA は strong/epsilon user の同条件 pair が `6c026603…` / `73951f4b…` と異なり、
+  ending の history 2本/0本 pair はともに `50845613…` と完全一致することを検証した。
+- `pnpm test` (37 files / 303 tests)、`pnpm lint`、`pnpm build`、`qa:ninth-tide-pulses`、
+  production `qa:ninth-tide` (3 browsers × 11 states × 3 repeats)、`qa:exhibits`、`qa:visual` を通過した。
+  ping-pong FBO 航跡は本票へ混在させず、記載通り将来の独立票に留めた。
