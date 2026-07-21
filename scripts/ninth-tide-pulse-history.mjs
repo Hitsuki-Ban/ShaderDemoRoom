@@ -14,7 +14,7 @@ const playwrightVersion = require('playwright/package.json').version;
 assertBundledPlaywrightVersion(playwrightVersion);
 const config = parseNinthTideConfig(process.env);
 const outputDir = 'output/playwright/ninth-tide-pulses';
-const DESKTOP_ZERO_PULSE_GOLDEN = '37ed1ba00f2b4c8c9315774f79b2a8da2b7309ea3dcbf29adcde53bffb98bb4d';
+const DESKTOP_ZERO_PULSE_GOLDEN = 'd0e920bbb5b7b684a697c2ce694c1522e33238d0a547b61a6a4f086d7744f2c6';
 await mkdir(outputDir, { recursive: true });
 
 function assert(condition, message) {

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "ticket": "T-NT-02",
+  "sourceRevision": "70a67ea94655a33ab23fc7443c210a59debd6ad7",
+  "bundleSha256": "457e40a7e6eebf0cce993884b7d403f141dafbe801fd661d1ddc3326a000c944",
+  "captureManifestSha256": "067e5a9b88cd6ada025487c37346d2bddb371c40bc03f81aaee42b1a7762765e",
+  "environment": {
+    "playwright": "1.60.0",
+    "renderer": "ANGLE SwiftShader",
+    "viewport": { "width": 1440, "height": 900, "deviceScaleFactor": 1 }
+  },
+  "nearBlackMaxCode": 32,
+  "states": {
+    "section-8": {
+      "mode": "main",
+      "section": 8,
+      "timestampMs": 342276.2,
+      "framebufferSha256": "15c003401a7be5ff224197316a154c2c8b9e99a351a9c402b94be6ddd0b02c09",
+      "pngSha256": "aeb9926120529e163433efd2672284065ab13dadae78c7eeda8ecc3f389e8169",
+      "regions": {
+        "field": {
+          "width": 1440,
+          "height": 900,
+          "roi": { "x": 144, "y": 90, "width": 1152, "height": 720 },
+          "roiPixels": 829440,
+          "nearBlackMaxCode": 32,
+          "meanLumaCode": 2.4427348572530865,
+          "lumaNearBlackHistogram": [509511,92314,49268,29009,13236,11545,14489,12829,19223,18501,9943,5612,4644,3928,3801,3191,2494,2219,2128,2224,2011,1939,1579,1318,1015,830,724,677,628,631,632,471,382],
+          "occupiedNonzeroBins": 32,
+          "interiorEmptyBins": 0,
+          "maxInteriorZeroRun": 0,
+          "dominantNonzeroBinRatio": 0.2945235854323863,
+          "equalHorizontalNearPairRatio": 0.6483889965019831,
+          "longestHorizontalNearRun": 116,
+          "nonzeroNearPixels": 313435
+        },
+        "floor": {
+          "width": 1440,
+          "height": 900,
+          "roi": { "x": 173, "y": 522, "width": 1094, "height": 306 },
+          "roiPixels": 334764,
+          "nearBlackMaxCode": 32,
+          "meanLumaCode": 3.2562163195564637,
+          "lumaNearBlackHistogram": [172744,52052,20204,18593,6336,3588,2803,3180,7151,10745,6975,3339,2811,2406,2479,2054,1426,1245,1156,1118,1047,986,855,831,732,609,556,544,482,483,487,369,309],
+          "occupiedNonzeroBins": 32,
+          "interiorEmptyBins": 0,
+          "maxInteriorZeroRun": 0,
+          "dominantNonzeroBinRatio": 0.32954523871327185,
+          "equalHorizontalNearPairRatio": 0.6631225282609456,
+          "longestHorizontalNearRun": 116,
+          "nonzeroNearPixels": 157951
+        }
+      }
+    },
+    "ending": {
+      "mode": "ending",
+      "section": 8,
+      "timestampMs": 346000,
+      "framebufferSha256": "4bdc732de51b6f405b2740de44f6c19c108f0ca42310fd1793f76e4845b8506a",
+      "pngSha256": "9b262bb156e61c43b827943cd31edabc14849975b37829911ce900ecc01bb5a3",
+      "regions": {
+        "field": {
+          "width": 1440,
+          "height": 900,
+          "roi": { "x": 144, "y": 90, "width": 1152, "height": 720 },
+          "roiPixels": 829440,
+          "nearBlackMaxCode": 32,
+          "meanLumaCode": 0.045435474537037036,
+          "lumaNearBlackHistogram": [810133,12507,2698,2487,528,134,59,114,324,37,37,46,12,202,84,19,2,1,9,2,2,1,0,2,0,0,0,0,0,0,0,0,0],
+          "occupiedNonzeroBins": 22,
+          "interiorEmptyBins": 1,
+          "maxInteriorZeroRun": 1,
+          "dominantNonzeroBinRatio": 0.6477961361164345,
+          "equalHorizontalNearPairRatio": 0.7196733125150132,
+          "longestHorizontalNearRun": 25,
+          "nonzeroNearPixels": 19307
+        },
+        "floor": {
+          "width": 1440,
+          "height": 900,
+          "roi": { "x": 173, "y": 522, "width": 1094, "height": 306 },
+          "roiPixels": 334764,
+          "nearBlackMaxCode": 32,
+          "meanLumaCode": 0.030457277365547073,
+          "lumaNearBlackHistogram": [328194,4721,965,619,144,31,16,10,5,4,3,3,4,35,7,1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+          "occupiedNonzeroBins": 16,
+          "interiorEmptyBins": 2,
+          "maxInteriorZeroRun": 2,
+          "dominantNonzeroBinRatio": 0.7185692541856925,
+          "equalHorizontalNearPairRatio": 0.8018465909090909,
+          "longestHorizontalNearRun": 25,
+          "nonzeroNearPixels": 6570
+        }
+      }
+    }
+  }
+}

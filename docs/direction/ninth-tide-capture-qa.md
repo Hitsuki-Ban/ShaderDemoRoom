@@ -114,3 +114,42 @@ renderer/browserの更新、または意図的なNinth Tide visual/camera/postpr
 5. baseline JSON、implementation revision、bundle SHA、QA logを同時に更新する。
 
 renderer別tolerance、retry、online fixture regeneration、旧hook compatibilityは追加しない。
+
+## T-NT-02 final-output dither gate
+
+```powershell
+$env:SHOWROOM_URL='http://127.0.0.1:4173/ShaderDemoRoom'
+pnpm qa:ninth-tide-dither
+```
+
+`qa:ninth-tide-dither` は `docs/direction/baselines/t-nt-02-before.json` の変更前
+`70a67ea` baseline と section-8 / ending の field・floor ROI を比較する。8-bit luma code の
+平均 shift は ±0.5 以内、horizontal equal-pair ratio は各 ROI で0.1以上低下、longest run は5 pixel
+以上短縮、occupied near-black bin は減少不可とする。seed 0 を同頁2回・2 fresh browserで exact 比較し、
+seed 137との RGB 差は最大1 code、alpha差0、平均差±0.5 code以内を要求する。
+
+hook は `__NINTH_TIDE_DITHER_SCENARIO__({ mode, section, timestampMs, seed })` の exact schema のみを
+受け付ける。hook は render から非同期 HalfFloat readback の完了まで single-flight であり、並行 call は
+`Ninth Tide dither scenario is already running.` で拒否される。gate はこの競合も state ごとに検証する。
+2 seed の Afterimage HalfFloat target hash は完全一致、final framebuffer hash は不一致、
+composer order は `RenderPass → UnrealBloomPass → AfterimagePass → VeilShaderPass → DitheredOutputPass`、
+output owner は1本でなければ失敗する。cross-driver hash fallback、旧 OutputPass、shader文字列置換、
+自動再試行は設けない。
+
+性能門禁は基線と候補の production preview を別 port で起動し、同じ hardware Chrome / D3D11 process 内で
+section-8 live を5組の AB/BA 順序で測る。各 page は8秒 warmup、bridge の1秒間隔10 sample、独立した8秒
+rAF cadenceを記録し、両指標の paired median regression が5%を超えた場合に失敗する。
+
+```powershell
+$env:BASELINE_URL='http://127.0.0.1:4177/ShaderDemoRoom'
+$env:CANDIDATE_URL='http://127.0.0.1:4175/ShaderDemoRoom'
+$env:BASELINE_REVISION='70a67ea94655a33ab23fc7443c210a59debd6ad7'
+$env:CANDIDATE_REVISION='<candidate revision or bundle identity>'
+$env:PERFORMANCE_OUTPUT_PATH='output/playwright/ninth-tide-dither-performance.json'
+pnpm qa:ninth-tide-dither-performance
+```
+
+T-NT-02 の採用 evidence は `docs/direction/baselines/t-nt-02-performance.json`。これは生成直後の output と
+SHA-256 `22d54aeb2a9d8e94f13049decd06e83557577c56462f55629528a95427ed2317` で一致し、bundle identity、
+renderer、全 sample、pair order、aggregate と gate result を含む。renderer fallback、sample retry、
+外れ値除去は行わない。
