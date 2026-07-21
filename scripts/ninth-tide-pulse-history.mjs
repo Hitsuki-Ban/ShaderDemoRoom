@@ -7,6 +7,7 @@ import {
   NINTH_TIDE_BROWSER_LAUNCH_OPTIONS,
   NINTH_TIDE_CONTEXT_OPTIONS,
   parseNinthTideConfig,
+  sha256Hex,
 } from './ninth-tide-core.mjs';
 
 const require = createRequire(import.meta.url);
@@ -26,6 +27,14 @@ function scenarioUrl() {
   url.searchParams.set('preview', 'main');
   url.searchParams.set('section', '0');
   return url.href;
+}
+
+async function fetchAppBuild() {
+  const url = new URL('./app.js', config.buildUrl).href;
+  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  assert(response.ok, `Ninth Tide pulse app returned HTTP ${response.status}: ${url}.`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  return Object.freeze({ url, bytes: bytes.length, sha256: sha256Hex(bytes) });
 }
 
 async function openScenarioPage(context) {
@@ -150,6 +159,7 @@ const manifest = {
     browserLaunchOptions: NINTH_TIDE_BROWSER_LAUNCH_OPTIONS,
   },
 };
+manifest.build = Object.freeze({ app: await fetchAppBuild() });
 
 const browser = await chromium.launch(NINTH_TIDE_BROWSER_LAUNCH_OPTIONS);
 try {

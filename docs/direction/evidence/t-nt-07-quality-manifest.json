@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "ticket": "T-NT-07",
+  "gate": "qa:ninth-tide-quality",
+  "status": "passed",
+  "capturedAt": "2026-07-21",
+  "sourceManifest": {
+    "path": "output/playwright/ninth-tide-quality/manifest.json",
+    "bytes": 150695,
+    "sha256": "14872644bea60bff4a3e5f6ac48367713ce76a9c7f5a9baf5c4d22ef5bd5e602"
+  },
+  "build": {
+    "htmlSha256": "a7b89cc2b37312da7e761f90d17d3244a60f5c339b0d47fc85af700bc74cdce4",
+    "appSha256": "ae65b19d4b6ca860c2ebe410340d1afd664e77886b96c7f8caa0b08a25b9f45d"
+  },
+  "environment": {
+    "playwrightVersion": "1.60.0",
+    "chromiumVersion": "148.0.7778.96",
+    "nodeVersion": "v24.16.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "renderer": "SwANGLE SwiftShader",
+    "viewportHeight": 900
+  },
+  "policy": {
+    "boundaryWidths": [819, 820],
+    "devicePixelRatios": [1, 2, 3],
+    "tierStressTransitions": 30,
+    "staticFrameCount": 3,
+    "maximumCustomPropertyWritesPerStaticAudit": 0
+  },
+  "results": {
+    "stepCount": 36,
+    "initialGeneration": 1,
+    "finalGeneration": 33,
+    "desktopPulseSlots": 8,
+    "mobilePulseSlots": 4,
+    "desktopOwnedResources": 55,
+    "mobileOwnedResources": 55,
+    "finalRendererMemory": {
+      "geometries": 55,
+      "textures": 18
+    },
+    "maximumStaticCustomPropertyWrites": 0,
+    "sonarPillarDynamicAfterEveryTransition": true,
+    "cappedDprThreeIssuedSizingCalls": false,
+    "rejectedCommit": {
+      "stagedResourceCount": 55,
+      "contextLost": true,
+      "liveGenerationUnchanged": true
+    },
+    "deterministicConcurrency": {
+      "reconcileRejected": true,
+      "framebufferSha256": "5d3299706b8678eb0f624f6289e691fef1bcafd536b4420b5527aecc0338003f",
+      "stateSha256": "7158eddb8504ae7ab2e18ca97eec93dbeb508fb69f5f1e10a23c67296f5f406e"
+    },
+    "cameraVectorAllocationSourceAudit": "passed",
+    "consoleErrors": 0,
+    "pageErrors": 0
+  },
+  "pairedPerformance": {
+    "sourcePath": "output/playwright/ninth-tide-quality/performance.json",
+    "sourceBytes": 29053,
+    "sourceSha256": "4b493a3f54e7e78dfdd6c82626add849b82a4a1ae2dd91235616771409050083",
+    "baselineRevision": "c92fccb2ed5a067613923c003595644834db9749",
+    "baselineBundleSha256": "3eabe8f1f9ca7fbd240aad9158380a1626e76d36fcfacd4a02267cc3c493dbd5",
+    "candidateBundleSha256": "ae65b19d4b6ca860c2ebe410340d1afd664e77886b96c7f8caa0b08a25b9f45d",
+    "pairCount": 5,
+    "maximumRegressionPercent": 5,
+    "bridgePairedMedianRegressionPercent": 0.6097560975609762,
+    "cadencePairedMedianRegressionPercent": 0.07587253414265138,
+    "passed": true,
+    "browserVersion": "150.0.7871.125",
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Ti (0x00002782) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  }
+}
