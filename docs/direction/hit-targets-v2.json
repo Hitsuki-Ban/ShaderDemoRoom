@@ -1,0 +1,790 @@
+{
+  "schemaVersion": 2,
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "canvasBox": {
+    "x": 0,
+    "y": 0,
+    "width": 1440,
+    "height": 900
+  },
+  "sections": [
+    {
+      "section": 0,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 719,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 719,
+          "clientY": 356,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 803,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 719,
+          "clientY": 524,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 635,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 719,
+          "clientY": 302,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 857,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 719,
+          "clientY": 578,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 581,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 1,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 721,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 721,
+          "clientY": 334,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 809,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 721,
+          "clientY": 544,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 633,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 721,
+          "clientY": 266,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 865,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 721,
+          "clientY": 612,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 577,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 2,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 720,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 350,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 810,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 530,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 630,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 293,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 867,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 587,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 573,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 3,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 718,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 718,
+          "clientY": 295,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 764,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 718,
+          "clientY": 583,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 672,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 718,
+          "clientY": 203,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 794,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 718,
+          "clientY": 675,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 642,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 4,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 717,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 717,
+          "clientY": 363,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 815,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 717,
+          "clientY": 517,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 619,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 717,
+          "clientY": 314,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 878,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 717,
+          "clientY": 566,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 556,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 5,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 720,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 326,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 789,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 552,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 651,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 253,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 833,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 625,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 607,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 6,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 720,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 341,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 838,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 537,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 602,
+          "clientY": 439,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 278,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 913,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 600,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 527,
+          "clientY": 439,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 7,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 721,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 721,
+          "clientY": 387,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 868,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 721,
+          "clientY": 493,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 574,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 721,
+          "clientY": 354,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 962,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 721,
+          "clientY": 526,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 480,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    },
+    {
+      "section": 8,
+      "points": [
+        {
+          "id": "center-center",
+          "kind": "center",
+          "axis": "center",
+          "clientX": 720,
+          "clientY": 440,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-top",
+          "kind": "edge-positive",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 401,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-right",
+          "kind": "edge-positive",
+          "axis": "right",
+          "clientX": 804,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-bottom",
+          "kind": "edge-positive",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 479,
+          "beforeHit": true,
+          "expectedHit": true
+        },
+        {
+          "id": "edge-positive-left",
+          "kind": "edge-positive",
+          "axis": "left",
+          "clientX": 636,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": true
+        },
+        {
+          "id": "negative-top",
+          "kind": "negative",
+          "axis": "top",
+          "clientX": 720,
+          "clientY": 377,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-right",
+          "kind": "negative",
+          "axis": "right",
+          "clientX": 858,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-bottom",
+          "kind": "negative",
+          "axis": "bottom",
+          "clientX": 720,
+          "clientY": 503,
+          "beforeHit": false,
+          "expectedHit": false
+        },
+        {
+          "id": "negative-left",
+          "kind": "negative",
+          "axis": "left",
+          "clientX": 582,
+          "clientY": 440,
+          "beforeHit": false,
+          "expectedHit": false
+        }
+      ]
+    }
+  ]
+}

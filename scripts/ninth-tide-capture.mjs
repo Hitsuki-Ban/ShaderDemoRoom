@@ -142,12 +142,17 @@ async function verifyHits(page, fixtureSection) {
     if (typeof actual !== 'boolean') {
       throw new TypeError(`Ninth Tide hit hook must return boolean for ${point.id}.`);
     }
-    if (actual !== point.beforeHit) {
+    if (actual !== point.expectedHit) {
       throw new Error(
-        `Ninth Tide section ${fixtureSection.section} hit ${point.id} was ${actual}; expected ${point.beforeHit}.`,
+        `Ninth Tide section ${fixtureSection.section} hit ${point.id} was ${actual}; expected ${point.expectedHit}.`,
       );
     }
-    results.push({ id: point.id, beforeHit: point.beforeHit, actual });
+    results.push({
+      id: point.id,
+      beforeHit: point.beforeHit,
+      expectedHit: point.expectedHit,
+      actual,
+    });
   }
   return results;
 }

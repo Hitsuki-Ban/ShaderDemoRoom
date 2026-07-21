@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { NINTH_TIDE_VIEWPORT, NINTH_TIDE_WARM_DOMINANCE } from './ninth-tide-policy.mjs';
 
 export const NINTH_TIDE_OUTPUT_DIR = 'output/playwright/ninth-tide';
-export const NINTH_TIDE_HIT_FIXTURE_PATH = 'docs/direction/hit-targets-v1.json';
+export const NINTH_TIDE_HIT_FIXTURE_PATH = 'docs/direction/hit-targets-v2.json';
 export const NINTH_TIDE_BUILD_PATH = 'exhibits/ninth-tide-archive/index.html';
 export const NINTH_TIDE_PLAYWRIGHT_VERSION = '1.60.0';
 
@@ -389,7 +389,7 @@ export function validateHitFixture(fixture) {
     ['schemaVersion', 'viewport', 'canvasBox', 'sections'],
     'Ninth Tide hit fixture',
   );
-  if (fixture.schemaVersion !== 1) throw new Error('Ninth Tide hit fixture schemaVersion must be 1.');
+  if (fixture.schemaVersion !== 2) throw new Error('Ninth Tide hit fixture schemaVersion must be 2.');
   assertExactKeys(fixture.viewport, ['width', 'height', 'deviceScaleFactor'], 'fixture viewport');
   if (
     fixture.viewport.width !== NINTH_TIDE_VIEWPORT.width
@@ -429,7 +429,7 @@ export function validateHitFixture(fixture) {
     for (const point of section.points) {
       assertExactKeys(
         point,
-        ['id', 'kind', 'axis', 'clientX', 'clientY', 'beforeHit'],
+        ['id', 'kind', 'axis', 'clientX', 'clientY', 'beforeHit', 'expectedHit'],
         `fixture section ${sectionIndex} point`,
       );
       if (typeof point.id !== 'string' || point.id.length === 0 || ids.has(point.id)) {
@@ -452,28 +452,27 @@ export function validateHitFixture(fixture) {
       if (typeof point.beforeHit !== 'boolean') {
         throw new TypeError(`Ninth Tide fixture section ${sectionIndex} beforeHit must be boolean.`);
       }
-      if (point.kind === 'center' && point.beforeHit !== true) {
-        throw new Error(`Ninth Tide fixture section ${sectionIndex} center must hit.`);
+      if (typeof point.expectedHit !== 'boolean') {
+        throw new TypeError(`Ninth Tide fixture section ${sectionIndex} expectedHit must be boolean.`);
       }
-      if (point.kind === 'negative' && point.beforeHit !== false) {
-        throw new Error(`Ninth Tide fixture section ${sectionIndex} negative points must miss.`);
+      const isHistoricalHorizontalMiss = sectionIndex >= 7
+        && point.kind === 'edge-positive'
+        && (point.axis === 'left' || point.axis === 'right');
+      const historicalHit = point.kind !== 'negative' && !isHistoricalHorizontalMiss;
+      if (point.beforeHit !== historicalHit) {
+        throw new Error(
+          `Ninth Tide fixture section ${sectionIndex} ${point.id} beforeHit must preserve the historical result ${historicalHit}.`,
+        );
       }
-      if (sectionIndex <= 6 && point.kind === 'edge-positive' && point.beforeHit !== true) {
-        throw new Error(`Ninth Tide fixture section ${sectionIndex} edge-positive points must hit.`);
+      const expectedHit = point.kind !== 'negative';
+      if (point.expectedHit !== expectedHit) {
+        throw new Error(
+          `Ninth Tide fixture section ${sectionIndex} ${point.id} expectedHit must be ${expectedHit}.`,
+        );
       }
     }
     if (shapes.size !== expectedPointShapes.size) {
       throw new Error(`Ninth Tide fixture section ${sectionIndex} is missing a required point shape.`);
-    }
-    if (sectionIndex >= 7) {
-      const knownHorizontalMiss = section.points.some(
-        (point) => point.kind === 'edge-positive'
-          && (point.axis === 'left' || point.axis === 'right')
-          && point.beforeHit === false,
-      );
-      if (!knownHorizontalMiss) {
-        throw new Error(`Ninth Tide fixture section ${sectionIndex} must preserve a horizontal edge miss.`);
-      }
     }
   }
   return fixture;
