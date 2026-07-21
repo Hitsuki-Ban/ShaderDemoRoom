@@ -164,7 +164,7 @@ const englishMessages = {
         controls: {
           runtime: 'Embedded Exhibit',
           runtimeNote:
-            'Use the dive gate inside the frame for audio or silent entry. The opening ceremony takes time before the space hands control back.',
+            'Use the dive gate inside the frame for audio or silent entry. The opening ceremony takes time before the space hands control back; the final passage intentionally withdraws to near-black.',
           reload: 'Reload exhibit',
           openStandalone: 'Open standalone',
         },
@@ -318,7 +318,7 @@ const simplifiedChineseMessages = {
         controls: {
           runtime: '嵌入式展品',
           runtimeNote:
-            '可在画面内的下潜入口启动音频或静默进入；开场仪式需要一段时间，之后空间才交还控制。',
+            '可在画面内的下潜入口启动音频或静默进入；开场仪式需要一段时间，之后空间才交还控制，终幕会有意退入近黑。',
           reload: '重载展品',
           openStandalone: '独立打开',
         },

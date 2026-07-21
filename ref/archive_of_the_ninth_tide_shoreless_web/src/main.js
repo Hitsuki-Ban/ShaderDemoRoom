@@ -6,6 +6,10 @@ import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { DitheredOutputPass } from './dithered-output-pass.js';
 import {
+  mapMediaTimeToVisualScore,
+  mapVisualScoreTimeToEndingShutdown,
+} from './visual-score-clock.js';
+import {
   createMediaTimeDeltaTracker,
   createSpectralFluxOnsetDetector,
 } from './spectral-flux-onset.js';
@@ -44,6 +48,7 @@ const ui = {
   coreState: $('#coreState'), fieldState: $('#fieldState'), depth: $('#depthValue'), coord: $('#coordValue'), index: $('#indexValue'),
   signal: $('#signalState'), mode: $('#modeState'), audioState: $('#audioState'),
   timeNow: $('#timeNow'), timeTotal: $('#timeTotal'), low: $('#bandLow'), mid: $('#bandMid'), high: $('#bandHigh'),
+  runtimeStatus: $('#runtimeStatus'), archiveProgress: $('#archiveProgress'),
   cursor: $('#cursor'), message: $('#message'), audio: $('#audio'), unsupported: $('#unsupported')
 };
 
@@ -114,6 +119,10 @@ function showMessage(text, duration = 1700) {
   if (!deterministicCaptureActive) {
     showMessage.timer = setTimeout(() => ui.message.classList.remove('show'), duration);
   }
+}
+
+function setRuntimeStatus(text) {
+  if (ui.runtimeStatus.textContent !== text) ui.runtimeStatus.textContent = text;
 }
 
 const tideMeta = [
@@ -2220,6 +2229,7 @@ function resetExperienceState() {
   state.pitchTarget = 0.07;
   document.body.classList.add('entered');
   document.body.classList.remove('calibrated', 'ending', 'ended');
+  setRuntimeStatus('开场校准中');
   ui.coreState.textContent = 'CALIBRATING';
   ui.fieldState.textContent = 'DARK ADAPTATION';
   ui.mode.textContent = 'CALIBRATION';
@@ -2605,6 +2615,7 @@ function updateCeremony(dt) {
     ui.coreState.textContent = 'RESONANT';
     ui.fieldState.textContent = 'LIVE / 64 BANDS';
     ui.mode.textContent = 'OBSERVATION';
+    setRuntimeStatus('第 I 章 · 无月测深');
     document.documentElement.style.setProperty('--ritual-caption', '0');
   }
 }
@@ -2618,23 +2629,22 @@ function finishEnding() {
   state.playing = false;
   document.body.classList.add('ending');
   setTimeout(() => document.body.classList.add('ended'), 700);
+  setRuntimeStatus('体验结束 · 已归档');
   ui.audioState.textContent = 'CLOSED';
   ui.coreState.textContent = 'EXTINGUISHED';
   ui.fieldState.textContent = 'NO RETURN';
   document.documentElement.style.setProperty('--blackout', '1');
 }
 
-function updateEnding() {
+function updateEnding(visualScoreTime) {
   if (!state.entered || state.previewMode === 'main' || state.previewMode === 'opening') return;
   let target = state.shutdown;
   if (state.previewMode === 'ending') {
     target = Math.max(target, 0.68);
-  } else if (state.audioReady && Number.isFinite(ui.audio.duration) && ui.audio.duration > 20) {
-    const span = 13.6;
-    const start = ui.audio.duration - span;
-    const raw = clamp((ui.audio.currentTime - start) / span, 0, 1);
-    // A held breath, a reversal, then a rapid optical collapse.
-    target = raw < 0.58 ? raw * 0.78 : lerp(0.4524, 1.0, smootherstep(0.58, 1.0, raw));
+  } else if (state.audioReady) {
+    // A held breath, a reversal, then a rapid optical collapse. Withdrawal is
+    // scored in visual time so local tracks of every duration enter it together.
+    target = mapVisualScoreTimeToEndingShutdown(visualScoreTime, scoreDuration);
   }
   state.shutdown = Math.max(state.shutdown, target);
   globals.shutdown.value = state.shutdown;
@@ -2643,6 +2653,7 @@ function updateEnding() {
     state.ending = true;
     document.body.classList.add('ending');
     ui.mode.textContent = 'WITHDRAWAL';
+    setRuntimeStatus('终幕退潮中 · 第 IX 章');
   }
   if (state.endingCue === 0 && state.shutdown > 0.05) {
     state.endingCue = 1;
@@ -2673,16 +2684,19 @@ function resolveVisualScoreDuration() {
   return Number.isFinite(ui.audio.duration) ? ui.audio.duration : scoreDuration;
 }
 
-function updateTide(elapsed, dt) {
-  const duration = resolveVisualScoreDuration();
+function resolveVisualScoreTime(elapsed, duration) {
   let musicTime;
   if (state.previewMode === 'main') {
     const i = clamp(state.previewSection, 0, 8);
     musicTime = lerp(sectionBoundaries[i], sectionBoundaries[i + 1], 0.46);
   } else if (state.previewMode === 'ending') musicTime = 346.0;
-  else musicTime = state.audioReady && duration > 0 ? ui.audio.currentTime : ((elapsed / 118) * duration) % duration;
-  musicTime = clamp(musicTime, 0, sectionBoundaries[sectionBoundaries.length - 1] - 0.001);
+  else musicTime = state.audioReady
+    ? mapMediaTimeToVisualScore(ui.audio.currentTime, duration, scoreDuration)
+    : ((elapsed / 118) * duration) % duration;
+  return clamp(musicTime, 0, scoreDuration - 0.001);
+}
 
+function updateTide(musicTime, dt) {
   let rawTide = sectionBoundaries.length - 2;
   for (let i = 0; i < sectionBoundaries.length - 1; i++) {
     if (musicTime < sectionBoundaries[i + 1]) { rawTide = i; break; }
@@ -2758,6 +2772,7 @@ function updateTide(elapsed, dt) {
     ui.phaseName.textContent = meta[1];
     ui.phaseSub.textContent = meta[2];
     ui.sideTicks.forEach((tick, index) => tick.classList.toggle('active', index === state.tideIndex));
+    if (state.calibrated && !state.ending) setRuntimeStatus(`第 ${meta[0]} 章 · ${meta[1]}`);
     if (state.calibrated && !state.ending && state.activeSeconds > 2) showMessage(`${meta[0]} · ${meta[1]}`, 1150);
   }
 }
@@ -3173,14 +3188,15 @@ function updateHover() {
   }
 }
 
-function updateTransport() {
-  const duration = resolveVisualScoreDuration();
-  const current = state.audioReady ? ui.audio.currentTime : (state.activeSeconds % duration);
+function updateTransport(visualScoreTime, duration) {
+  const progress = clamp(visualScoreTime / scoreDuration, 0, 1);
+  const current = state.audioReady ? progress * duration : visualScoreTime;
   ui.timeNow.textContent = formatTime(current);
   ui.timeTotal.textContent = formatTime(duration);
-  const progress = duration > 0 ? clamp(current / duration, 0, 1) : 0;
   document.documentElement.style.setProperty('--progress', `${(progress * 100).toFixed(3)}%`);
   ui.index.textContent = `09–${String(Math.floor(progress * 9999)).padStart(4, '0')}`;
+  ui.archiveProgress.setAttribute('aria-valuenow', (progress * 100).toFixed(1));
+  ui.archiveProgress.setAttribute('aria-valuetext', `${formatTime(current)} / ${formatTime(duration)}`);
 }
 
 function advanceFrameState(dt, elapsed) {
@@ -3197,15 +3213,17 @@ function advanceFrameState(dt, elapsed) {
 
   updateAudio(dt, elapsed);
   updateCeremony(dt);
-  updateEnding();
-  updateTide(elapsed, dt);
+  const visualScoreDuration = resolveVisualScoreDuration();
+  const visualScoreTime = resolveVisualScoreTime(elapsed, visualScoreDuration);
+  updateEnding(visualScoreTime);
+  updateTide(visualScoreTime, dt);
   updateCamera(dt);
   updateCore(dt, elapsed);
   updateResonators(dt, elapsed);
   updatePulse(dt);
   updateWorld(dt, elapsed);
   updateHover();
-  updateTransport();
+  updateTransport(visualScoreTime, visualScoreDuration);
 
 }
 
@@ -3295,6 +3313,11 @@ function applyPreview(mode, section) {
   ui.phaseName.textContent = meta[1];
   ui.phaseSub.textContent = meta[2];
   ui.sideTicks.forEach((tick, index) => tick.classList.toggle('active', index === section));
+  setRuntimeStatus(mode === 'opening'
+    ? '开场校准中'
+    : mode === 'ending'
+      ? '终幕退潮中 · 第 IX 章'
+      : `第 ${meta[0]} 章 · ${meta[1]}`);
   triggerPulse({
     origin: new THREE.Vector2(0, 0),
     strength: mode === 'ending' ? 0.45 : 1.15,
