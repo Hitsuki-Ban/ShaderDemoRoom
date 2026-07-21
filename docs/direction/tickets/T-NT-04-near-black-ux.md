@@ -2,7 +2,7 @@
 
 - 分類: AD / UX / A11y
 - 優先度: P2
-- 状態: 実装・ローカル検証完了（PR #40 review 中）
+- 状態: **完了 (2026-07-21; PR #40)**
 - 評価軸: ストーリーテリング / 一見客の誤認防止 / 近黒階調の維持
 - 依存: T-NT-02 / T-NT-05 / T-SH-04 / T-I18N-01（すべて完了）
 
@@ -58,7 +58,7 @@
 
 ## 実装・検証結果（2026-07-21）
 
-- 作業報告: 実装 commit `9fe584e` を [PR #40](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/40) として提出。独立 review と CI を同一 head で確認後に merge する。
+- 作業報告: 実装 commit `9fe584e` を [PR #40](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/40) として提出し、初回 review の BLOCK を `817da68` で解消。head `3b593a1` の独立 APPROVE と CI success を確認して `main@4e711b4` へ squash merge した。
 - desktop ending: `IX` P90 `3.417:1` / P99 `3.417:1` / max `3.455:1`、3:1 以上 855 px、4.5:1 以上 0 px。全画面の 3:1 以上占有率 `0.0675%`、playhead は 3:1 以上 7 px。
 - mobile 390×844: `IX` は 28 px、P90 `3.417:1`、3:1 以上 158 px。全画面占有率 `0.0501%`、scroll width / height は viewport と一致。
 - ending transport: CSS `97.601%`、ARIA `97.6`、表示 `05:46 / 05:54`。status / progressbar / live region は各 1。
