@@ -5,7 +5,10 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { DitheredOutputPass } from './dithered-output-pass.js';
-import { mapMediaTimeToVisualScore } from './visual-score-clock.js';
+import {
+  mapMediaTimeToVisualScore,
+  mapVisualScoreTimeToEndingShutdown,
+} from './visual-score-clock.js';
 import {
   createMediaTimeDeltaTracker,
   createSpectralFluxOnsetDetector,
@@ -2633,17 +2636,15 @@ function finishEnding() {
   document.documentElement.style.setProperty('--blackout', '1');
 }
 
-function updateEnding() {
+function updateEnding(visualScoreTime) {
   if (!state.entered || state.previewMode === 'main' || state.previewMode === 'opening') return;
   let target = state.shutdown;
   if (state.previewMode === 'ending') {
     target = Math.max(target, 0.68);
-  } else if (state.audioReady && Number.isFinite(ui.audio.duration) && ui.audio.duration > 20) {
-    const span = 13.6;
-    const start = ui.audio.duration - span;
-    const raw = clamp((ui.audio.currentTime - start) / span, 0, 1);
-    // A held breath, a reversal, then a rapid optical collapse.
-    target = raw < 0.58 ? raw * 0.78 : lerp(0.4524, 1.0, smootherstep(0.58, 1.0, raw));
+  } else if (state.audioReady) {
+    // A held breath, a reversal, then a rapid optical collapse. Withdrawal is
+    // scored in visual time so local tracks of every duration enter it together.
+    target = mapVisualScoreTimeToEndingShutdown(visualScoreTime, scoreDuration);
   }
   state.shutdown = Math.max(state.shutdown, target);
   globals.shutdown.value = state.shutdown;
@@ -3212,9 +3213,9 @@ function advanceFrameState(dt, elapsed) {
 
   updateAudio(dt, elapsed);
   updateCeremony(dt);
-  updateEnding();
   const visualScoreDuration = resolveVisualScoreDuration();
   const visualScoreTime = resolveVisualScoreTime(elapsed, visualScoreDuration);
+  updateEnding(visualScoreTime);
   updateTide(visualScoreTime, dt);
   updateCamera(dt);
   updateCore(dt, elapsed);

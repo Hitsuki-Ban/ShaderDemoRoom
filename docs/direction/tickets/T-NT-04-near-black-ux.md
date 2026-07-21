@@ -63,8 +63,9 @@
 - mobile 390×844: `IX` は 28 px、P90 `3.417:1`、3:1 以上 158 px。全画面占有率 `0.0501%`、scroll width / height は viewport と一致。
 - ending transport: CSS `97.601%`、ARIA `97.6`、表示 `05:46 / 05:54`。status / progressbar / live region は各 1。
 - custom audio: 120 s / 600 s の音源を visual score 全体へ正規化する unit gate を追加。transport の表示時間は同じ score progress から媒体 duration へ戻すため、長尺音源でも 354.504 s で停止しない。
+- review BLOCK と解消: 初回 PR review で、withdrawal だけが媒体末尾の固定 13.6 s を使い、120 s 音源では visual score 314.327 s（第 VIII 章）から早期退潮する不整合を検出した。withdrawal も本 frame の visual score time から導出し、旧開始点 106.4 s と第 IX 章開始点 111.722 s では `shutdown = 0`、score 最後の 13.6 s だけで退潮する組合せ回帰を追加した。
 - state exit: 同一 page で ending → main、ending → opening、ending → ended を実行し、3 経路すべて即時 `opacity: 0; visibility: hidden` を確認。退出時の 2.4 s 残留 transition はない。
 - reduced motion: desktop ending と screenshot SHA-256 が完全一致（`ee31c8380e9b8f676223c388cb9c07377a6a0640419f0b083152a0c16cfa00d2`）。
 - Canvas 不変: opening / section IX / ending framebuffer hash は before と after でそれぞれ `3200649e…` / `15855092…` / `8e2dda6c…` のまま。既存 3×11 deterministic matrix も通過。
 - 証拠: before `t-nt-04-ending-before.png`（SHA-256 `7312168b…`）、desktop after `t-nt-04-ending-after.png`（`ee31c838…`）、mobile after `t-nt-04-ending-mobile-after.png`（`d9b1d191…`）、5 capture manifest `t-nt-04-near-black-qa-2026-07-21.json`。
-- gates: `pnpm lint`、`pnpm typecheck`、`pnpm test`（41 files / 334 tests）、`pnpm build`、`pnpm exhibits:check`、`pnpm qa:exhibits`、`pnpm qa:visual`、`pnpm qa:ninth-tide`、`pnpm qa:ninth-tide-near-black` が通過。
+- gates: `pnpm lint`、`pnpm typecheck`、`pnpm test`（41 files / 340 tests）、`pnpm build` が再通過。生成 snapshot と browser QA は blocker 修正 commit 後に再検証する。
