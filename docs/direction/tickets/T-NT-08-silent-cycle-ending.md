@@ -2,7 +2,7 @@
 
 - 分類: AD / TA
 - 優先度: P3
-- 状態: **実装中 (2026-07-22)**
+- 状態: **完了 (2026-07-22)**
 - 評価軸: ストーリーテリング / 状態機械
 - 依存: T-NT-05
 
@@ -52,3 +52,10 @@
 - exact-head 独立审查复现了单次 `fastForward(118_000)` 会在 IX transition 完成前先 finish 的竞态，因此给出 BLOCK。修复后 live ending 显式等待 committed IX；浏览器 gate 新增一步跳到终点的回归：终点首帧保持 chapter I / unfinished，随后 29 个 50ms active frames 得到 `chapter-IX → shutdown → 3 cues → finish`，再进入 epilogue，全程无直接跳章或二次 finish。
 - 最终 candidate app SHA-256 为 `298e24c8871701120a63974673465dece5697da1e9ac710f4fbadca02012affb`，ref dist 与 public exhibit 字节一致。cycle manifest SHA-256 `9785edb9cc3d93a36153419c0a0fc7571546a831de449fe5830382dff112d168`；11-state manifest `c505a56a6076fa69cd9158400c377555d5fc070c8b455a402cebc29b255a0a5e`；near-black manifest `bdc64de5d491fd629c21d1c5558e5faaaa071fced98e186c6101d33ef7d8ebe2`。
 - gates: `pnpm test`（43 files / 402 tests）、`pnpm lint`、`pnpm typecheck`、`pnpm build`、production `qa:ninth-tide`（3 fresh browser runs × 11 states × repeats）、`qa:ninth-tide-near-black`（5 captures）、`qa:ninth-tide-cycle` 全通过。提交后继续执行 exhibit sync、PR CI、独立 exact-head review 与部署验证。
+
+## PR・审查・合并报告 (2026-07-22)
+
+- PR [#42](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/42) 以 exact head `83707eccccb7e2894499dce5c79fc5b009b9eddc` 完成。初始 head `5c0abc4974b0505365c8fe641148af867a4684d9` 的独立审查在 [ReviewReport](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/42#issuecomment-5037451133) 中阻断了“一步跳到终点时 IX 尚未 commit 就提前 finish”的竞态；修复 commit `83707ec` 增加 committed-IX 门禁及浏览器回归。
+- 修复后的独立 delta review 在 [exact-head ReviewReport](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/42#issuecomment-5037630741) 给出 `APPROVE`，P0–P3 blocker 与 non-blocking finding 均为 0；审查者独立复跑 35/35 focused tests、完整 cycle gate、一步跳跃回归、真实音频 early-native-ended smoke 与 ref/public hash sync。
+- PR CI [run 29856897335](https://github.com/Hitsuki-Ban/ShaderDemoRoom/actions/runs/29856897335) 在 exact head 上通过 lint、typecheck、43 files / 402 tests、build、exhibit sync 及完整 production visual QA；PR 分支的 Pages deploy 按 workflow 条件正常跳过。
+- 2026-07-22 squash merge 到 `main`，merge commit `a92e8f1b3f71716ce97ed4104e5b6c7cbd37faee`。本票的产品实现、自动化门禁、独立审查与合并闭环均已完成；线上 Pages 验证记录在本段后续部署报告中。
