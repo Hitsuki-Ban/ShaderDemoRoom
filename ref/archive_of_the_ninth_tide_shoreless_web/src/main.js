@@ -8,8 +8,9 @@ import { DitheredOutputPass } from './dithered-output-pass.js';
 import { resolveQualityProfile, qualityProfilesEqual } from './quality-profile.js';
 import { createStylePropertyWriter } from './style-property-writer.js';
 import {
+  advanceEndingState,
   mapMediaTimeToVisualScore,
-  mapVisualScoreTimeToEndingShutdown,
+  mapSilentElapsedToVisualScore,
 } from './visual-score-clock.js';
 import {
   createMediaTimeDeltaTracker,
@@ -72,6 +73,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const previewParams = new URLSearchParams(location.search);
 const forcedPreview = window.__NINTH_TIDE_PREVIEW__;
 const deterministicCaptureRequested = previewParams.has('preview') || forcedPreview !== undefined;
+const cycleAuditRequested = previewParams.get('qa') === 'cycle';
 const defaultMainPreviewSection = 7;
 let pulseHistory = createPulseHistory(qualityProfile.pulse);
 let pulseSlotCount = qualityProfile.pulse.maxPulses;
@@ -155,6 +157,7 @@ const tideMeta = [
 // slicing its duration into nine equal blocks.
 const sectionBoundaries = [0, 48.9709, 75.0469, 103.0966, 145.2408, 183.8092, 224.8853, 260.2260, 330.0484, 354.5040];
 const scoreDuration = sectionBoundaries[sectionBoundaries.length - 1];
+const silentCycleDuration = 118;
 const sectionTransitionDuration = 2.85;
 const onsetDetectorConfig = Object.freeze({
   historySeconds: 1.25,
@@ -252,6 +255,10 @@ const state = {
   ending: false,
   ended: false,
   endingCue: 0,
+  finishCount: 0,
+  clockSource: '',
+  roundStartedAt: 0,
+  round: 0,
   previewMode: '',
   previewSection: defaultMainPreviewSection,
   audioReady: false,
@@ -290,6 +297,26 @@ const state = {
   syntheticPhase: 0,
   coreHovered: false
 };
+
+let epilogueTimer = null;
+let cycleAuditSequence = 0;
+const cycleAuditEvents = [];
+
+function recordCycleAudit(id, visualScoreTime = 0) {
+  if (!cycleAuditRequested) return;
+  if (typeof id !== 'string' || id.length === 0) {
+    throw new TypeError('Ninth Tide cycle audit id must be a non-empty string.');
+  }
+  if (!Number.isFinite(visualScoreTime) || visualScoreTime < 0 || visualScoreTime > scoreDuration) {
+    throw new RangeError('Ninth Tide cycle audit time must be within the visual score.');
+  }
+  cycleAuditEvents.push(Object.freeze({
+    sequence: ++cycleAuditSequence,
+    id,
+    logicalTime: visualScoreTime,
+    source: state.clockSource,
+  }));
+}
 
 const globals = {
   time: { value: 0 },
@@ -2772,7 +2799,9 @@ ui.audio.addEventListener('pause', () => {
   if (!state.ended) ui.audioState.textContent = state.audioReady ? 'PAUSED' : 'STANDBY';
 });
 ui.audio.addEventListener('seeking', resetOnsetDetector);
-ui.audio.addEventListener('ended', () => finishEnding());
+ui.audio.addEventListener('ended', () => {
+  if (state.clockSource === 'audio') updateEnding(scoreDuration);
+});
 ui.audio.addEventListener('error', () => {
   state.audioFailed = true;
   ui.fileLabel.hidden = false;
@@ -2808,7 +2837,27 @@ async function prepareAudio() {
   state.audioReady = true;
 }
 
-function resetExperienceState() {
+function resetExperienceState(clockSource, roundStartedAt, restarting) {
+  if (!['audio', 'silent'].includes(clockSource)) {
+    throw new TypeError(`Unknown Ninth Tide clock source: ${String(clockSource)}.`);
+  }
+  if (!Number.isFinite(roundStartedAt) || roundStartedAt < 0) {
+    throw new RangeError('Ninth Tide round origin must be finite and non-negative.');
+  }
+  if (typeof restarting !== 'boolean') {
+    throw new TypeError('Ninth Tide restarting flag must be boolean.');
+  }
+  state.clockSource = clockSource;
+  if (epilogueTimer !== null) {
+    clearTimeout(epilogueTimer);
+    epilogueTimer = null;
+  }
+  if (!restarting) {
+    cycleAuditEvents.length = 0;
+    cycleAuditSequence = 0;
+  } else {
+    recordCycleAudit('replay', scoreDuration);
+  }
   resetOnsetDetector();
   resetPulseHistory(pulseHistory);
   state.calibrated = false;
@@ -2821,6 +2870,9 @@ function resetExperienceState() {
   state.ending = false;
   state.ended = false;
   state.endingCue = 0;
+  state.finishCount = 0;
+  state.roundStartedAt = roundStartedAt;
+  state.round += 1;
   state.archiveOpen = 0;
   state.archiveOpenTarget = 0;
   state.pulseCooldown = 0;
@@ -2847,15 +2899,22 @@ function resetExperienceState() {
   ui.mode.textContent = 'CALIBRATION';
   rootStyleWriter.set('--blackout', '1');
   rootStyleWriter.set('--ritual-caption', '0');
+  recordCycleAudit(restarting ? 'chapter-I' : 'enter', 0);
+  if (!restarting) recordCycleAudit('chapter-I', 0);
 }
 
-async function enterExperience(withAudio, restarting = false) {
+async function enterExperience(clockSource, restarting = false) {
+  if (!['audio', 'silent'].includes(clockSource)) {
+    throw new TypeError(`Unknown Ninth Tide clock source: ${String(clockSource)}.`);
+  }
   if (!state.entered || restarting || state.ended) {
     state.entered = true;
-    resetExperienceState();
+    resetExperienceState(clockSource, timer.getElapsed(), restarting);
     if (Number.isFinite(ui.audio.duration)) ui.audio.currentTime = 0;
+  } else if (state.clockSource !== clockSource) {
+    throw new Error('Ninth Tide cannot change clock source during an active round.');
   }
-  if (!withAudio) {
+  if (clockSource === 'silent') {
     state.audioReady = false;
     state.playing = false;
     ui.signal.textContent = 'SYNTHETIC';
@@ -2895,6 +2954,7 @@ async function enterExperience(withAudio, restarting = false) {
     const playbackBlocked = error instanceof DOMException && error.name === 'NotAllowedError';
     if (!playbackBlocked) console.error(error);
     state.entered = false;
+    state.clockSource = '';
     document.body.classList.remove('entered');
     ui.enter.disabled = false;
     ui.enter.textContent = '重试音频';
@@ -2907,9 +2967,16 @@ async function enterExperience(withAudio, restarting = false) {
   }
 }
 
-ui.enter.addEventListener('click', () => enterExperience(true));
-ui.silent.addEventListener('click', () => enterExperience(false));
-ui.replay.addEventListener('click', () => enterExperience(true, true));
+function replayExperience() {
+  if (!['audio', 'silent'].includes(state.clockSource)) {
+    throw new Error('Ninth Tide replay requires a completed round clock source.');
+  }
+  return enterExperience(state.clockSource, true);
+}
+
+ui.enter.addEventListener('click', () => enterExperience('audio'));
+ui.silent.addEventListener('click', () => enterExperience('silent'));
+ui.replay.addEventListener('click', replayExperience);
 ui.file.addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -2919,7 +2986,7 @@ ui.file.addEventListener('change', async (event) => {
   state.audioFailed = false;
   ui.fileLabel.hidden = true;
   ui.hint.textContent = `已载入 ${file.name}`;
-  await enterExperience(true, true);
+  await enterExperience('audio', true);
 });
 window.addEventListener('dragover', (event) => event.preventDefault());
 window.addEventListener('drop', async (event) => {
@@ -2929,7 +2996,7 @@ window.addEventListener('drop', async (event) => {
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
   setAudioSource(objectUrl);
-  await enterExperience(true, true);
+  await enterExperience('audio', true);
   showMessage(`AUDIO LOADED / ${file.name.toUpperCase()}`, 2200);
 });
 
@@ -3147,9 +3214,9 @@ window.addEventListener('keydown', async (event) => {
   if (event.code === 'Space') {
     event.preventDefault();
     if (state.ended) {
-      await enterExperience(true, true);
+      await replayExperience();
     } else if (!state.entered) {
-      await enterExperience(true);
+      await enterExperience('audio');
     } else if (state.audioReady) {
       if (ui.audio.paused) await playAudioElement(ui.audio); else ui.audio.pause();
     }
@@ -3233,57 +3300,89 @@ function updateCeremony(dt) {
 }
 
 function finishEnding() {
-  if (state.ended) return;
+  if (state.ended) return false;
   state.shutdown = 1;
   globals.shutdown.value = 1;
   state.ending = true;
   state.ended = true;
+  state.finishCount += 1;
   state.playing = false;
   document.body.classList.add('ending');
-  setTimeout(() => document.body.classList.add('ended'), 700);
+  epilogueTimer = setTimeout(() => {
+    epilogueTimer = null;
+    document.body.classList.add('ended');
+    recordCycleAudit('epilogue', scoreDuration);
+  }, 700);
   setRuntimeStatus('体验结束 · 已归档');
   ui.audioState.textContent = 'CLOSED';
   ui.coreState.textContent = 'EXTINGUISHED';
   ui.fieldState.textContent = 'NO RETURN';
   rootStyleWriter.set('--blackout', '1');
+  return true;
 }
 
-function updateEnding(visualScoreTime) {
-  if (!state.entered || state.previewMode === 'main' || state.previewMode === 'opening') return;
-  let target = state.shutdown;
-  if (state.previewMode === 'ending') {
-    target = Math.max(target, 0.68);
-  } else if (state.audioReady) {
-    // A held breath, a reversal, then a rapid optical collapse. Withdrawal is
-    // scored in visual time so local tracks of every duration enter it together.
-    target = mapVisualScoreTimeToEndingShutdown(visualScoreTime, scoreDuration);
-  }
-  state.shutdown = Math.max(state.shutdown, target);
+function updateFixedEndingPreview() {
+  const transitions = [];
+  state.shutdown = Math.max(state.shutdown, 0.68);
   globals.shutdown.value = state.shutdown;
-
-  if (state.shutdown > 0.018 && !state.ending) {
+  if (!state.ending) {
     state.ending = true;
+    transitions.push('shutdown-start');
     document.body.classList.add('ending');
     ui.mode.textContent = 'WITHDRAWAL';
     setRuntimeStatus('终幕退潮中 · 第 IX 章');
   }
-  if (state.endingCue === 0 && state.shutdown > 0.05) {
+  if (state.endingCue === 0) {
     state.endingCue = 1;
+    transitions.push('outer-silence');
     showMessage('OUTER SILENCE', 1450);
   }
-  if (state.endingCue === 1 && state.shutdown > 0.41) {
+  if (state.endingCue === 1) {
     state.endingCue = 2;
+    transitions.push('echo-reverses');
     triggerPulse({ origin: new THREE.Vector2(0, 0), strength: 0.82, sourceY: 0.34, announce: false, mode: 8, source: 'system' });
     showMessage('THE ECHO REVERSES', 1550);
   }
-  if (state.endingCue === 2 && state.shutdown > 0.76) {
-    state.endingCue = 3;
-    showMessage('LAST LIGHT', 1450);
+  return Object.freeze(transitions);
+}
+
+function updateEnding(visualScoreTime) {
+  if (!state.entered || state.previewMode === 'main' || state.previewMode === 'opening') return Object.freeze([]);
+  if (state.previewMode === 'ending') return updateFixedEndingPreview();
+  const transition = advanceEndingState({
+    shutdown: state.shutdown,
+    started: state.ending,
+    cueCursor: state.endingCue,
+    finished: state.ended,
+  }, visualScoreTime, scoreDuration);
+  state.shutdown = transition.state.shutdown;
+  state.ending = transition.state.started;
+  state.endingCue = transition.state.cueCursor;
+  globals.shutdown.value = state.shutdown;
+
+  for (const transitionId of transition.transitions) {
+    recordCycleAudit(transitionId, visualScoreTime);
+    if (transitionId === 'shutdown-start') {
+      document.body.classList.add('ending');
+      ui.mode.textContent = 'WITHDRAWAL';
+      setRuntimeStatus('终幕退潮中 · 第 IX 章');
+    } else if (transitionId === 'outer-silence') {
+      showMessage('OUTER SILENCE', 1450);
+    } else if (transitionId === 'echo-reverses') {
+      triggerPulse({ origin: new THREE.Vector2(0, 0), strength: 0.82, sourceY: 0.34, announce: false, mode: 8, source: 'system' });
+      showMessage('THE ECHO REVERSES', 1550);
+    } else if (transitionId === 'last-light') {
+      showMessage('LAST LIGHT', 1450);
+    } else if (transitionId === 'finish') {
+      finishEnding();
+    } else {
+      throw new Error(`Unknown Ninth Tide ending transition: ${transitionId}.`);
+    }
   }
-  // Some browsers keep `paused === false` for a few frames after a data-URI
-  // audio stream reaches its reported duration. The visual score is already at
-  // absolute black here, so close deterministically from the music clock.
-  if (state.shutdown >= 0.995) finishEnding();
+  if (state.ended !== transition.state.finished || state.finishCount > 1) {
+    throw new Error('Ninth Tide ending reducer diverged from the committed ending state.');
+  }
+  return transition.transitions;
 }
 
 // ---------- Visual updates ----------
@@ -3292,8 +3391,16 @@ const paletteScratch = {
 };
 let lastTide = -1;
 function resolveVisualScoreDuration() {
-  if (deterministicCaptureRequested) return scoreDuration;
-  return Number.isFinite(ui.audio.duration) ? ui.audio.duration : scoreDuration;
+  if (deterministicCaptureRequested || state.previewMode !== '') return scoreDuration;
+  if (!state.entered || state.clockSource === 'silent') return scoreDuration;
+  if (state.clockSource !== 'audio') {
+    throw new Error(`Unknown Ninth Tide clock source: ${String(state.clockSource)}.`);
+  }
+  if (!state.audioReady || ui.audio.readyState < HTMLMediaElement.HAVE_METADATA) return null;
+  if (!Number.isFinite(ui.audio.duration) || ui.audio.duration <= 0) {
+    throw new RangeError('Ninth Tide audio duration must be a positive finite number.');
+  }
+  return ui.audio.duration;
 }
 
 function resolveVisualScoreTime(elapsed, duration) {
@@ -3302,10 +3409,35 @@ function resolveVisualScoreTime(elapsed, duration) {
     const i = clamp(state.previewSection, 0, 8);
     musicTime = lerp(sectionBoundaries[i], sectionBoundaries[i + 1], 0.46);
   } else if (state.previewMode === 'ending') musicTime = 346.0;
-  else musicTime = state.audioReady
-    ? mapMediaTimeToVisualScore(ui.audio.currentTime, duration, scoreDuration)
-    : ((elapsed / 118) * duration) % duration;
-  return clamp(musicTime, 0, scoreDuration - 0.001);
+  else if (state.previewMode === 'opening') {
+    musicTime = mapSilentElapsedToVisualScore(
+      elapsed,
+      silentCycleDuration,
+      scoreDuration,
+    );
+  } else if (!state.entered) musicTime = 0;
+  else if (state.clockSource === 'audio') {
+    musicTime = duration === null
+      ? 0
+      : mapMediaTimeToVisualScore(ui.audio.currentTime, duration, scoreDuration);
+  } else if (state.clockSource === 'silent') {
+    musicTime = mapSilentElapsedToVisualScore(
+      elapsed - state.roundStartedAt,
+      silentCycleDuration,
+      scoreDuration,
+    );
+  } else {
+    throw new Error(`Unknown Ninth Tide clock source: ${String(state.clockSource)}.`);
+  }
+  return clamp(musicTime, 0, scoreDuration);
+}
+
+function commitTideIndex(nextTideIndex, musicTime) {
+  const previousTideIndex = state.tideIndex;
+  state.tideIndex = nextTideIndex;
+  if (previousTideIndex !== 8 && nextTideIndex === 8) {
+    recordCycleAudit('chapter-IX', musicTime);
+  }
 }
 
 function updateTide(musicTime, dt) {
@@ -3327,7 +3459,7 @@ function updateTide(musicTime, dt) {
     transitionProgress = clamp(state.transitionClock / sectionTransitionDuration, 0, 1);
     if (!state.transitionSwitched && transitionProgress >= 0.49) {
       state.transitionSwitched = true;
-      state.tideIndex = state.pendingTide;
+      commitTideIndex(state.pendingTide, musicTime);
       globals.section.value = state.tideIndex;
       // The new chapter announces itself in its own sonar dialect.
       if (state.calibrated && !state.ending) {
@@ -3335,7 +3467,7 @@ function updateTide(musicTime, dt) {
       }
     }
     if (transitionProgress >= 1) {
-      state.tideIndex = state.pendingTide;
+      commitTideIndex(state.pendingTide, musicTime);
       state.pendingTide = -1;
       state.transitionClock = 99;
       state.transitionSwitched = false;
@@ -3802,13 +3934,16 @@ function updateHover() {
 
 function updateTransport(visualScoreTime, duration) {
   const progress = clamp(visualScoreTime / scoreDuration, 0, 1);
-  const current = state.audioReady ? progress * duration : visualScoreTime;
+  const current = state.clockSource === 'audio' && duration !== null
+    ? progress * duration
+    : visualScoreTime;
+  const displayDuration = duration ?? 0;
   ui.timeNow.textContent = formatTime(current);
-  ui.timeTotal.textContent = formatTime(duration);
+  ui.timeTotal.textContent = formatTime(displayDuration);
   rootStyleWriter.set('--progress', `${(progress * 100).toFixed(3)}%`);
   ui.index.textContent = `09–${String(Math.floor(progress * 9999)).padStart(4, '0')}`;
   ui.archiveProgress.setAttribute('aria-valuenow', (progress * 100).toFixed(1));
-  ui.archiveProgress.setAttribute('aria-valuetext', `${formatTime(current)} / ${formatTime(duration)}`);
+  ui.archiveProgress.setAttribute('aria-valuetext', `${formatTime(current)} / ${formatTime(displayDuration)}`);
 }
 
 function advanceFrameState(dt, elapsed) {
@@ -4123,6 +4258,7 @@ function applyPreview(mode, section) {
   state.ending = false;
   state.ended = false;
   state.endingCue = 0;
+  state.finishCount = 0;
   state.ceremonyCue = 0;
   state.archiveOpen = 0;
   globals.section.value = section;
@@ -4966,6 +5102,31 @@ if (deterministicCaptureRequested) {
   window.__NINTH_TIDE_DITHER_SCENARIO__ = runDeterministicDitherScenario;
 }
 
+function snapshotCycleAudit() {
+  const duration = resolveVisualScoreDuration();
+  return Object.freeze({
+    source: state.clockSource,
+    round: state.round,
+    chapter: state.tideIndex + 1,
+    visualScoreTime: resolveVisualScoreTime(timer.getElapsed(), duration),
+    shutdown: state.shutdown,
+    ending: state.ending,
+    finished: state.ended,
+    epilogueVisible: document.body.classList.contains('ended'),
+    endingCue: state.endingCue,
+    finishCount: state.finishCount,
+    clockPending: state.clockSource === 'audio' && duration === null,
+    events: Object.freeze(cycleAuditEvents.map((event) => Object.freeze({ ...event }))),
+  });
+}
+
+if (cycleAuditRequested) {
+  if (deterministicCaptureRequested) {
+    throw new Error('Ninth Tide cycle audit cannot overlap deterministic preview.');
+  }
+  window.__NINTH_TIDE_CYCLE_AUDIT__ = Object.freeze({ snapshot: snapshotCycleAudit });
+}
+
 initializeRuntimeControl();
 resetStatsSample();
 if (!deterministicCaptureRequested) requestNextFrame();
@@ -4977,6 +5138,7 @@ window.addEventListener('beforeunload', () => {
   coarsePointerQuery.removeEventListener('change', scheduleQualityReconcile);
   if (dprResolutionQuery) dprResolutionQuery.removeEventListener('change', scheduleQualityReconcile);
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+  if (epilogueTimer !== null) clearTimeout(epilogueTimer);
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   timer.dispose();
   qualityGeneration.owner.dispose();

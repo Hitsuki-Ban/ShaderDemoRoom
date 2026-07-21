@@ -17,6 +17,7 @@
     "qa:ninth-tide": "node scripts/ninth-tide-capture.mjs",
     "qa:ninth-tide-near-black": "node scripts/ninth-tide-near-black.mjs",
     "qa:ninth-tide-quality": "node scripts/ninth-tide-quality.mjs",
+    "qa:ninth-tide-cycle": "node scripts/ninth-tide-cycle.mjs",
     "qa:ninth-tide-dither": "node scripts/ninth-tide-dither.mjs",
     "qa:ninth-tide-dither-performance": "node scripts/ninth-tide-dither-performance.mjs",
     "qa:ninth-tide-pulses": "node scripts/ninth-tide-pulse-history.mjs",
