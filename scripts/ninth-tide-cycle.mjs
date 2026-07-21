@@ -21,6 +21,7 @@ const SILENT_CYCLE_MS = 118_000;
 const CHAPTER_NINE_JUMP_MS = 110_000;
 const CHAPTER_TRANSITION_STEPS = 28;
 const CHAPTER_TRANSITION_STEP_MS = 50;
+const JUMP_CONVERGENCE_STEPS = CHAPTER_TRANSITION_STEPS + 1;
 const EPILOGUE_DWELL_MS = 700;
 const SCORE_DURATION_SECONDS = 354.504;
 const EXPECTED_CYCLE_EVENT_IDS = Object.freeze([
@@ -74,6 +75,7 @@ const manifest = {
     expectedCycleEventIds: EXPECTED_CYCLE_EVENT_IDS,
   },
   silent: [],
+  silentJump: null,
   audio: null,
 };
 
@@ -319,6 +321,55 @@ async function runSilentCycle(browser, buildUrl, reducedMotion) {
   }
 }
 
+async function runSilentJumpCycle(browser, buildUrl) {
+  const context = await browser.newContext(NINTH_TIDE_CONTEXT_OPTIONS);
+  const page = await context.newPage();
+  const observation = observePage(page);
+  const label = 'single-jump silent cycle';
+
+  try {
+    await page.clock.install({ time: new Date('2026-07-22T00:00:00.000Z') });
+    await navigateToCycleAudit(page, buildUrl);
+    const entered = await clickAndReadCycleSnapshot(page, '#silentBtn', `${label} entered`);
+    assertFreshRoundOrigin(entered, `${label} entry`);
+
+    await page.clock.fastForward(SILENT_CYCLE_MS);
+    const jumped = await readCycleSnapshot(page, `${label} endpoint jump`);
+    assert.equal(jumped.visualScoreTime, SCORE_DURATION_SECONDS,
+      `${label} did not clamp at the exact visual score endpoint.`);
+    assert.equal(jumped.chapter, 1, `${label} committed chapter IX without its transition.`);
+    assert.equal(jumped.finished, false, `${label} finished before chapter IX committed.`);
+    assert.equal(jumped.finishCount, 0, `${label} counted finish before chapter IX committed.`);
+    assertEventSequence(jumped, EXPECTED_CYCLE_EVENT_IDS.slice(0, 2), `${label} endpoint jump`);
+
+    for (let index = 0; index < JUMP_CONVERGENCE_STEPS; index += 1) {
+      await page.clock.fastForward(CHAPTER_TRANSITION_STEP_MS);
+    }
+    const finished = await readCycleSnapshot(page, `${label} converged finish`);
+    assert.equal(finished.chapter, 9, `${label} did not commit chapter IX before finish.`);
+    assert.equal(finished.finished, true, `${label} did not finish after chapter IX committed.`);
+    assert.equal(finished.finishCount, 1, `${label} finish was not idempotent.`);
+    assertEventSequence(finished, EXPECTED_CYCLE_EVENT_IDS.slice(0, -1), `${label} finish`);
+
+    await page.clock.fastForward(EPILOGUE_DWELL_MS);
+    const epilogue = await readCycleSnapshot(page, `${label} epilogue`);
+    assert.equal(epilogue.epilogueVisible, true, `${label} did not reveal the epilogue.`);
+    assert.equal(epilogue.finishCount, 1, `${label} finished more than once.`);
+    assertEventSequence(epilogue, EXPECTED_CYCLE_EVENT_IDS, `${label} epilogue`);
+    assert.deepEqual(observation.archiveAudioRequests, [], `${label} requested archive.mp3.`);
+    assertNoPageErrors(observation, label);
+
+    return {
+      checkpoints: { entered, jumped, finished, epilogue },
+      archiveAudioRequests: observation.archiveAudioRequests,
+      errors: observation.errors,
+    };
+  } finally {
+    await page.close();
+    await context.close();
+  }
+}
+
 async function waitForNativeEnded(audio) {
   return audio.evaluate(async (element) => {
     if (!(element instanceof HTMLAudioElement)) {
@@ -484,6 +535,7 @@ async function runGate() {
       logicalStateSequence(normal.checkpoints),
       'Reduced motion changed the silent cycle state sequence.',
     );
+    manifest.silentJump = await runSilentJumpCycle(browser, config.buildUrl);
     manifest.status = 'passed';
   } finally {
     await browser.close();

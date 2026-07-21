@@ -3349,6 +3349,7 @@ function updateFixedEndingPreview() {
 function updateEnding(visualScoreTime) {
   if (!state.entered || state.previewMode === 'main' || state.previewMode === 'opening') return Object.freeze([]);
   if (state.previewMode === 'ending') return updateFixedEndingPreview();
+  if (state.tideIndex !== 8) return Object.freeze([]);
   const transition = advanceEndingState({
     shutdown: state.shutdown,
     started: state.ending,
