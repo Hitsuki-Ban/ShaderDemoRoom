@@ -1,9 +1,25 @@
 # [T-VW-02] 天候3状態のサムネイル判別性を確立する(色相シフト脱却)
 
+- 状態: 調査・実装中（T-VW-01 / T-VW-08 完了、2026-07-23）
 - 分類: AD
 - 優先度: P1
 - 評価軸: サムネイルテスト / モーション言語 / ストーリーテリング
 - 依存: T-VW-01(ランドマークの3天候演出を確定) / T-VW-08(雨条=パーティクル個別リサイクルを確定)。Rain と Storm の最終 look を本票で確定してから T-VW-06 が補間する
+
+## 疑問・既定判断 (2026-07-23)
+
+- **疑問1 — 主検収が weather selector 自体を測れていない**: 現行 QA は Clear が default、Rain が
+  weather selector、Storm が wind / rain / waveHeight / cloudCover / chop / foam 等も同時に変える full Storm preset
+  であり、`WEATHER_LOOKS` の3端点と非天候スライダー差を分離できない。**既定判断**: 本票の主検収は
+  非天候 settings を完全に揃え、`weather` だけを clear / rain / storm に切り替える。full Storm preset は
+  hero / stress / performance QA として残すが、weather identity の合格根拠には使わない。これは後続
+  T-VW-06 が補間する端点を先に確定するための最小境界でもある。
+- **疑問2 — FPS の絶対門と paired 門の関係**: T-VW-08 の最終 paired median は `0.9679712101x` だが、
+  candidate absolute median `13.3959885445 FPS` は票面基準 `15.37` の90%である `13.833 FPS` を下回る。
+  **既定判断**: 本票では absolute `fpsMedian >= 13.833` と同一環境 AB/BA paired median `>= 0.95x` を
+  どちらも報告し、両方を合格条件とする。環境正規化した paired 値で absolute 未達を置き換えない。
+- 人間判断が別途必要になるのは、同一 controls の彩色 / grayscale 160px sheet が機械門を満たした後も
+  3状態の意味読みが競合する場合だけとする。それまでは上記既定判断で進める。
 
 ## 現状(証拠)
 
