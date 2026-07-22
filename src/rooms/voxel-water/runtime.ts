@@ -186,7 +186,7 @@ export const WEATHER_LOOKS = {
     precipitationResponse: 0.38,
     rainStreakLength: 90,
     rainStreakColor: new Color(0x527b8d),
-    rippleStrength: 0.84,
+    rippleStrength: 0.9,
     waveHeightScale: 1,
     waveHeightFloor: 0.62,
     chopFloor: 0.44,
