@@ -6,7 +6,7 @@ uniform float uToonSteps;
 uniform float uFoam;
 uniform float uClarity;
 uniform float uSurfaceDetail;
-uniform float uCurrentDirection;
+uniform vec2 uCurrentDirectionXZ;
 uniform float uCurrentStrength;
 uniform float uSkyTime;
 uniform float uColorTemperature;
@@ -23,7 +23,7 @@ uniform float uVoxelSpacing;
 uniform float uWaterGridCellMultiple;
 uniform float uStormGridCellMultiple;
 uniform vec2 uVoxelFieldOffset;
-uniform float uVoxelFieldYaw;
+uniform vec2 uVoxelFieldBasis;
 uniform vec3 uSunDirection;
 uniform vec4 uHeadlandCapsules[4];
 uniform float uHeadlandRadii[4];
@@ -57,11 +57,9 @@ float gridLine(vec2 worldPosition, float cellMultiple) {
 }
 
 vec2 voxelGridPosition(vec2 oceanPosition) {
-  float cosine = cos(uVoxelFieldYaw);
-  float sine = sin(uVoxelFieldYaw);
   vec2 fieldLocal = vec2(
-    cosine * oceanPosition.x - sine * oceanPosition.y,
-    sine * oceanPosition.x + cosine * oceanPosition.y
+    uVoxelFieldBasis.x * oceanPosition.x - uVoxelFieldBasis.y * oceanPosition.y,
+    uVoxelFieldBasis.y * oceanPosition.x + uVoxelFieldBasis.x * oceanPosition.y
   );
   return fieldLocal - uVoxelFieldOffset;
 }
@@ -216,10 +214,11 @@ void main() {
     color = mix(color, uWeatherFogColor, rainCurtain * 0.14);
   }
 
-  float currentAngle = radians(uCurrentDirection);
-  vec2 currentDirection = normalize(vec2(cos(currentAngle), sin(currentAngle)));
-  vec2 currentRight = vec2(-currentDirection.y, currentDirection.x);
-  vec2 flowSpace = vec2(dot(vWorldPosition.xz, currentRight), dot(vWorldPosition.xz, currentDirection));
+  vec2 currentRight = vec2(-uCurrentDirectionXZ.y, uCurrentDirectionXZ.x);
+  vec2 flowSpace = vec2(
+    dot(vWorldPosition.xz, currentRight),
+    dot(vWorldPosition.xz, uCurrentDirectionXZ)
+  );
   float flowNoise = sin(flowSpace.y * 1.25 - uTime * (0.42 + uCurrentStrength * 0.9));
   flowNoise += sin(flowSpace.x * 0.46 + flowSpace.y * 0.18 + uTime * 0.18) * 0.36;
   flowNoise = flowNoise * 0.36 + 0.5;
@@ -362,14 +361,12 @@ void main() {
   float clearFoamDetail = smoothstep(0.03, 0.12, crestFoam)
     * smoothstep(0.3, 0.65, vRawWave);
   foamMask *= mix(clearFoamDetail, 1.0, smoothstep(0.0, 0.48, uStorm));
-  if (foamWeatherPhase < 1.0) {
-    float clearFoamPatch = mix(
-      0.0,
-      0.3,
-      smoothstep(0.35, 0.6, noise(vOceanXZ * 0.16 + vec2(2.3, -1.7)))
-    );
-    foamMask *= mix(clearFoamPatch, 1.0, max(foamWeatherPhase, clearMorningFoamLift));
-  }
+  float clearFoamPatch = mix(
+    0.0,
+    0.3,
+    smoothstep(0.35, 0.6, noise(vOceanXZ * 0.16 + vec2(2.3, -1.7)))
+  );
+  foamMask *= mix(clearFoamPatch, 1.0, max(foamWeatherPhase, clearMorningFoamLift));
   float clearMorningFoamPatch = smoothstep(
     0.55,
     0.72,

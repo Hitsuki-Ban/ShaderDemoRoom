@@ -377,6 +377,12 @@ export function createRoomRuntime(
   const headlandRadiusUniforms = HEADLAND_SEGMENTS_WORLD_OCEAN.map(({ radius }) => radius);
   const sunDirectionUniform = { value: sunDirection };
   const columnWeatherStrengthUniform = { value: initialWeatherLook.strength };
+  const currentDirectionUniform = { value: new Vector2() };
+  const currentDirectionRadians = settings.currentDirection * Math.PI / 180;
+  currentDirectionUniform.value.set(
+    Math.cos(currentDirectionRadians),
+    Math.sin(currentDirectionRadians),
+  );
 
   scene.add(root);
   scene.fog = new Fog(initialWeatherLook.fogColor, initialWeatherLook.fogNear, initialWeatherLook.fogFar);
@@ -426,7 +432,7 @@ export function createRoomRuntime(
       uCloudCover: { value: settings.cloudCover },
       uToonSteps: { value: settings.toonSteps },
       uClarity: { value: settings.clarity },
-      uCurrentDirection: { value: settings.currentDirection },
+      uCurrentDirectionXZ: currentDirectionUniform,
       uCurrentStrength: { value: settings.currentStrength },
       uSkyTime: { value: settings.skyTime },
       uColorTemperature: { value: settings.colorTemperature },
@@ -444,7 +450,9 @@ export function createRoomRuntime(
       uWaterGridCellMultiple: { value: WATER_GRID_CELL_MULTIPLE },
       uStormGridCellMultiple: { value: STORM_GRID_CELL_MULTIPLE },
       uVoxelFieldOffset: { value: new Vector2(VOXEL_FIELD_OFFSET.x, VOXEL_FIELD_OFFSET.z) },
-      uVoxelFieldYaw: { value: VOXEL_FIELD_YAW },
+      uVoxelFieldBasis: {
+        value: new Vector2(Math.cos(VOXEL_FIELD_YAW), Math.sin(VOXEL_FIELD_YAW)),
+      },
       uSunDirection: sunDirectionUniform,
       uHeadlandCapsules: { value: headlandCapsuleUniforms },
       uHeadlandRadii: { value: headlandRadiusUniforms },
@@ -899,7 +907,8 @@ export function createRoomRuntime(
     waterMaterial.uniforms.uFoam.value = effectiveSettings.foam;
     waterMaterial.uniforms.uClarity.value = settings.clarity;
     waterMaterial.uniforms.uSurfaceDetail.value = settings.surfaceDetail;
-    waterMaterial.uniforms.uCurrentDirection.value = settings.currentDirection;
+    const currentRadians = settings.currentDirection * Math.PI / 180;
+    currentDirectionUniform.value.set(Math.cos(currentRadians), Math.sin(currentRadians));
     waterMaterial.uniforms.uCurrentStrength.value = settings.currentStrength;
     waterMaterial.uniforms.uSkyTime.value = settings.skyTime;
     waterMaterial.uniforms.uColorTemperature.value = settings.colorTemperature;

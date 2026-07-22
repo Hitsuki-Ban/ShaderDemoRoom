@@ -180,8 +180,15 @@ describe('voxel water runtime contracts', () => {
       uVoxelSpacing: { value: VOXEL_SPACING },
       uWaterGridCellMultiple: { value: WATER_GRID_CELL_MULTIPLE },
       uStormGridCellMultiple: { value: STORM_GRID_CELL_MULTIPLE },
-      uVoxelFieldYaw: { value: VOXEL_FIELD_YAW },
     });
+    expect(plane.material.uniforms.uVoxelFieldBasis.value.toArray()).toEqual([
+      Math.cos(VOXEL_FIELD_YAW),
+      Math.sin(VOXEL_FIELD_YAW),
+    ]);
+    runtime.updateSettings({ ...voxelWaterDefaults, currentDirection: 90 });
+    const [currentX, currentZ] = plane.material.uniforms.uCurrentDirectionXZ.value.toArray();
+    expect(currentX).toBeCloseTo(0, 12);
+    expect(currentZ).toBeCloseTo(1, 12);
     expect(plane.material.uniforms.uVoxelFieldOffset.value.toArray()).toEqual([
       VOXEL_FIELD_OFFSET.x,
       VOXEL_FIELD_OFFSET.z,
@@ -564,10 +571,12 @@ describe('voxel water runtime contracts', () => {
     expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(5);
     expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 1.8');
     expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
-    expect(skyFragmentShader).toContain('if (uSunVisibility > 0.0)');
     expect(skyFragmentShader).not.toContain('normalize(uSunDirection)');
     expect(voxelWaterFragmentShader).not.toContain('normalize(uSunDirection)');
-    expect(voxelWaterFragmentShader).toContain('if (foamWeatherPhase < 1.0)');
+    expect(voxelWaterFragmentShader).toContain('uniform vec2 uCurrentDirectionXZ;');
+    expect(voxelWaterFragmentShader).toContain('uniform vec2 uVoxelFieldBasis;');
+    expect(voxelWaterFragmentShader).not.toContain('radians(uCurrentDirection)');
+    expect(voxelWaterFragmentShader).not.toContain('cos(uVoxelFieldYaw)');
     expect(skyFragmentShader).toContain('sunDisc * uSunVisibility');
     expect(skyFragmentShader).not.toContain('1.0 - uStorm * 0.78');
   });
