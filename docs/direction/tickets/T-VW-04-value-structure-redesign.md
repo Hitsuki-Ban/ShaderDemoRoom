@@ -1,6 +1,6 @@
 # [T-VW-04] 値構造を再設計する(ニアモノトーン圧縮の解消)
 
-- 状態: 実装・固定ゲート・独立審査完了（PR作成待ち、2026-07-22）
+- 状態: 実装・固定ゲート・独立審査完了（PR #45 CI・merge待ち、2026-07-22）
 - 分類: AD
 - 優先度: P2
 - 評価軸: 値構造 / サムネイルテスト
@@ -139,6 +139,7 @@ research-stylized-water.md §2.5(SoT: 「深水色⇔サブサーフェス色を
 - 太陽は width p10/p90 `73/73px`、height `76/77px`、aspect p10/p90 `0.948/0.961`、circularity p10 `0.972`、solidity p10 `0.977`、vertical-run ratio p90 `1.030` で固定形状門を通過した。
 - 同一 production build で RAF整列後の `qa:water-value` を連続2回実行し、4状態×16フレームの64 SHA-256 と report SHA-256 `35B7FE1408B8332E2A2C7A6AFA511C1C60C5F997C25FD9871DC0CEB24785A9AF` が一致した。console error は全状態0、report `passed=true`。
 - 独立 verifier も fresh process で同じ門を連続2回実行し、64フレームの差分0、同一 report SHA-256、全契約通過を再現した。さらに `qa:water` 三状態（seam default `0.167`、rain `0`、storm `0`）、44 files / 422 tests、lint、typecheck、build、foam=0/1 production probe を独立確認した。reviewer は RAF整列がロック済み Playwright 実装に一致し、閾値・ROI・製品経路を変えないこと、Clear `0.84` が Graphic Tide Atlas の暗部設計を維持することを確認し APPROVE とした。
+- PR [#45](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/45) を作成し、実装要約、決定性 SHA、独立 reviewer / verifier 結論、全ローカル門の結果を本文へ記録した。CI と main deploy の結果は merge 後に本票へ追記する。
 - 既存 `qa:water` は default seam `0.167 <= 1.5`、rain `0 <= 1.5`、storm `0 <= 1.0` で通過し、motion/toon/contrast/coverage も維持した。`qa:visual` は14 captures、URL/i18n、mobile overflow/HUD overlap、console error 0 で通過した。
 - 固定時刻の production probe で ridge 探索域の `Y' >=192` pixel は `foam=0` の `10,615 (4.25%)` から `foam=1` の `58,662 (23.47%)` へ5.5倍増え、whitecap が foam control に実質応答し、0で残る空/水面由来高輝度だけを誤って消していないことを確認した。
 - 静的/単体門は `pnpm lint`、`pnpm typecheck`、`pnpm test`（44 files / 422 tests）、`pnpm build`、`pnpm exhibits:check`、`git diff --check` を通過した。
