@@ -71,9 +71,9 @@ void main() {
   cloudColor = mix(cloudColor, uWeatherCloudTint, 0.24 + uStorm * 0.14);
   color = mix(color, cloudColor, cloudMask * cloudBand * (0.12 + uCloudCover * 0.36 + uStorm * 0.12));
 
-  float sunAngle = acos(clamp(dot(direction, uSunDirection), -1.0, 1.0));
-  float sunGlow = 1.0 - smoothstep(0.04, 0.085, sunAngle);
-  float sunDisc = 1.0 - smoothstep(0.032, 0.04, sunAngle);
+  float sunAlignment = clamp(dot(direction, uSunDirection), -1.0, 1.0);
+  float sunGlow = smoothstep(0.996389674502, 0.999200106661, sunAlignment);
+  float sunDisc = smoothstep(0.999200106661, 0.999488043689, sunAlignment);
   color += sunGlow * uSunVisibility * vec3(1.0, 0.687, 0.328) * (0.018 + warmMix * 0.012);
   color = mix(color, vec3(1.0, 0.687, 0.328), sunDisc * uSunVisibility);
   float clearMorningLift = (1.0 - smoothstep(0.28, 0.48, uSkyTime)) * (1.0 - uStorm);

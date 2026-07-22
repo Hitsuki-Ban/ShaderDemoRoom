@@ -262,7 +262,8 @@ describe('voxel water runtime contracts', () => {
 
   it('renders one feathered three-dimensional sun disc from the shared direction', () => {
     expect(skyFragmentShader).toContain('dot(direction, uSunDirection)');
-    expect(skyFragmentShader).toContain('smoothstep(0.032, 0.04, sunAngle)');
+    expect(skyFragmentShader).toContain('smoothstep(0.999200106661, 0.999488043689, sunAlignment)');
+    expect(skyFragmentShader).not.toContain('acos(');
     expect(skyFragmentShader).not.toContain('uSunDirection.xz');
   });
 
