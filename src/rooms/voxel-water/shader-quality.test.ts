@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  AmbientLight,
   Color,
   Camera,
   BufferGeometry,
@@ -11,11 +12,14 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
+  PointLight,
   Points,
   Scene,
   ShaderMaterial,
+  SpotLight,
   StaticDrawUsage,
   Vector3,
+  Vector4,
   type Object3D,
 } from 'three';
 import type { RoomRuntimeContext, VoxelWaterSettings } from '../types';
@@ -28,7 +32,8 @@ import {
 } from './runtime';
 import { voxelWaterDefaults } from './state';
 import {
-  ACTIVE_LANDMARK_CANDIDATE,
+  HEADLAND_SEGMENTS_WORLD_OCEAN,
+  LANDMARK_MODEL,
   landmarkCoversVoxelColumnWorldOcean,
   LANDMARK_INSTANCE_BUDGET,
 } from './landmarkModel';
@@ -84,7 +89,8 @@ function findObject<TObject extends Object3D>(
 }
 
 function extractUniformNames(source: string) {
-  return [...source.matchAll(/\buniform\s+\w+\s+(\w+)\s*;/g)].map((match) => match[1]);
+  return [...source.matchAll(/\buniform\s+\w+\s+(\w+)(?:\s*\[\s*\d+\s*\])?\s*;/g)]
+    .map((match) => match[1]);
 }
 
 describe('voxel water runtime contracts', () => {
@@ -101,6 +107,15 @@ describe('voxel water runtime contracts', () => {
       expect(look).not.toHaveProperty('columnOpacity');
       expect(look.waterTint).toBeInstanceOf(Color);
       expect(look.fogColor).toBeInstanceOf(Color);
+      expect(look.landmarkEmissive).toBeInstanceOf(Color);
+      expect(look.landmarkEmissiveIntensity).toBeGreaterThanOrEqual(0);
+      expect(look.landmarkEmissiveLift).toBeGreaterThanOrEqual(0);
+      expect(look.landmarkRoughness).toBeGreaterThan(0);
+      expect(look.landmarkRoughness).toBeLessThanOrEqual(1);
+      expect(look.beaconColor).toBeInstanceOf(Color);
+      expect(look.beaconEmissiveStrength).toBeGreaterThan(0);
+      expect(look.beaconEmissiveStrength).toBeLessThanOrEqual(1);
+      expect(look.beaconPulseAmplitude).toBeGreaterThanOrEqual(0);
     }
 
     expect(WEATHER_LOOKS.clear.strength).toBeLessThan(WEATHER_LOOKS.rain.strength);
@@ -150,6 +165,39 @@ describe('voxel water runtime contracts', () => {
       VOXEL_FIELD_OFFSET.x,
       VOXEL_FIELD_OFFSET.z,
     ]);
+    runtime.dispose();
+  });
+
+  it('binds the model-owned headland capsules to the water contact-foam SDF', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const capsuleValues = plane.material.uniforms.uHeadlandCapsules.value as Vector4[];
+    const radiusValues = plane.material.uniforms.uHeadlandRadii.value as number[];
+
+    expect(capsuleValues).toHaveLength(HEADLAND_SEGMENTS_WORLD_OCEAN.length);
+    expect(radiusValues).toEqual(HEADLAND_SEGMENTS_WORLD_OCEAN.map(({ radius }) => radius));
+    for (let index = 0; index < HEADLAND_SEGMENTS_WORLD_OCEAN.length; index += 1) {
+      const segment = HEADLAND_SEGMENTS_WORLD_OCEAN[index];
+      expect(capsuleValues[index].toArray()).toEqual([
+        segment.start.worldX,
+        segment.start.worldZ,
+        segment.end.worldX,
+        segment.end.worldZ,
+      ]);
+    }
+    expect(voxelWaterFragmentShader).toContain('float signedDistanceToHeadland(vec2 position)');
+    expect(voxelWaterFragmentShader).toContain('signedDistanceToCapsule(position, uHeadlandCapsules[index], uHeadlandRadii[index])');
+    expect(voxelWaterFragmentShader).toContain(
+      'float contactFoam = contactBand * contactAgitation * contactBreakup * uFoam;',
+    );
+    expect(voxelWaterFragmentShader.indexOf('float contactFoam ='))
+      .toBeLessThan(voxelWaterFragmentShader.lastIndexOf('color = mix(color, valueFoamColor'));
     runtime.dispose();
   });
 
@@ -219,10 +267,10 @@ describe('voxel water runtime contracts', () => {
     );
     const landmark = findObject(
       objects,
-      (object): object is InstancedMesh<BufferGeometry, MeshBasicMaterial> =>
+      (object): object is InstancedMesh<BufferGeometry, MeshStandardMaterial> =>
         object.name === 'voxel-water-landmark'
         && object instanceof InstancedMesh
-        && object.material instanceof MeshBasicMaterial,
+        && object.material instanceof MeshStandardMaterial,
     );
     const spray = findObject(
       objects,
@@ -256,12 +304,40 @@ describe('voxel water runtime contracts', () => {
     expect(landmark.material.transparent).toBe(false);
     expect(landmark.material.depthTest).toBe(true);
     expect(landmark.material.depthWrite).toBe(true);
-    expect(landmark.material.vertexColors).toBe(false);
+    expect(landmark.material.vertexColors).toBe(true);
     expect(landmark.instanceColor).not.toBeNull();
     expect(Math.max(...(landmark.instanceColor?.array ?? []))).toBeGreaterThan(0.4);
-    expect(landmark.count).toBe(ACTIVE_LANDMARK_CANDIDATE.instances.length);
+    expect(landmark.count).toBe(LANDMARK_MODEL.instances.length);
     expect(landmark.count).toBeLessThanOrEqual(LANDMARK_INSTANCE_BUDGET);
-    expect(landmark.userData.candidateId).toBe(ACTIVE_LANDMARK_CANDIDATE.id);
+    const landmarkRoleEmissive = landmark.geometry.getAttribute('aLandmarkEmissiveColor');
+    const landmarkBeaconMask = landmark.geometry.getAttribute('aLandmarkBeaconMask');
+    const expectedRoleEmissive = {
+      'headland-dark': new Color(0x07131b),
+      'tower-light': new Color(0xb8b1a0),
+      'roof-dark': new Color(0x1d2b32),
+      'beacon-warm': new Color(0xffb568),
+    } as const;
+    expect(landmarkRoleEmissive.count).toBe(landmark.count);
+    expect(landmarkBeaconMask.count).toBe(landmark.count);
+    expect(new Set(LANDMARK_MODEL.instances.map(({ colorRole }) => colorRole))).toEqual(
+      new Set(Object.keys(expectedRoleEmissive)),
+    );
+    for (let index = 0; index < LANDMARK_MODEL.instances.length; index += 1) {
+      const expectedColor = expectedRoleEmissive[LANDMARK_MODEL.instances[index].colorRole];
+      expect(landmarkRoleEmissive.getX(index)).toBeCloseTo(expectedColor.r, 6);
+      expect(landmarkRoleEmissive.getY(index)).toBeCloseTo(expectedColor.g, 6);
+      expect(landmarkRoleEmissive.getZ(index)).toBeCloseTo(expectedColor.b, 6);
+      expect(landmarkBeaconMask.getX(index)).toBe(
+        LANDMARK_MODEL.instances[index].role === 'beacon' ? 1 : 0,
+      );
+    }
+    expect(landmark.material.roughness).toBe(WEATHER_LOOKS.clear.landmarkRoughness);
+    expect(landmark.material.emissiveIntensity).toBe(WEATHER_LOOKS.clear.landmarkEmissiveIntensity);
+    expect(objects.filter(({ name }) => name === 'voxel-water-landmark')).toHaveLength(1);
+    expect(objects.some(({ name }) => name === 'voxel-water-landmark-glow')).toBe(false);
+    expect(objects.some((object) => object instanceof PointLight || object instanceof SpotLight)).toBe(false);
+    expect(objects.filter((object) => object instanceof AmbientLight || object instanceof DirectionalLight))
+      .toHaveLength(2);
     expect(plane.material.transparent).toBe(true);
     expect(plane.material.depthTest).toBe(true);
     expect(plane.material.depthWrite).toBe(false);
@@ -291,6 +367,13 @@ describe('voxel water runtime contracts', () => {
         && object instanceof InstancedMesh
         && object.material instanceof MeshStandardMaterial,
     );
+    const landmark = findObject(
+      objects,
+      (object): object is InstancedMesh<never, MeshStandardMaterial> =>
+        object.name === 'voxel-water-landmark'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
+    );
     const nextSettings: VoxelWaterSettings = {
       ...voxelWaterDefaults,
       weather: 'storm',
@@ -307,6 +390,41 @@ describe('voxel water runtime contracts', () => {
     expect(plane.material.uniforms.uStorm.value).toBe(WEATHER_LOOKS.storm.strength);
     expect(columns.material.transparent).toBe(false);
     expect(columns.material.opacity).toBe(1);
+    expect(landmark.material.emissive.equals(WEATHER_LOOKS.storm.landmarkEmissive)).toBe(true);
+    expect(landmark.material.emissiveIntensity).toBe(WEATHER_LOOKS.storm.landmarkEmissiveIntensity);
+    expect(landmark.material.roughness).toBe(WEATHER_LOOKS.storm.landmarkRoughness);
+    const landmarkShader = {
+      vertexShader: '#include <common>\nvoid main() {\n#include <begin_vertex>\n}',
+      fragmentShader: '#include <common>\nvoid main() {\n#include <emissivemap_fragment>\n}',
+      uniforms: {} as Record<string, { value: unknown }>,
+    };
+    landmark.material.onBeforeCompile(landmarkShader as never, {} as never);
+    expect(landmarkShader.vertexShader).toContain('attribute vec3 aLandmarkEmissiveColor;');
+    expect(landmarkShader.vertexShader).toContain('attribute float aLandmarkBeaconMask;');
+    expect(landmarkShader.vertexShader).toContain(
+      'vLandmarkEmissiveColor = aLandmarkEmissiveColor;',
+    );
+    expect(landmarkShader.fragmentShader).toContain(
+      'float landmarkBeaconPulse = 1.0',
+    );
+    expect(landmarkShader.uniforms).toMatchObject({
+      uLandmarkEmissiveLift: { value: WEATHER_LOOKS.storm.landmarkEmissiveLift },
+      uBeaconEmissiveStrength: {
+        value: WEATHER_LOOKS.storm.beaconEmissiveStrength,
+      },
+      uBeaconPulseAmplitude: { value: WEATHER_LOOKS.storm.beaconPulseAmplitude },
+    });
+    expect(
+      (landmarkShader.uniforms.uBeaconColor.value as Color).equals(
+        WEATHER_LOOKS.storm.beaconColor,
+      ),
+    ).toBe(true);
+    expect(landmark.material.customProgramCacheKey()).toBe('voxel-water-landmark-emissive-v3');
+    expect(() => landmark.material.onBeforeCompile({
+      vertexShader: '',
+      fragmentShader: '#include <common>\nvoid main() {}',
+      uniforms: {} as Record<string, { value: unknown }>,
+    } as never, {} as never)).toThrow(/role-emissive injection markers/);
     runtime.dispose();
   });
 
@@ -429,6 +547,38 @@ describe('voxel water runtime contracts', () => {
     expect(columns.instanceMatrix.version).toBe(matrixVersion);
     expect(columns.instanceMatrix.array).toEqual(matrixBefore);
     expect(plane.material.uniforms.uTime.value).toBeGreaterThan(timeBefore);
+    runtime.dispose();
+  });
+
+  it('drives the in-material beacon pulse from shared motion time and freezes it at motionScale zero', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<never, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const landmark = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshStandardMaterial> =>
+        object.name === 'voxel-water-landmark'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
+    );
+    const landmarkShader = {
+      vertexShader: '#include <common>\nvoid main() {\n#include <begin_vertex>\n}',
+      fragmentShader: '#include <common>\nvoid main() {\n#include <emissivemap_fragment>\n}',
+      uniforms: {} as Record<string, { value: unknown }>,
+    };
+    landmark.material.onBeforeCompile(landmarkShader as never, {} as never);
+    expect(landmarkShader.uniforms.uTime).toBe(plane.material.uniforms.uTime);
+    runtime.render({ elapsed: 1, delta: 1 });
+    const advancedTime = landmarkShader.uniforms.uTime.value as number;
+    expect(advancedTime).toBeGreaterThan(0);
+    runtime.setMotionScale(0);
+    runtime.render({ elapsed: 11, delta: 10 });
+    expect(landmarkShader.uniforms.uTime.value).toBe(advancedTime);
     runtime.dispose();
   });
 
@@ -581,6 +731,35 @@ describe('voxel water runtime contracts', () => {
     runtime.dispose();
 
     expect(disposeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('disposes every unique landmark and shared cloud resource exactly once', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const landmark = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshStandardMaterial> =>
+        object.name === 'voxel-water-landmark'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshStandardMaterial,
+    );
+    const cloudMaterials = objects
+      .filter((object): object is Mesh<BufferGeometry, MeshBasicMaterial> => (
+        object instanceof Mesh && object.material instanceof MeshBasicMaterial
+      ))
+      .map(({ material }) => material);
+    const sharedCloudMaterial = cloudMaterials.find((material, index) => (
+      cloudMaterials.indexOf(material) !== index
+    ));
+    if (!sharedCloudMaterial) throw new Error('Expected a shared voxel-water cloud material.');
+
+    const spies = [
+      vi.spyOn(landmark.geometry, 'dispose'),
+      vi.spyOn(landmark.material, 'dispose'),
+      vi.spyOn(sharedCloudMaterial, 'dispose'),
+    ];
+    runtime.dispose();
+
+    for (const disposeSpy of spies) expect(disposeSpy).toHaveBeenCalledTimes(1);
   });
 
 });

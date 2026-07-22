@@ -1,6 +1,6 @@
 # [T-VW-01] 焦点ランドマークを導入する(構図再建)
 
-- 状態: 段階1グレーボックス完了（人間Gate A BLOCK、2026-07-22）
+- 状態: 段階2実装・Gate B・独立レビュー完了（PR/CI待ち、2026-07-22）
 - 分類: AD
 - 優先度: P1
 - 評価軸: 焦点階層 / 構図 / ヒーローショット成立性
@@ -78,3 +78,38 @@ research-exhibition-direction.md §3(weenie=視覚磁石)・§2(値ヒエラル�
 
 - 判断根拠: `sheltered` は広いslab roofが160pxサムネイルで煙突キャップに読まれるリスクが最も高く（基準2に抵触の懸念）、`monumental` は左暗質量が最重でストームの4値表現において海面を最も潰す（基準3に抵触の懸念）。`balanced` は3天候で同一identityを保ちつつ両懸念の中間にあり、実装側暫定推奨とも一致。
 - 段階2へ進行可: beacon glow、接触泡、weather材質（固定neutral unlit → Ambient/Directional/Fog応答の単一opaque `MeshStandardMaterial`）、ROI再較正（`landmarkDarkAnchor` 分離・water/crest ROI再定義）、performance AB/BA計測（paired speed ratio median ≥0.90、draw calls default 19→21 / storm 20→22以内）。未採用候補（`sheltered` / `monumental`）と段階1グレーボックス材質はコードから削除する。
+
+## 段階2 実装・Gate B 証拠（2026-07-22）
+
+- 採用形は `balanced` 由来の単一 `LANDMARK_MODEL`（50 instances）へ確定し、候補ID・候補selector・段階1 neutral unlit材質・study runnerを削除した。岩礁/塔/屋根/beaconのroleと色roleを決定論的SoTに持ち、既存46 columnのSAT/SDF除外、右側water-mid負空間、512 instance budgetを維持する。
+- 最終材質はAmbient/Directional/Fogへ応答する単一opaque `MeshStandardMaterial`。role別emissive色とbeacon maskをinstance attributeで渡し、weather別beacon色・強度・pulseを同じshader programへ注入する。追加Point/Spot light、透明beam、texture、別billboard drawはない。pulseは水面と同じmotion timeを使い、`motionScale=0`で停止する。
+- 水面はlandmark capsule SoTをuniform配列として共有し、SDF近傍だけに接触泡を加える。泡強度は既存 `uFoam` に明示的に従い、`foam=0` で寄与が厳密に0になる。右側の静かなwater-midにはlandmarkを追加していない。
+- QA ROIは `scripts/water-roi-contract.mjs` へ一本化した。water inclusionからlandmarkを明示除外し、旧column-sideを `landmarkDarkAnchor` として分離、実column-sideを右前景へ再固定した。crestは強foam maskそのものを除外し、radius 1の8近傍中4px以上が強foamである弱ridge境界だけを採用するため、両maskは構造上相互排他的である。既存luma/area/width/aspect閾値は緩和していない。tower検出は中心の長い低彩度塔身、連続warm beacon core、最大2pxの抗鋸齒遷移後に4行以上連続する暗roof capを一体として測り、bboxは実maskから算出する。無roofの灰柱+暖点と水面短横線はいずれも候補にしない。
+
+### Gate B visual
+
+- 原寸canvas（862×735、順にclear/rain/storm）:
+  - `docs/direction/captures/t-vw-01-gate-b-clear.png` — SHA-256 `faca3daf718db6b9dbbb431ab1cae2d735129fa762a653d254cf5f16c1749672`
+  - `docs/direction/captures/t-vw-01-gate-b-rain.png` — SHA-256 `55145129fe96c380e0fdac089bb2f46b792d88a36bfe01304cb280b114633987`
+  - `docs/direction/captures/t-vw-01-gate-b-storm.png` — SHA-256 `868e94e46a475e96959b5e50cb026d0cfa7b8953072b23b20548cf0bc4c9d670`
+- 4値/160px sheet（default/rain/storm/solar）: `docs/direction/captures/t-vw-01-gate-b-value-sheet.png` — SHA-256 `91e4cc66c49d44c525563dc14496c3f6f84753d96b4ac7eb2b7b56f1708323b3`。
+- 16 deterministic frames × 4 statesの `qa:water-value` は全門通過。crest median p10はclear/rain/storm/solarで `165.86 / 137.86 / 146.12 / 152.27`、pixel support p10は `2641 / 2384.5 / 1852 / 2414.5`（門: ≥256）、foamとのoverlap maxは全状態 `0`。tower height ratioは全状態 `0.26`、width `0.12–0.14`、160px support `432–462`（門: ≥64）、local contrast p10 `15.60–58.98`（門: ≥12）。clear/rain/solar drawCallsMax `20`、storm `21`。console/page errorは0。
+- 3秒テストの機械的前提（画面高25–33%、幅≤14%、160px silhouette、4値分離、3天候同identity）は成立した。最終の「最初に視線が止まる」判断は、上記3原寸captureを使う独立レビューで確定する。
+
+### Performance
+
+- 疑問: 独立透明beacon billboardを維持した最初の候補は21 callsで、5組AB/BAのpaired speed ratio medianが `0.898x` と門 `0.90x` を僅かに下回った。単なる再計測で通すべきか。決定: 再計測で揺らぎを狙わず、billboardを削除してbeacon pulse/color/intensityを既存opaque landmark drawへ統合した。haloは失うが、原寸・4値・160px・storm可読性の全門を再成立させ、T-VW-07と共有できるpulse語彙は維持する。
+- 最終product candidate tree `eab20ade99be526c7d06ac10f17850dab19671e8` 対 deploy済みT-VW-04 `d202e7a` を同一SwiftShader process、5s warm-up + 15s measurement、5組交互AB/BAで比較した。paired speed ratio median `0.9467x`（range `0.9172x–0.9671x`）、baseline median `14.1884 FPS`、candidate median `13.4077 FPS`、draw calls `19→20`。門 `≥0.90x` を通過。後続の独立レビュー修正はQA測定器とfixtureだけで、計測済みproduct runtime/shaderは変更していない。
+- 機械可読report: `docs/direction/captures/t-vw-01-performance.json` — SHA-256 `08ea6ab12dcc60156815459d249bf02d13ed5ca049a9e50fea271bf568145c14`。
+
+### Regression
+
+- `pnpm test`: 46 files / 450 tests通過（最終beacon統合後の対象testは26/26、water-value metricは19/19通過）。`pnpm lint`、`pnpm typecheck`、`pnpm exhibits:check`、production build通過。
+- CI等価browser列の `qa:exhibits` / `qa:orb` / `qa:visual` / `qa:water` / `qa:water-value` / `qa:ninth-tide` / `qa:ninth-tide-near-black` は通過し、`qa:ninth-tide-cycle` / `qa:ninth-tide-hit-target` / `qa:renderer` も通過した。
+- 検証時の疑問: 無変更のNinth Tide `qa:ninth-tide-quality` がローカル高速配信時だけ `desktop-dpr-2 renderer memory did not plateau after the first frame` を2回再現した。分岐の `public` / `dist` とdeploy版 `app.js` は同一SHA-256 `6fe0b342…` で、同一scriptのdeploy対照はローカル失敗点を越えて進行したため、VW-01の回帰とは扱わず無関係コードを変更しない。PR CIで独立再判定し、再現時はそのrun evidenceを基に別票化する。
+
+### 独立レビュー
+
+- 初回reviewはcrest/foamの意味的重複と、暗roofを必須にしていないtower detectorを阻断として指摘した。両方を測定器・fixture・64-frame Gateへ反映し、元reviewerの増分再審査と別verifierの増分検証はいずれも阻断なしでPASSした。
+- reviewer独立再計算の代表frame crest supportはclear/rain/storm/solarで `2656 / 2489 / 1868 / 2494`、foam overlapは全て `0`。roof gapは `0 / 1 / 2px` を許容し `3px` を拒否することも別probeで確認した。
+- 非阻断follow-up: 生産値 `strongerBoundaryMinimumNeighbors=4` は実装・本票・64-frame挙動で一致するが、将来のcontract provenanceをさらに強めるならreport fieldまたは専用unit assertionへ固定できる。本票の受入条件外であり、現実装の合否には影響しない。

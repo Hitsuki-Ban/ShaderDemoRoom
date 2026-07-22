@@ -365,12 +365,17 @@ async function runScenario(firstRoom) {
     const voxelMean =
       telemetrySamples['voxel-water'].reduce((total, sample) => total + sample.fps, 0) /
       telemetrySamples['voxel-water'].length;
+    const voxelCalls = telemetrySamples['voxel-water'].map((sample) => sample.calls);
     const glassCalls = telemetrySamples['glass-optics'].map((sample) => sample.calls);
     console.log(
       `voxel telemetry: ${telemetrySamples['voxel-water'].map(({ calls, fps }) => `${fps} FPS/${calls} calls`).join(', ')} (FPS mean ${voxelMean})`,
     );
     console.log(
       `glass telemetry: ${telemetrySamples['glass-optics'].map(({ calls, fps }) => `${fps} FPS/${calls} calls`).join(', ')}`,
+    );
+    assert(
+      voxelCalls.every((calls) => calls > 0 && calls <= 20),
+      `Voxel-water logical-frame calls exceeded the 20-call landmark budget: ${voxelCalls.join(', ')}.`,
     );
     assert(
       glassCalls.every((calls) => calls === 15),

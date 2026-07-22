@@ -2,15 +2,12 @@ import { VOXEL_FIELD_YAW, VOXEL_SPACING } from './waveModel';
 
 export const LANDMARK_INSTANCE_BUDGET = 512;
 
-export const LANDMARK_CANDIDATE_IDS = [
-  'sheltered',
-  'balanced',
-  'monumental',
-] as const;
-
-export type LandmarkCandidateId = typeof LANDMARK_CANDIDATE_IDS[number];
-export type LandmarkRole = 'rock' | 'tower' | 'roof';
-export type LandmarkColorRole = 'headland-dark' | 'tower-light' | 'roof-dark';
+export type LandmarkRole = 'rock' | 'tower' | 'roof' | 'beacon';
+export type LandmarkColorRole =
+  | 'headland-dark'
+  | 'tower-light'
+  | 'roof-dark'
+  | 'beacon-warm';
 
 export type WorldOceanXZ = Readonly<{
   worldX: number;
@@ -29,11 +26,7 @@ export type LandmarkBoxInstance = Readonly<{
   colorRole: LandmarkColorRole;
 }>;
 
-export type LandmarkCandidate = Readonly<{
-  id: LandmarkCandidateId;
-  headlandScreenShare: number;
-  towerTaper: number;
-  roofSilhouette: 'slab' | 'stepped' | 'spire';
+export type LandmarkModel = Readonly<{
   instances: readonly LandmarkBoxInstance[];
 }>;
 
@@ -57,7 +50,7 @@ export const LANDMARK_WORLD_BOUNDS = {
   max: [2.8, 6.1, 6.25],
 } as const;
 
-type HeadlandSegment = Readonly<{
+export type HeadlandSegmentWorldOcean = Readonly<{
   start: WorldOceanXZ;
   end: WorldOceanXZ;
   radius: number;
@@ -73,12 +66,12 @@ const HEADLAND_SPINE_WORLD_OCEAN = [
 
 const HEADLAND_SEGMENT_RADII = [1.15, 1.12, 1.08, 1.02] as const;
 
-const HEADLAND_SEGMENTS: readonly HeadlandSegment[] = HEADLAND_SEGMENT_RADII.map(
-  (radius, index) => ({
+export const HEADLAND_SEGMENTS_WORLD_OCEAN: readonly HeadlandSegmentWorldOcean[] = Object.freeze(
+  HEADLAND_SEGMENT_RADII.map((radius, index) => Object.freeze({
     start: HEADLAND_SPINE_WORLD_OCEAN[index],
     end: HEADLAND_SPINE_WORLD_OCEAN[index + 1],
     radius,
-  }),
+  })),
 );
 
 const ROCK_CELL_SIZE = 0.5;
@@ -87,30 +80,6 @@ const ROCK_BOTTOM_Y = -0.3;
 const ROCK_FOOTPRINT_INSET = Math.SQRT2 * ROCK_CELL_SIZE * 0.5;
 const TOWER_LAYER_HEIGHT = 0.4;
 const TOWER_LAYER_COUNT = 7;
-
-type CandidateSpec = Readonly<{
-  headlandScreenShare: number;
-  towerTaper: number;
-  roofSilhouette: LandmarkCandidate['roofSilhouette'];
-}>;
-
-const CANDIDATE_SPECS: Record<LandmarkCandidateId, CandidateSpec> = {
-  sheltered: {
-    headlandScreenShare: 0.82,
-    towerTaper: 0.05,
-    roofSilhouette: 'slab',
-  },
-  balanced: {
-    headlandScreenShare: 1,
-    towerTaper: 0.25,
-    roofSilhouette: 'stepped',
-  },
-  monumental: {
-    headlandScreenShare: 1.18,
-    towerTaper: 0.45,
-    roofSilhouette: 'spire',
-  },
-};
 
 function assertFiniteWorldOcean(position: WorldOceanXZ) {
   if (!Number.isFinite(position.worldX) || !Number.isFinite(position.worldZ)) {
@@ -150,7 +119,7 @@ export function worldOceanToVoxelFieldLocal(
 
 function signedDistanceToCapsule(
   position: WorldOceanXZ,
-  segment: HeadlandSegment,
+  segment: HeadlandSegmentWorldOcean,
 ) {
   const segmentX = segment.end.worldX - segment.start.worldX;
   const segmentZ = segment.end.worldZ - segment.start.worldZ;
@@ -170,7 +139,7 @@ function signedDistanceToCapsule(
 export function signedDistanceToHeadlandWorldOcean(position: WorldOceanXZ) {
   assertFiniteWorldOcean(position);
   let distance = Number.POSITIVE_INFINITY;
-  for (const segment of HEADLAND_SEGMENTS) {
+  for (const segment of HEADLAND_SEGMENTS_WORLD_OCEAN) {
     distance = Math.min(distance, signedDistanceToCapsule(position, segment));
   }
   return distance;
@@ -251,9 +220,9 @@ export function landmarkCoversVoxelColumnWorldOcean(position: WorldOceanXZ) {
   ));
 }
 
-function createRockInstances(headlandScreenShare: number) {
+function createRockInstances() {
   return ROCK_FOOTPRINT_CENTERS.map(({ worldX, worldZ }): LandmarkBoxInstance => {
-    const height = unscaledHeadlandHeight(worldX, worldZ) * headlandScreenShare;
+    const height = unscaledHeadlandHeight(worldX, worldZ);
     return {
       role: 'rock',
       worldPosition: [worldX, ROCK_BOTTOM_Y + height * 0.5, worldZ],
@@ -263,17 +232,17 @@ function createRockInstances(headlandScreenShare: number) {
   });
 }
 
-function lighthouseBaseY(headlandScreenShare: number) {
+function lighthouseBaseY() {
   return ROCK_BOTTOM_Y + unscaledHeadlandHeight(
     LIGHTHOUSE_BASE_WORLD_OCEAN.worldX,
     LIGHTHOUSE_BASE_WORLD_OCEAN.worldZ,
-  ) * headlandScreenShare;
+  );
 }
 
-function createTowerInstances(baseY: number, towerTaper: number) {
+function createTowerInstances(baseY: number) {
   return Array.from({ length: TOWER_LAYER_COUNT }, (_, index): LandmarkBoxInstance => {
     const progress = index / (TOWER_LAYER_COUNT - 1);
-    const width = 0.84 * (1 - towerTaper * progress);
+    const width = 0.84 * (1 - 0.25 * progress);
     return {
       role: 'tower',
       worldPosition: [
@@ -287,74 +256,27 @@ function createTowerInstances(baseY: number, towerTaper: number) {
   });
 }
 
-function createRoofInstances(
-  towerTopY: number,
-  silhouette: LandmarkCandidate['roofSilhouette'],
-): LandmarkBoxInstance[] {
+function createRoofAndBeaconInstances(towerTopY: number): LandmarkBoxInstance[] {
   const centerX = LIGHTHOUSE_BASE_WORLD_OCEAN.worldX;
   const centerZ = LIGHTHOUSE_BASE_WORLD_OCEAN.worldZ;
-  if (silhouette === 'slab') {
-    return [
-      {
-        role: 'roof',
-        worldPosition: [centerX, towerTopY + 0.14, centerZ],
-        scale: [1.34, 0.24, 1.34],
-        colorRole: 'roof-dark',
-      },
-      {
-        role: 'roof',
-        worldPosition: [centerX, towerTopY + 0.36, centerZ],
-        scale: [0.74, 0.2, 0.74],
-        colorRole: 'roof-dark',
-      },
-    ];
-  }
-  if (silhouette === 'stepped') {
-    return [
-      {
-        role: 'roof',
-        worldPosition: [centerX, towerTopY + 0.1, centerZ],
-        scale: [1.3, 0.18, 1.3],
-        colorRole: 'roof-dark',
-      },
-      {
-        role: 'roof',
-        worldPosition: [centerX, towerTopY + 0.27, centerZ],
-        scale: [0.84, 0.16, 0.84],
-        colorRole: 'roof-dark',
-      },
-      {
-        role: 'roof',
-        worldPosition: [centerX, towerTopY + 0.42, centerZ],
-        scale: [0.52, 0.2, 0.52],
-        colorRole: 'roof-dark',
-      },
-    ];
-  }
   return [
     {
       role: 'roof',
-      worldPosition: [centerX, towerTopY + 0.09, centerZ],
-      scale: [1.24, 0.16, 1.24],
+      worldPosition: [centerX, towerTopY + 0.1, centerZ],
+      scale: [1.3, 0.18, 1.3],
       colorRole: 'roof-dark',
     },
     {
       role: 'roof',
-      worldPosition: [centerX, towerTopY + 0.24, centerZ],
-      scale: [0.76, 0.14, 0.76],
+      worldPosition: [centerX, towerTopY + 0.27, centerZ],
+      scale: [0.84, 0.16, 0.84],
       colorRole: 'roof-dark',
     },
     {
-      role: 'roof',
-      worldPosition: [centerX, towerTopY + 0.39, centerZ],
-      scale: [0.42, 0.18, 0.42],
-      colorRole: 'roof-dark',
-    },
-    {
-      role: 'roof',
-      worldPosition: [centerX, towerTopY + 0.55, centerZ],
-      scale: [0.2, 0.14, 0.2],
-      colorRole: 'roof-dark',
+      role: 'beacon',
+      worldPosition: LANDMARK_BEACON_WORLD_POSITION,
+      scale: [0.52, 0.2, 0.52],
+      colorRole: 'beacon-warm',
     },
   ];
 }
@@ -380,31 +302,23 @@ function assertInstanceContract(instances: readonly LandmarkBoxInstance[]) {
   }
 }
 
-export function createLandmarkCandidate(candidateId: string): LandmarkCandidate {
-  if (!LANDMARK_CANDIDATE_IDS.includes(candidateId as LandmarkCandidateId)) {
-    throw new Error(`Unknown landmark candidate "${candidateId}".`);
-  }
-  const id = candidateId as LandmarkCandidateId;
-  const spec = CANDIDATE_SPECS[id];
-  const baseY = lighthouseBaseY(spec.headlandScreenShare);
-  const towerTopY = baseY + TOWER_LAYER_COUNT * TOWER_LAYER_HEIGHT;
-  const instances = [
-    ...createRockInstances(spec.headlandScreenShare),
-    ...createTowerInstances(baseY, spec.towerTaper),
-    ...createRoofInstances(towerTopY, spec.roofSilhouette),
-  ];
-  assertInstanceContract(instances);
-  return {
-    id,
-    headlandScreenShare: spec.headlandScreenShare,
-    towerTaper: spec.towerTaper,
-    roofSilhouette: spec.roofSilhouette,
-    instances,
-  };
-}
+const LIGHTHOUSE_BASE_Y = lighthouseBaseY();
+const TOWER_TOP_Y = LIGHTHOUSE_BASE_Y + TOWER_LAYER_COUNT * TOWER_LAYER_HEIGHT;
 
-export const LANDMARK_CANDIDATES = LANDMARK_CANDIDATE_IDS.map(createLandmarkCandidate);
-export const ACTIVE_LANDMARK_CANDIDATE_ID = 'balanced' as const satisfies LandmarkCandidateId;
-export const ACTIVE_LANDMARK_CANDIDATE = createLandmarkCandidate(
-  ACTIVE_LANDMARK_CANDIDATE_ID,
-);
+export const LANDMARK_BEACON_WORLD_POSITION = [
+  LIGHTHOUSE_BASE_WORLD_OCEAN.worldX,
+  TOWER_TOP_Y + 0.42,
+  LIGHTHOUSE_BASE_WORLD_OCEAN.worldZ,
+] as const;
+
+const LANDMARK_INSTANCES = [
+  ...createRockInstances(),
+  ...createTowerInstances(LIGHTHOUSE_BASE_Y),
+  ...createRoofAndBeaconInstances(TOWER_TOP_Y),
+] as const;
+
+assertInstanceContract(LANDMARK_INSTANCES);
+
+export const LANDMARK_MODEL: LandmarkModel = Object.freeze({
+  instances: Object.freeze(LANDMARK_INSTANCES),
+});

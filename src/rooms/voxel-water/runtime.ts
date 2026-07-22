@@ -25,8 +25,8 @@ import {
   SphereGeometry,
   Vector2,
   Vector3,
+  Vector4,
   type Material,
-  type Object3D,
 } from 'three';
 import type {
   DeepReadonly,
@@ -41,7 +41,8 @@ import skyFragmentShader from './sky.frag.glsl?raw';
 import skyVertexShader from './sky.vert.glsl?raw';
 import vertexShaderTemplate from './water.vert.glsl?raw';
 import {
-  ACTIVE_LANDMARK_CANDIDATE,
+  HEADLAND_SEGMENTS_WORLD_OCEAN,
+  LANDMARK_MODEL,
   landmarkCoversVoxelColumnWorldOcean,
 } from './landmarkModel';
 import {
@@ -89,6 +90,13 @@ export type WeatherLook = {
   columnBrightness: number;
   columnLightFloor: number;
   cloudOpacityBase: number;
+  landmarkEmissive: Color;
+  landmarkEmissiveIntensity: number;
+  landmarkEmissiveLift: number;
+  landmarkRoughness: number;
+  beaconColor: Color;
+  beaconEmissiveStrength: number;
+  beaconPulseAmplitude: number;
 };
 
 export const WEATHER_LOOKS = {
@@ -116,6 +124,13 @@ export const WEATHER_LOOKS = {
     columnBrightness: 0.84,
     columnLightFloor: 0.02,
     cloudOpacityBase: 0.06,
+    landmarkEmissive: new Color(0x050c12),
+    landmarkEmissiveIntensity: 0.08,
+    landmarkEmissiveLift: 0.55,
+    landmarkRoughness: 0.86,
+    beaconColor: new Color(0xffd89b),
+    beaconEmissiveStrength: 0.96,
+    beaconPulseAmplitude: 0.16,
   },
   rain: {
     strength: 0.48,
@@ -141,6 +156,13 @@ export const WEATHER_LOOKS = {
     columnBrightness: 0.18,
     columnLightFloor: 0.01,
     cloudOpacityBase: 0.16,
+    landmarkEmissive: new Color(0x050b12),
+    landmarkEmissiveIntensity: 0.1,
+    landmarkEmissiveLift: 0.75,
+    landmarkRoughness: 0.78,
+    beaconColor: new Color(0xffd093),
+    beaconEmissiveStrength: 0.72,
+    beaconPulseAmplitude: 0.24,
   },
   storm: {
     strength: 0.88,
@@ -166,6 +188,13 @@ export const WEATHER_LOOKS = {
     columnBrightness: 0.08,
     columnLightFloor: 0,
     cloudOpacityBase: 0.28,
+    landmarkEmissive: new Color(0x040a10),
+    landmarkEmissiveIntensity: 0.12,
+    landmarkEmissiveLift: 1,
+    landmarkRoughness: 0.72,
+    beaconColor: new Color(0xffc878),
+    beaconEmissiveStrength: 0.9,
+    beaconPulseAmplitude: 0.34,
   },
 } satisfies Record<VoxelWaterSettings['weather'], WeatherLook>;
 
@@ -179,6 +208,10 @@ const VOXEL_SIZE = VOXEL_SPACING;
 const SKY_RADIUS = 62;
 const OCEAN_SNAP_SIZE = VOXEL_SPACING * OCEAN_SNAP_CELL_MULTIPLE;
 const INFINITE_OCEAN_STRATEGY = 'hybrid-near-voxel-field-camera-relative-far-plane';
+const HEADLAND_SEGMENT_COUNT = 4;
+const LANDMARK_EMISSIVE_PROGRAM_KEY = 'voxel-water-landmark-emissive-v3';
+const LANDMARK_EMISSIVE_MARKER = '#include <emissivemap_fragment>';
+const LANDMARK_VERTEX_MARKER = '#include <begin_vertex>';
 
 function createSeededRandom(seed: number) {
   let value = seed >>> 0;
@@ -194,17 +227,22 @@ function hashCell(x: number, z: number) {
   return value - Math.floor(value);
 }
 
-function disposeObject(object: Object3D) {
-  object.traverse((child) => {
-    const mesh = child as Mesh;
-    if ('geometry' in mesh && mesh.geometry) {
-      mesh.geometry.dispose();
-    }
-    if ('material' in mesh && mesh.material) {
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      materials.forEach((material) => material.dispose());
-    }
+function disposeSceneResources(scene: Scene) {
+  const instancedMeshes = new Set<InstancedMesh>();
+  const geometries = new Set<BufferGeometry>();
+  const materials = new Set<Material>();
+
+  scene.traverse((object) => {
+    if (object instanceof InstancedMesh) instancedMeshes.add(object);
+    if (!(object instanceof Mesh || object instanceof Points || object instanceof LineSegments)) return;
+    geometries.add(object.geometry);
+    const objectMaterials = Array.isArray(object.material) ? object.material : [object.material];
+    objectMaterials.forEach((material) => materials.add(material));
   });
+
+  instancedMeshes.forEach((mesh) => mesh.dispose());
+  geometries.forEach((geometry) => geometry.dispose());
+  materials.forEach((material) => material.dispose());
 }
 
 export function createRoomRuntime(
@@ -247,6 +285,13 @@ export function createRoomRuntime(
     uSurfaceDetail: { value: settings.surfaceDetail },
     uFoam: { value: settings.foam },
   };
+  if (HEADLAND_SEGMENTS_WORLD_OCEAN.length !== HEADLAND_SEGMENT_COUNT) {
+    throw new Error(`Water shader requires exactly ${HEADLAND_SEGMENT_COUNT} headland capsule segments.`);
+  }
+  const headlandCapsuleUniforms = HEADLAND_SEGMENTS_WORLD_OCEAN.map(({ start, end }) => (
+    new Vector4(start.worldX, start.worldZ, end.worldX, end.worldZ)
+  ));
+  const headlandRadiusUniforms = HEADLAND_SEGMENTS_WORLD_OCEAN.map(({ radius }) => radius);
   const sunDirectionUniform = { value: sunDirection };
   const columnWeatherStrengthUniform = { value: initialWeatherLook.strength };
 
@@ -316,6 +361,8 @@ export function createRoomRuntime(
       uVoxelFieldOffset: { value: new Vector2(VOXEL_FIELD_OFFSET.x, VOXEL_FIELD_OFFSET.z) },
       uVoxelFieldYaw: { value: VOXEL_FIELD_YAW },
       uSunDirection: sunDirectionUniform,
+      uHeadlandCapsules: { value: headlandCapsuleUniforms },
+      uHeadlandRadii: { value: headlandRadiusUniforms },
     },
   });
 
@@ -336,36 +383,116 @@ export function createRoomRuntime(
   root.add(plane);
 
   const landmarkGeometry = new BoxGeometry(1, 1, 1);
-  const landmarkMaterial = new MeshBasicMaterial({
+  const landmarkMaterial = new MeshStandardMaterial({
     color: 0xffffff,
+    roughness: initialWeatherLook.landmarkRoughness,
+    metalness: 0.02,
+    emissive: initialWeatherLook.landmarkEmissive,
+    emissiveIntensity: initialWeatherLook.landmarkEmissiveIntensity,
+    vertexColors: true,
     toneMapped: false,
     transparent: false,
     depthTest: true,
     depthWrite: true,
   });
+  const landmarkEmissiveLiftUniform = { value: initialWeatherLook.landmarkEmissiveLift };
+  const landmarkBeaconColorUniform = { value: initialWeatherLook.beaconColor.clone() };
+  const landmarkBeaconEmissiveStrengthUniform = {
+    value: initialWeatherLook.beaconEmissiveStrength,
+  };
+  const landmarkBeaconPulseAmplitudeUniform = {
+    value: initialWeatherLook.beaconPulseAmplitude,
+  };
+  landmarkMaterial.onBeforeCompile = (shader) => {
+    if (!shader.vertexShader.includes(LANDMARK_VERTEX_MARKER)
+      || !shader.fragmentShader.includes(LANDMARK_EMISSIVE_MARKER)) {
+      throw new Error('Landmark standard shader is missing its role-emissive injection markers.');
+    }
+    shader.uniforms.uLandmarkEmissiveLift = landmarkEmissiveLiftUniform;
+    shader.uniforms.uTime = waveUniforms.uTime;
+    shader.uniforms.uBeaconColor = landmarkBeaconColorUniform;
+    shader.uniforms.uBeaconEmissiveStrength = landmarkBeaconEmissiveStrengthUniform;
+    shader.uniforms.uBeaconPulseAmplitude = landmarkBeaconPulseAmplitudeUniform;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <common>',
+      '#include <common>\nattribute vec3 aLandmarkEmissiveColor;\nattribute float aLandmarkBeaconMask;\nvarying vec3 vLandmarkEmissiveColor;\nvarying float vLandmarkBeaconMask;',
+    ).replace(
+      LANDMARK_VERTEX_MARKER,
+      `${LANDMARK_VERTEX_MARKER}\n      vLandmarkEmissiveColor = aLandmarkEmissiveColor;\n      vLandmarkBeaconMask = aLandmarkBeaconMask;`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      LANDMARK_EMISSIVE_MARKER,
+      `${LANDMARK_EMISSIVE_MARKER}
+      float landmarkBeaconPulse = 1.0
+        + sin(uTime * 1.35) * uBeaconPulseAmplitude * vLandmarkBeaconMask;
+      vec3 landmarkRoleEmissive = mix(
+        vLandmarkEmissiveColor,
+        uBeaconColor,
+        vLandmarkBeaconMask
+      );
+      float landmarkRoleStrength = mix(
+        1.0,
+        uBeaconEmissiveStrength * landmarkBeaconPulse,
+        vLandmarkBeaconMask
+      );
+      totalEmissiveRadiance += landmarkRoleEmissive
+        * uLandmarkEmissiveLift
+        * landmarkRoleStrength;`,
+    ).replace(
+      '#include <common>',
+      '#include <common>\nuniform float uTime;\nuniform float uLandmarkEmissiveLift;\nuniform vec3 uBeaconColor;\nuniform float uBeaconEmissiveStrength;\nuniform float uBeaconPulseAmplitude;\nvarying vec3 vLandmarkEmissiveColor;\nvarying float vLandmarkBeaconMask;',
+    );
+  };
+  landmarkMaterial.customProgramCacheKey = () => LANDMARK_EMISSIVE_PROGRAM_KEY;
   const landmark = new InstancedMesh(
     landmarkGeometry,
     landmarkMaterial,
-    ACTIVE_LANDMARK_CANDIDATE.instances.length,
+    LANDMARK_MODEL.instances.length,
   );
   const landmarkColors = {
     'headland-dark': new Color(0x172b37),
     'tower-light': new Color(0xb7b9ab),
     'roof-dark': new Color(0x38464b),
+    'beacon-warm': new Color(0xffd89b),
   } as const;
-  for (let index = 0; index < ACTIVE_LANDMARK_CANDIDATE.instances.length; index += 1) {
-    const instance = ACTIVE_LANDMARK_CANDIDATE.instances[index];
+  const landmarkEmissiveColors = {
+    'headland-dark': new Color(0x07131b),
+    'tower-light': new Color(0xb8b1a0),
+    'roof-dark': new Color(0x1d2b32),
+    'beacon-warm': new Color(0xffb568),
+  } as const;
+  const landmarkEmissiveColorAttribute = new InstancedBufferAttribute(
+    new Float32Array(LANDMARK_MODEL.instances.length * 3),
+    3,
+  );
+  const landmarkBeaconMaskAttribute = new InstancedBufferAttribute(
+    new Float32Array(LANDMARK_MODEL.instances.length),
+    1,
+  );
+  for (let index = 0; index < LANDMARK_MODEL.instances.length; index += 1) {
+    const instance = LANDMARK_MODEL.instances[index];
     matrix.makeScale(...instance.scale);
     matrix.setPosition(...instance.worldPosition);
     landmark.setMatrixAt(index, matrix);
     landmark.setColorAt(index, landmarkColors[instance.colorRole]);
+    const emissiveColor = landmarkEmissiveColors[instance.colorRole];
+    landmarkEmissiveColorAttribute.setXYZ(
+      index,
+      emissiveColor.r,
+      emissiveColor.g,
+      emissiveColor.b,
+    );
+    landmarkBeaconMaskAttribute.setX(index, instance.role === 'beacon' ? 1 : 0);
   }
+  landmarkGeometry.setAttribute('aLandmarkEmissiveColor', landmarkEmissiveColorAttribute);
+  landmarkGeometry.setAttribute('aLandmarkBeaconMask', landmarkBeaconMaskAttribute);
+  landmarkEmissiveColorAttribute.needsUpdate = true;
+  landmarkBeaconMaskAttribute.needsUpdate = true;
   landmark.instanceMatrix.needsUpdate = true;
   if (landmark.instanceColor) landmark.instanceColor.needsUpdate = true;
   landmark.frustumCulled = false;
   landmark.name = 'voxel-water-landmark';
   landmark.renderOrder = 1;
-  landmark.userData.candidateId = ACTIVE_LANDMARK_CANDIDATE.id;
   root.add(landmark);
 
   const columnMaterial = new MeshStandardMaterial({
@@ -595,6 +722,13 @@ export function createRoomRuntime(
     columnMaterial.roughness = 0.7 - settings.clarity * 0.12 + settings.rain * 0.08;
     columnMaterial.emissiveIntensity =
       1.12 + settings.clarity * 0.05 + weatherLook.strength * 0.18;
+    landmarkMaterial.emissive.copy(weatherLook.landmarkEmissive);
+    landmarkMaterial.emissiveIntensity = weatherLook.landmarkEmissiveIntensity;
+    landmarkMaterial.roughness = weatherLook.landmarkRoughness;
+    landmarkEmissiveLiftUniform.value = weatherLook.landmarkEmissiveLift;
+    landmarkBeaconColorUniform.value.copy(weatherLook.beaconColor);
+    landmarkBeaconEmissiveStrengthUniform.value = weatherLook.beaconEmissiveStrength;
+    landmarkBeaconPulseAmplitudeUniform.value = weatherLook.beaconPulseAmplitude;
     gridLineMaterial.color.copy(weatherLook.columnTint).lerp(weatherLook.columnTopTint, 0.28 + weatherLook.strength * 0.18);
     gridLineMaterial.opacity = 0.002 + settings.surfaceDetail * 0.003 + weatherLook.strength * 0.003;
   };
@@ -707,16 +841,7 @@ export function createRoomRuntime(
       renderer.render(scene, camera);
     },
     dispose() {
-      columns.dispose();
-      landmark.dispose();
-      disposeObject(root);
-      sky.geometry.dispose();
-      [waterMaterial, skyMaterial, columnMaterial, rainMaterial, sprayMaterial, cloudMaterial, gridLineMaterial].forEach((material: Material) =>
-        material.dispose(),
-      );
-      rainGeometry.dispose();
-      sprayGeometry.dispose();
-      gridLineGeometry.dispose();
+      disposeSceneResources(scene);
     },
   };
 }

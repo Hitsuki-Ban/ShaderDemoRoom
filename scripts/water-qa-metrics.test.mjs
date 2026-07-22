@@ -5,6 +5,7 @@ import {
   luma,
   MAX_STORM_FOREGROUND_SEAM_SCORE,
   measurePersistentVerticalSeam,
+  regionMetrics,
   measureVerticalSeam,
   measureRegion,
 } from './water-qa-metrics.mjs';
@@ -64,6 +65,17 @@ describe('water QA pixel metrics', () => {
 
     expect(metrics.lumaMean).toBeCloseTo(120, 10);
     expect(metrics.toonBandSeparation).toBeCloseTo(200, 10);
+  });
+
+  it('excludes the landmark from region metrics water measurements', () => {
+    const baseline = makeFrame(100, 100, Array.from({ length: 10_000 }, () => [120, 120, 120]));
+    const contaminatedColors = Array.from({ length: 10_000 }, () => [120, 120, 120]);
+    for (let y = 16; y < 97; y += 1) {
+      for (let x = 22; x < 49; x += 1) contaminatedColors[y * 100 + x] = [0, 0, 0];
+    }
+    const contaminated = makeFrame(100, 100, contaminatedColors);
+
+    expect(regionMetrics(contaminated, 1).water).toEqual(regionMetrics(baseline, 1).water);
   });
 
   it('compares sampled RGB frame deltas', () => {

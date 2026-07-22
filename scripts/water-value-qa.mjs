@@ -10,6 +10,7 @@ import {
   encodePng,
   fourBinCoverage,
   measureRegionLuma,
+  measureLandmarkSilhouette,
   measureRidgeMasks,
   measureSun,
   measureWaterMetrics,
@@ -17,6 +18,14 @@ import {
   posterizeFrame,
   resizeMaskSupport,
 } from './water-value-metrics.mjs';
+import {
+  COLUMN_SIDE_ROI,
+  LANDMARK_DARK_ANCHOR_ROI,
+  LANDMARK_EXCLUSION_ROI,
+  LANDMARK_TOWER_ROI,
+  WATER_MID_ROI,
+  WATER_REGION_ROI,
+} from './water-roi-contract.mjs';
 
 const BASE_URL = process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
 const OUTPUT_DIR = 'output/water-value-qa';
@@ -38,10 +47,15 @@ const SAMPLE_TIMES_MS = Object.freeze(NOMINAL_SAMPLE_TIMES_MS.map(
   (time) => Math.ceil(time / PLAYWRIGHT_CLOCK_RAF_MS) * PLAYWRIGHT_CLOCK_RAF_MS,
 ));
 
-const COLUMN_SIDE_ROI = Object.freeze({ x0: 0.275, y0: 0.750, x1: 0.426, y1: 0.830 });
-const WATER_MID_ROI = Object.freeze({ x0: 0.650, y0: 0.422, x1: 0.835, y1: 0.531 });
 const RIDGE_ROI = Object.freeze({ x0: 0.093, y0: 0.204, x1: 0.905, y1: 0.680 });
-const CREST_CONTRACT = Object.freeze({ threshold: 5, area: 24, width: 12, aspect: 1.3 });
+const CREST_CONTRACT = Object.freeze({
+  threshold: 5,
+  area: 24,
+  width: 12,
+  aspect: 1.3,
+  strongerBoundaryRadius: 1,
+  strongerBoundaryMinimumNeighbors: 4,
+});
 const FOAM_CONTRACT = Object.freeze({ threshold: 15, area: 12, width: 8, aspect: 1.2 });
 
 const STATES = Object.freeze([
@@ -100,13 +114,22 @@ function summarizeSun(measurements) {
 
 function summarizeSemantic(frameSemantic) {
   return {
+    landmarkDarkAnchorMedianP90: percentile(
+      frameSemantic.map((entry) => entry.landmarkDarkAnchorMedian),
+      0.9,
+    ),
     columnSideMedianP90: percentile(frameSemantic.map((entry) => entry.columnSideMedian), 0.9),
     waterMidMedianP10: percentile(frameSemantic.map((entry) => entry.waterMidMedian), 0.1),
     waterMidMedianP90: percentile(frameSemantic.map((entry) => entry.waterMidMedian), 0.9),
     crestMedianP10: aggregateNullable(frameSemantic.map((entry) => entry.crestMedian), 0.1),
     crestMedianP90: aggregateNullable(frameSemantic.map((entry) => entry.crestMedian), 0.9),
+    crestPixelCountP10: percentile(frameSemantic.map((entry) => entry.crestPixelCount), 0.1),
+    crestFoamOverlapPixelCountMax: Math.max(
+      ...frameSemantic.map((entry) => entry.crestFoamOverlapPixelCount),
+    ),
     foamMedianP10: aggregateNullable(frameSemantic.map((entry) => entry.foamMedian), 0.1),
     foamPixelCountP10: percentile(frameSemantic.map((entry) => entry.foamPixelCount), 0.1),
+    frames: frameSemantic,
   };
 }
 
@@ -172,20 +195,51 @@ async function captureState(browser, state) {
     clockTime = sampleTime;
     frames.push(parsePng(await canvas.screenshot({ type: 'png' })));
   }
+  const telemetryRaw = await page
+    .locator('[data-telemetry-json]')
+    .first()
+    .getAttribute('data-telemetry-json');
+  let telemetry = null;
+  if (telemetryRaw !== null) {
+    try {
+      const stats = JSON.parse(telemetryRaw);
+      telemetry = {
+        drawCalls: stats.drawCalls,
+        drawCallsMax: stats.drawCallsMax,
+      };
+    } catch {
+      telemetry = null;
+    }
+  }
   await context.close();
-  return { frames, dimensions, consoleErrors };
+  return { frames, dimensions, consoleErrors, telemetry };
 }
 
 function analyzeState(state, capture) {
-  const frameMetrics = capture.frames.map((frame) => measureWaterMetrics(frame));
+  const frameMetrics = capture.frames.map((frame) => measureWaterMetrics(frame, {
+    inclusion: WATER_REGION_ROI,
+    exclusion: LANDMARK_EXCLUSION_ROI,
+  }));
   const aggregate = aggregateFrameMetrics(frameMetrics);
   const coverage = aggregateCoverage(capture.frames.map((frame) => fourBinCoverage(frame)));
   const frameSemantic = capture.frames.map((frame) => {
-    const [crest, foam] = measureRidgeMasks(frame, RIDGE_ROI, [CREST_CONTRACT, FOAM_CONTRACT]);
+    const [crest, foam] = measureRidgeMasks(
+      frame,
+      RIDGE_ROI,
+      [CREST_CONTRACT, FOAM_CONTRACT],
+      LANDMARK_EXCLUSION_ROI,
+    );
+    let crestFoamOverlapPixelCount = 0;
+    for (let pixel = 0; pixel < crest.mask.length; pixel += 1) {
+      if (crest.mask[pixel] && foam.mask[pixel]) crestFoamOverlapPixelCount += 1;
+    }
     return {
+      landmarkDarkAnchorMedian: measureRegionLuma(frame, LANDMARK_DARK_ANCHOR_ROI).median,
       columnSideMedian: measureRegionLuma(frame, COLUMN_SIDE_ROI).median,
       waterMidMedian: measureRegionLuma(frame, WATER_MID_ROI).median,
       crestMedian: crest.median,
+      crestPixelCount: crest.pixelCount,
+      crestFoamOverlapPixelCount,
       foamMedian: foam.median,
       foamPixelCount: foam.pixelCount,
     };
@@ -199,10 +253,16 @@ function analyzeState(state, capture) {
     representative,
     RIDGE_ROI,
     [CREST_CONTRACT, FOAM_CONTRACT],
+    LANDMARK_EXCLUSION_ROI,
   );
+  const landmark = measureLandmarkSilhouette(representative, LANDMARK_TOWER_ROI);
   const resized = areaAverageResize(representative, THUMBNAIL.width, THUMBNAIL.height);
   const thumbnail = posterizeFrame(resized);
   const semanticMaskPixels = {
+    landmarkDarkAnchor: resizeMaskSupport(
+      rectangleMask(representative.width, representative.height, LANDMARK_DARK_ANCHOR_ROI),
+      representative.width, representative.height, THUMBNAIL.width, THUMBNAIL.height,
+    ),
     columnSide: resizeMaskSupport(
       rectangleMask(representative.width, representative.height, COLUMN_SIDE_ROI),
       representative.width, representative.height, THUMBNAIL.width, THUMBNAIL.height,
@@ -217,6 +277,13 @@ function analyzeState(state, capture) {
     foam: resizeMaskSupport(
       foam.mask, representative.width, representative.height, THUMBNAIL.width, THUMBNAIL.height,
     ),
+    landmark: resizeMaskSupport(
+      landmark.mask,
+      representative.width,
+      representative.height,
+      THUMBNAIL.width,
+      THUMBNAIL.height,
+    ),
   };
   return {
     id: state.id,
@@ -225,6 +292,7 @@ function analyzeState(state, capture) {
     report: {
       dimensions: capture.dimensions,
       consoleErrors: capture.consoleErrors,
+      telemetry: capture.telemetry,
       framePixelHashes: capture.frames.map((frame) =>
         createHash('sha256').update(frame.pixels).digest('hex')),
       representativeFrame: representativeIndex,
@@ -235,6 +303,14 @@ function analyzeState(state, capture) {
       },
       fourBinCoverage: coverage,
       semantic: summarizeSemantic(frameSemantic),
+      landmark: {
+        area: landmark.area,
+        bbox: landmark.bbox,
+        towerHeightRatio: landmark.towerHeightRatio,
+        widthRatio: landmark.widthRatio,
+        supportAt160: landmark.supportAt160,
+        localContrastP10: landmark.localContrastP10,
+      },
       thumbnail: {
         width: THUMBNAIL.width,
         height: THUMBNAIL.height,
@@ -262,9 +338,22 @@ function collectFailures(results) {
     fail(report.dimensions.backing.width === CANVAS_BACKING.width
       && report.dimensions.backing.height === CANVAS_BACKING.height, `${id}: backing store is not 474x404.`);
     fail(report.dimensions.loaderCount === 0, `${id}: loader remains mounted.`);
+    const drawCallLimit = id === 'storm' ? 21 : 20;
+    fail(Number.isFinite(report.telemetry?.drawCalls), `${id}: drawCalls telemetry is missing.`);
+    fail(Number.isFinite(report.telemetry?.drawCallsMax), `${id}: drawCallsMax telemetry is missing.`);
+    if (Number.isFinite(report.telemetry?.drawCalls)) {
+      fail(report.telemetry.drawCalls <= drawCallLimit,
+        `${id}: drawCalls ${report.telemetry.drawCalls} exceeds ${drawCallLimit}.`);
+    }
+    if (Number.isFinite(report.telemetry?.drawCallsMax)) {
+      fail(report.telemetry.drawCallsMax <= drawCallLimit,
+        `${id}: drawCallsMax ${report.telemetry.drawCallsMax} exceeds ${drawCallLimit}.`);
+    }
     report.fourBinCoverage.forEach((coverage, bin) => {
       fail(coverage >= 0.05, `${id}: full-size value bin ${bin} coverage ${coverage} is below 0.05.`);
     });
+    fail(report.semantic.landmarkDarkAnchorMedianP90 < 64,
+      `${id}: landmark dark-anchor median p90 is not below 64.`);
     fail(report.semantic.columnSideMedianP90 < 64, `${id}: column-side median p90 is not below 64.`);
     fail(report.semantic.waterMidMedianP10 >= 64, `${id}: water-mid median p10 is below 64.`);
     fail(report.semantic.waterMidMedianP90 <= 127, `${id}: water-mid median p90 exceeds 127.`);
@@ -272,6 +361,9 @@ function collectFailures(results) {
       `${id}: crest median p10 is missing or below 128.`);
     fail(report.semantic.crestMedianP90 !== null && report.semantic.crestMedianP90 <= 191,
       `${id}: crest median p90 is missing or exceeds 191.`);
+    fail(report.semantic.crestPixelCountP10 >= 256, `${id}: crest pixels p10 is below 256.`);
+    fail(report.semantic.crestFoamOverlapPixelCountMax === 0,
+      `${id}: crest and foam masks overlap.`);
     fail(report.semantic.foamMedianP10 !== null && report.semantic.foamMedianP10 >= 192,
       `${id}: foam median p10 is missing or below 192.`);
     fail(report.semantic.foamPixelCountP10 >= 256, `${id}: foam pixels p10 is below 256.`);
@@ -280,6 +372,14 @@ function collectFailures(results) {
     });
     fail(report.thumbnail.grayP05 < 64, `${id}: thumbnail gray p05 is not below 64.`);
     fail(report.thumbnail.grayP95 >= 192, `${id}: thumbnail gray p95 is below 192.`);
+    fail(report.landmark.towerHeightRatio >= 0.25 && report.landmark.towerHeightRatio <= 0.33,
+      `${id}: landmark tower height is outside 25..33% of frame height.`);
+    fail(report.landmark.widthRatio <= 0.14,
+      `${id}: landmark tower width exceeds 14% of frame width.`);
+    fail(report.landmark.supportAt160 >= 64,
+      `${id}: landmark silhouette has fewer than 64 pixels at 160px width.`);
+    fail(report.landmark.localContrastP10 >= 12,
+      `${id}: landmark local contrast p10 is below 12.`);
     for (const [semantic, count] of Object.entries(report.thumbnail.semanticMaskPixels)) {
       fail(count >= 8, `${id}: thumbnail ${semantic} mask has fewer than 8 pixels.`);
     }
@@ -295,8 +395,10 @@ function collectFailures(results) {
     'default-rain waterLuma separation is below 35.');
   fail(byId.rain.water.waterLuma - byId.storm.water.waterLuma >= 30,
     'rain-storm waterLuma separation is below 30.');
-  fail(byId.default.semantic.waterMidMedianP10 > byId.default.semantic.columnSideMedianP90,
-    'default: water mid does not remain above the column-side anchor.');
+  fail(byId.default.semantic.waterMidMedianP10 > Math.max(
+    byId.default.semantic.landmarkDarkAnchorMedianP90,
+    byId.default.semantic.columnSideMedianP90,
+  ), 'default: water mid does not remain above both dark anchors.');
   fail(byId.default.semantic.crestMedianP10 > byId.default.semantic.waterMidMedianP90,
     'default: crest does not remain above water mid.');
 
@@ -355,6 +457,15 @@ const report = {
     nominalSampleTimesMs: NOMINAL_SAMPLE_TIMES_MS,
     sampleTimesMs: SAMPLE_TIMES_MS,
     thumbnail: THUMBNAIL,
+    rois: {
+      water: WATER_REGION_ROI,
+      landmarkExclusion: LANDMARK_EXCLUSION_ROI,
+      landmarkTower: LANDMARK_TOWER_ROI,
+      landmarkDarkAnchor: LANDMARK_DARK_ANCHOR_ROI,
+      columnSide: COLUMN_SIDE_ROI,
+      waterMid: WATER_MID_ROI,
+      ridge: RIDGE_ROI,
+    },
   },
   beforeBaseline: BEFORE_BASELINE,
   states: Object.fromEntries(analyzed.map((result) => [result.id, result.report])),

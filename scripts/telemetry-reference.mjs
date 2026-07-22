@@ -15,7 +15,9 @@ const {
 
 const warmupSeconds = 5;
 const measurementSeconds = 15;
-const expectedDrawCalls = roomId === 'glass-optics' ? 15 : 19;
+const drawCallContract = roomId === 'glass-optics'
+  ? { mode: 'exact', value: 15 }
+  : { mode: 'maximum', value: 20 };
 
 function assert(condition, message) {
   if (!condition) {
@@ -87,9 +89,16 @@ async function captureReference({ expectedClassification, label, launchOptions }
       metadata.environment.classification === expectedClassification,
       `${label} classified as ${metadata.environment.classification}; expected ${expectedClassification}.`,
     );
+    const drawCallsPass = drawCallContract.mode === 'exact'
+      ? samples.every(({ drawCalls }) => drawCalls === drawCallContract.value)
+      : samples.every(({ drawCalls, drawCallsMax }) => (
+          drawCalls > 0
+          && drawCalls <= drawCallContract.value
+          && drawCallsMax <= drawCallContract.value
+        ));
     assert(
-      samples.every(({ drawCalls }) => drawCalls === expectedDrawCalls),
-      `${label} changed the calibrated ${expectedDrawCalls}-call ${roomId} baseline.`,
+      drawCallsPass,
+      `${label} violated the ${drawCallContract.mode} ${drawCallContract.value}-call ${roomId} contract.`,
     );
 
     return {

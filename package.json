@@ -14,7 +14,7 @@
     "qa:exhibits": "node scripts/exhibit-smoke.mjs",
     "qa:water": "node scripts/water-qa.mjs",
     "qa:water-value": "node scripts/water-value-qa.mjs",
-    "qa:water-landmark-study": "node scripts/water-landmark-study.mjs",
+    "qa:water-landmark-performance": "node scripts/water-landmark-performance.mjs",
     "qa:glass": "node scripts/glass-optics-qa-runner.mjs",
     "qa:ninth-tide": "node scripts/ninth-tide-capture.mjs",
     "qa:ninth-tide-near-black": "node scripts/ninth-tide-near-black.mjs",

@@ -1,4 +1,5 @@
 import { inflateSync } from 'node:zlib';
+import { LANDMARK_EXCLUSION_ROI, WATER_REGION_ROI } from './water-roi-contract.mjs';
 
 export function parsePng(buffer) {
   if (buffer[0] !== 137 || buffer[1] !== 80) {
@@ -160,7 +161,14 @@ export function hue(r, g, b) {
   return (value * 60 + 360) % 360;
 }
 
-export function measureRegion(frame, region, sampleScale) {
+function containsPixel(frame, region, x, y) {
+  const centerX = (x + 0.5) / frame.width;
+  const centerY = (y + 0.5) / frame.height;
+  return centerX >= region.x0 && centerX < region.x1
+    && centerY >= region.y0 && centerY < region.y1;
+}
+
+export function measureRegion(frame, region, sampleScale, exclusion = null) {
   const x0 = Math.floor(region.x0 * frame.width);
   const x1 = Math.floor(region.x1 * frame.width);
   const y0 = Math.floor(region.y0 * frame.height);
@@ -185,6 +193,10 @@ export function measureRegion(frame, region, sampleScale) {
 
   for (let y = y0; y < y1; y += sampleScale) {
     for (let x = x0; x < x1; x += sampleScale) {
+      if (exclusion !== null && containsPixel(frame, exclusion, x, y)) continue;
+      const nextX = Math.min(frame.width - 1, x + sampleScale);
+      const nextY = Math.min(frame.height - 1, y + sampleScale);
+      if (exclusion !== null && containsPixel(frame, exclusion, nextX, nextY)) continue;
       const index = (y * frame.width + x) * frame.bytesPerPixel;
       const r = frame.pixels[index];
       const g = frame.pixels[index + 1];
@@ -211,8 +223,6 @@ export function measureRegion(frame, region, sampleScale) {
         waterLike += 1;
       }
 
-      const nextX = Math.min(frame.width - 1, x + sampleScale);
-      const nextY = Math.min(frame.height - 1, y + sampleScale);
       const nextIndex = (nextY * frame.width + nextX) * frame.bytesPerPixel;
       localContrastTotal += (
         Math.abs(r - frame.pixels[nextIndex]) +
@@ -223,6 +233,8 @@ export function measureRegion(frame, region, sampleScale) {
       count += 1;
     }
   }
+
+  if (count === 0) throw new Error('Measured region contains no samples outside exclusion.');
 
   lumaSamples.sort((a, b) => a - b);
   const p10 = lumaSamples[Math.floor(lumaSamples.length * 0.1)] ?? lumaMin;
@@ -258,7 +270,7 @@ export function measureRegion(frame, region, sampleScale) {
 export function regionMetrics(frame, sampleScale) {
   const sky = measureRegion(frame, { x0: 0.08, x1: 0.92, y0: 0.02, y1: 0.28 }, sampleScale);
   const horizon = measureRegion(frame, { x0: 0.06, x1: 0.94, y0: 0.24, y1: 0.52 }, sampleScale);
-  const water = measureRegion(frame, { x0: 0.06, x1: 0.94, y0: 0.42, y1: 0.94 }, sampleScale);
+  const water = measureRegion(frame, WATER_REGION_ROI, sampleScale, LANDMARK_EXCLUSION_ROI);
 
   return {
     sky: {
