@@ -1,13 +1,18 @@
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { createStageRunner } from './exhibit-smoke-stage.mjs';
 
 const baseUrl =
   process.env.SHOWROOM_URL ?? 'http://127.0.0.1:4173/ShaderDemoRoom';
 const browser = await chromium.launch({ headless: true });
+let executionFailure = null;
+try {
 const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 const page = await context.newPage();
 const consoleErrors = [];
+const pageErrors = [];
+const pageMonitors = new WeakMap();
 const orbFreezeCaptureDir = path.resolve('output/playwright/orb-freeze');
 const orbHudCaptureDir = path.resolve('output/playwright/orb-hud');
 
@@ -17,11 +22,69 @@ await Promise.all([
 ]);
 
 function monitorConsoleErrors(targetPage) {
+  const state = {
+    consoleErrors: [],
+    pageErrors: [],
+    mainResponse: null,
+  };
+  pageMonitors.set(targetPage, state);
   targetPage.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
+    if (message.type() !== 'error') return;
+    state.consoleErrors.push(message.text());
+    consoleErrors.push(message.text());
   });
-  targetPage.on('pageerror', (error) => consoleErrors.push(error.message));
+  targetPage.on('pageerror', (error) => {
+    state.pageErrors.push(error.message);
+    pageErrors.push(error.message);
+    consoleErrors.push(error.message);
+  });
+  targetPage.on('response', (response) => {
+    if (
+      response.frame() === targetPage.mainFrame()
+      && response.request().resourceType() === 'document'
+    ) {
+      state.mainResponse = {
+        status: response.status(),
+        contentType: response.headers()['content-type'] ?? null,
+      };
+    }
+  });
 }
+
+async function collectPageDiagnostic(target) {
+  const targetPage = target?.page ?? page;
+  const selector = target?.selector ?? null;
+  const state = pageMonitors.get(targetPage);
+  if (!state) throw new Error('Diagnostic target page is not monitored.');
+
+  const read = async (reader) => {
+    try {
+      return await reader();
+    } catch (error) {
+      return { unavailable: error instanceof Error ? error.message : String(error) };
+    }
+  };
+
+  return {
+    url: await read(() => targetPage.url()),
+    title: await read(() => targetPage.title()),
+    mainResponse: state.mainResponse,
+    locator: selector === null
+      ? null
+      : {
+          selector,
+          count: await read(() => targetPage.locator(selector).count()),
+        },
+    consoleErrors: [...state.consoleErrors],
+    pageErrors: [...state.pageErrors],
+  };
+}
+
+const runStage = createStageRunner({
+  write: (line) => console.log(line),
+  now: () => performance.now(),
+  diagnose: collectPageDiagnostic,
+});
 
 function isArchiveAudioRequest(request) {
   return new URL(request.url()).pathname.endsWith(
@@ -355,42 +418,41 @@ async function abortNextTidePlay(audio) {
   });
 }
 
-async function assertTideSilentDemandLoading() {
+async function assertTideSilentDemandLoading(stage) {
   const silentPage = await context.newPage();
   monitorConsoleErrors(silentPage);
+  stage.setDiagnosticTarget({ page: silentPage, selector: '#audio' });
+  stage.deferCleanup(() => silentPage.close());
   const requests = observeArchiveAudioRequests(silentPage);
-  try {
-    await silentPage.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html`, {
-      waitUntil: 'domcontentloaded',
-    });
-    const audio = silentPage.locator('#audio');
-    if (await audio.getAttribute('src') !== null) {
-      throw new Error('Ninth Tide initial audio unexpectedly owned a source.');
-    }
-    await instrumentTideAudio(audio);
-    await silentPage.locator('#silentBtn').click();
-    await silentPage.locator('body.entered').waitFor({ state: 'attached' });
-    await silentPage.waitForTimeout(250);
-    const audit = await readTideAudioQa(audio);
-    if (requests.length !== 0 || audit.loadCalls !== 0 || audit.src !== null) {
-      throw new Error(
-        `Ninth Tide silent entry loaded archive audio: ${JSON.stringify({ requests, audit })}.`,
-      );
-    }
-    return { requests, loadCalls: audit.loadCalls, source: audit.src };
-  } finally {
-    await silentPage.close();
+  await silentPage.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html`, {
+    waitUntil: 'domcontentloaded',
+  });
+  const audio = silentPage.locator('#audio');
+  if (await audio.getAttribute('src') !== null) {
+    throw new Error('Ninth Tide initial audio unexpectedly owned a source.');
   }
+  await instrumentTideAudio(audio);
+  await silentPage.locator('#silentBtn').click();
+  await silentPage.locator('body.entered').waitFor({ state: 'attached' });
+  await silentPage.waitForTimeout(250);
+  const audit = await readTideAudioQa(audio);
+  if (requests.length !== 0 || audit.loadCalls !== 0 || audit.src !== null) {
+    throw new Error(
+      `Ninth Tide silent entry loaded archive audio: ${JSON.stringify({ requests, audit })}.`,
+    );
+  }
+  return { requests, loadCalls: audit.loadCalls, source: audit.src };
 }
 
-async function assertTideAutoplayRetryDemandLoading() {
+async function assertTideAutoplayRetryDemandLoading(stage) {
   const retryPage = await context.newPage();
   monitorConsoleErrors(retryPage);
+  stage.setDiagnosticTarget({ page: retryPage, selector: '#audio' });
+  stage.deferCleanup(() => retryPage.close());
   const requests = observeArchiveAudioRequests(retryPage);
-  try {
-    await retryPage.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html`, {
-      waitUntil: 'domcontentloaded',
-    });
+  await retryPage.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html`, {
+    waitUntil: 'domcontentloaded',
+  });
     const audio = retryPage.locator('#audio');
     if (await audio.getAttribute('src') !== null || requests.length !== 0) {
       throw new Error('Ninth Tide autoplay retry page did not start source-free.');
@@ -476,18 +538,15 @@ async function assertTideAutoplayRetryDemandLoading() {
         `Ninth Tide interrupted play was not contained: ${JSON.stringify({ transportAudit, abortAudit, consoleErrors })}.`,
       );
     }
-    return {
-      requests,
-      refused,
-      resumed,
-      transport: transportAudit,
-      abortRace: abortAudit,
-      pausedAt,
-      stillPausedAt,
-    };
-  } finally {
-    await retryPage.close();
-  }
+  return {
+    requests,
+    refused,
+    resumed,
+    transport: transportAudit,
+    abortRace: abortAudit,
+    pausedAt,
+    stillPausedAt,
+  };
 }
 
 async function assertTideMediaStartedWhilePaused(iframe, requests) {
@@ -673,128 +732,184 @@ async function assertPageVisibilityLifecycle(iframe, label, hud = null) {
   };
 }
 
-const embeddedOrbFrame = await openEmbeddedRoom(
-  'anime-liquid-orb',
-  ['pause', 'stats', 'set-mode', 'set-quality'],
-);
-const embeddedOrb = embeddedOrbFrame.contentFrame();
-await embeddedOrb.locator('#loading.is-hidden').waitFor({ state: 'attached' });
-const orbFpsHud = embeddedOrb.locator('#fps');
-await embeddedOrbFrame.evaluate((element) => {
-  element.contentWindow.document.documentElement.dataset.bridgeQa = 'orb-preserved';
-});
-for (let mode = 0; mode < 4; mode += 1) {
-  await postEmbeddedCommand(embeddedOrbFrame, 'set-orb-mode', { mode });
-  await embeddedOrb.locator(`.mode-btn[data-mode="${mode}"].is-active`).waitFor();
-}
-for (const quality of ['high', 'medium', 'low']) {
-  await postEmbeddedCommand(embeddedOrbFrame, 'set-orb-quality', { quality });
-  await embeddedOrb
-    .locator(`.quality[data-quality="${quality}"].is-active`)
-    .waitFor({ state: 'attached' });
-}
-const orbWallClockTelemetry = await assertWallClockTelemetry(embeddedOrbFrame, 'Orb');
-await embeddedOrb.locator('#audio-toggle').click({ force: true });
-await embeddedOrb.locator('#audio-toggle[aria-pressed="true"]').waitFor();
-const orbRunningHud = await pollHudText(
-  orbFpsHud,
-  (text) => /^\d+ FPS$/.test(text),
-  'Orb running capture',
-);
-const orbRunningHudCapturePath = path.join(orbHudCaptureDir, 'running.png');
-const orbPausedHudCapturePath = path.join(orbHudCaptureDir, 'paused.png');
-await embeddedOrb.locator('body').screenshot({ path: orbRunningHudCapturePath });
-const orbPauseLifecycle = await assertPauseLifecycle(embeddedOrbFrame, 'Orb', {
-  hud: orbFpsHud,
-  pausedCapturePath: orbPausedHudCapturePath,
-});
-const orbPauseRace = await assertPauseRace(embeddedOrbFrame, 'Orb');
-const orbVisibilityLifecycle = await assertPageVisibilityLifecycle(
-  embeddedOrbFrame,
-  'Orb',
-  orbFpsHud,
-);
-const orbFramePreserved = await embeddedOrb.locator('html').getAttribute('data-bridge-qa');
-if (orbFramePreserved !== 'orb-preserved') {
-  throw new Error('Orb bridge commands unexpectedly reloaded the iframe.');
-}
-const orbAudioActive = await embeddedOrb
-  .locator('#audio-toggle')
-  .getAttribute('aria-pressed');
-if (orbAudioActive !== 'true') throw new Error('Orb lost its active audio intent.');
-
-const tideSilentDemandLoading = await assertTideSilentDemandLoading();
-const tideAutoplayRetryDemandLoading = await assertTideAutoplayRetryDemandLoading();
-const embeddedTideFrame = await openEmbeddedRoom(
-  'ninth-tide-archive',
-  ['pause', 'stats', 'set-preview'],
-);
-const embeddedTide = embeddedTideFrame.contentFrame();
-await embeddedTideFrame.evaluate((element) => {
-  element.contentWindow.document.documentElement.dataset.bridgeQa = 'tide-preserved';
-});
-const tideMediaStartedWhilePaused = await assertTideMediaStartedWhilePaused(
-  embeddedTideFrame,
-  archiveAudioRequests,
-);
-const embeddedTideSections = [];
-for (let section = 0; section < roman.length; section += 1) {
-  await postEmbeddedCommand(embeddedTideFrame, 'set-tide-preview', {
-    mode: 'main',
-    section,
+  const {
+    orbAudioActive,
+    orbPausedHudCapturePath,
+    orbPauseLifecycle,
+    orbPauseRace,
+    orbRunningHud,
+    orbRunningHudCapturePath,
+    orbVisibilityLifecycle,
+    orbWallClockTelemetry,
+  } = await runStage('Orb embedded bridge and lifecycle', async (stage) => {
+    stage.setDiagnosticTarget({ page, selector: 'iframe.embedded-exhibit-frame' });
+    const embeddedOrbFrame = await openEmbeddedRoom(
+      'anime-liquid-orb',
+      ['pause', 'stats', 'set-mode', 'set-quality'],
+    );
+    const embeddedOrb = embeddedOrbFrame.contentFrame();
+    await embeddedOrb.locator('#loading.is-hidden').waitFor({ state: 'attached' });
+    const orbFpsHud = embeddedOrb.locator('#fps');
+    await embeddedOrbFrame.evaluate((element) => {
+      element.contentWindow.document.documentElement.dataset.bridgeQa = 'orb-preserved';
+    });
+    for (let mode = 0; mode < 4; mode += 1) {
+      await postEmbeddedCommand(embeddedOrbFrame, 'set-orb-mode', { mode });
+      await embeddedOrb.locator(`.mode-btn[data-mode="${mode}"].is-active`).waitFor();
+    }
+    for (const quality of ['high', 'medium', 'low']) {
+      await postEmbeddedCommand(embeddedOrbFrame, 'set-orb-quality', { quality });
+      await embeddedOrb
+        .locator(`.quality[data-quality="${quality}"].is-active`)
+        .waitFor({ state: 'attached' });
+    }
+    const orbWallClockTelemetry = await assertWallClockTelemetry(embeddedOrbFrame, 'Orb');
+    await embeddedOrb.locator('#audio-toggle').click({ force: true });
+    await embeddedOrb.locator('#audio-toggle[aria-pressed="true"]').waitFor();
+    const orbRunningHud = await pollHudText(
+      orbFpsHud,
+      (text) => /^\d+ FPS$/.test(text),
+      'Orb running capture',
+    );
+    const orbRunningHudCapturePath = path.join(orbHudCaptureDir, 'running.png');
+    const orbPausedHudCapturePath = path.join(orbHudCaptureDir, 'paused.png');
+    await embeddedOrb.locator('body').screenshot({ path: orbRunningHudCapturePath });
+    const orbPauseLifecycle = await assertPauseLifecycle(embeddedOrbFrame, 'Orb', {
+      hud: orbFpsHud,
+      pausedCapturePath: orbPausedHudCapturePath,
+    });
+    const orbPauseRace = await assertPauseRace(embeddedOrbFrame, 'Orb');
+    const orbVisibilityLifecycle = await assertPageVisibilityLifecycle(
+      embeddedOrbFrame,
+      'Orb',
+      orbFpsHud,
+    );
+    const orbFramePreserved = await embeddedOrb.locator('html').getAttribute('data-bridge-qa');
+    if (orbFramePreserved !== 'orb-preserved') {
+      throw new Error('Orb bridge commands unexpectedly reloaded the iframe.');
+    }
+    const orbAudioActive = await embeddedOrb
+      .locator('#audio-toggle')
+      .getAttribute('aria-pressed');
+    if (orbAudioActive !== 'true') throw new Error('Orb lost its active audio intent.');
+    return {
+      orbAudioActive,
+      orbPausedHudCapturePath,
+      orbPauseLifecycle,
+      orbPauseRace,
+      orbRunningHud,
+      orbRunningHudCapturePath,
+      orbVisibilityLifecycle,
+      orbWallClockTelemetry,
+    };
   });
-  await embeddedTide
-    .locator('#phaseNumber')
-    .filter({ hasText: new RegExp(`^${roman[section]}$`) })
-    .waitFor();
-  embeddedTideSections.push(await embeddedTide.locator('#phaseNumber').textContent());
-}
-const tidePauseLifecycle = await assertPauseLifecycle(embeddedTideFrame, 'Ninth Tide');
-const tidePauseRace = await assertPauseRace(embeddedTideFrame, 'Ninth Tide');
-const tideVisibilityLifecycle = await assertPageVisibilityLifecycle(
-  embeddedTideFrame,
-  'Ninth Tide',
-);
-const tideFramePreserved = await embeddedTide.locator('html').getAttribute('data-bridge-qa');
-if (tideFramePreserved !== 'tide-preserved') {
-  throw new Error('Ninth Tide bridge commands unexpectedly reloaded the iframe.');
-}
 
-const previewRequestCount = archiveAudioRequests.length;
-await page.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main`, {
-  waitUntil: 'domcontentloaded',
-});
-await page.locator('#phaseNumber').waitFor({ state: 'visible' });
-await page.waitForFunction(
-  () => document.querySelector('#phaseNumber')?.textContent === 'VIII',
-);
-const tideDefaultPhase = await page.locator('#phaseNumber').textContent();
-
-for (let section = 0; section < roman.length; section += 1) {
-  const url = `${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main&section=${section}`;
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.locator('#phaseNumber').waitFor({ state: 'visible' });
-  await page.waitForFunction(
-    (expected) => document.querySelector('#phaseNumber')?.textContent === expected,
-    roman[section],
+  const tideSilentDemandLoading = await runStage(
+    'Ninth Tide silent demand loading',
+    (stage) => assertTideSilentDemandLoading(stage),
   );
-
-  tideSections.push({
-    section,
-    phase: await page.locator('#phaseNumber').textContent(),
-    canvasCount: await page.locator('canvas').count(),
+  const tideAutoplayRetryDemandLoading = await runStage(
+    'Ninth Tide autoplay retry demand loading',
+    (stage) => assertTideAutoplayRetryDemandLoading(stage),
+  );
+  const {
+    embeddedTideSections,
+    tideMediaStartedWhilePaused,
+    tidePauseLifecycle,
+    tidePauseRace,
+    tideVisibilityLifecycle,
+  } = await runStage('Ninth Tide embedded bridge and lifecycle', async (stage) => {
+    stage.setDiagnosticTarget({ page, selector: 'iframe.embedded-exhibit-frame' });
+    const embeddedTideFrame = await openEmbeddedRoom(
+      'ninth-tide-archive',
+      ['pause', 'stats', 'set-preview'],
+    );
+    const embeddedTide = embeddedTideFrame.contentFrame();
+    await embeddedTideFrame.evaluate((element) => {
+      element.contentWindow.document.documentElement.dataset.bridgeQa = 'tide-preserved';
+    });
+    const tideMediaStartedWhilePaused = await assertTideMediaStartedWhilePaused(
+      embeddedTideFrame,
+      archiveAudioRequests,
+    );
+    const embeddedTideSections = [];
+    for (let section = 0; section < roman.length; section += 1) {
+      await postEmbeddedCommand(embeddedTideFrame, 'set-tide-preview', {
+        mode: 'main',
+        section,
+      });
+      await embeddedTide
+        .locator('#phaseNumber')
+        .filter({ hasText: new RegExp(`^${roman[section]}$`) })
+        .waitFor();
+      embeddedTideSections.push(await embeddedTide.locator('#phaseNumber').textContent());
+    }
+    const tidePauseLifecycle = await assertPauseLifecycle(embeddedTideFrame, 'Ninth Tide');
+    const tidePauseRace = await assertPauseRace(embeddedTideFrame, 'Ninth Tide');
+    const tideVisibilityLifecycle = await assertPageVisibilityLifecycle(
+      embeddedTideFrame,
+      'Ninth Tide',
+    );
+    const tideFramePreserved = await embeddedTide.locator('html').getAttribute('data-bridge-qa');
+    if (tideFramePreserved !== 'tide-preserved') {
+      throw new Error('Ninth Tide bridge commands unexpectedly reloaded the iframe.');
+    }
+    return {
+      embeddedTideSections,
+      tideMediaStartedWhilePaused,
+      tidePauseLifecycle,
+      tidePauseRace,
+      tideVisibilityLifecycle,
+    };
   });
-}
-if (archiveAudioRequests.length !== previewRequestCount) {
-  throw new Error(
-    `Ninth Tide previews requested archive audio: ${JSON.stringify(archiveAudioRequests)}.`,
-  );
-}
 
-await page.goto(`${baseUrl}/exhibits/anime-liquid-orb/index.html`, {
-  waitUntil: 'domcontentloaded',
-});
-await page.locator('#loading.is-hidden').waitFor({ state: 'attached' });
+  const tideDefaultPhase = await runStage('Ninth Tide standalone previews', async (stage) => {
+    stage.setDiagnosticTarget({ page, selector: '#phaseNumber' });
+    const previewRequestCount = archiveAudioRequests.length;
+    await page.goto(`${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator('#phaseNumber').waitFor({ state: 'visible' });
+    await page.waitForFunction(
+      () => document.querySelector('#phaseNumber')?.textContent === 'VIII',
+    );
+    const defaultPhase = await page.locator('#phaseNumber').textContent();
+
+    for (let section = 0; section < roman.length; section += 1) {
+      const url = `${baseUrl}/exhibits/ninth-tide-archive/index.html?preview=main&section=${section}`;
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      await page.locator('#phaseNumber').waitFor({ state: 'visible' });
+      await page.waitForFunction(
+        (expected) => document.querySelector('#phaseNumber')?.textContent === expected,
+        roman[section],
+      );
+
+      tideSections.push({
+        section,
+        phase: await page.locator('#phaseNumber').textContent(),
+        canvasCount: await page.locator('canvas').count(),
+      });
+    }
+    if (archiveAudioRequests.length !== previewRequestCount) {
+      throw new Error(
+        `Ninth Tide previews requested archive audio: ${JSON.stringify(archiveAudioRequests)}.`,
+      );
+    }
+    return defaultPhase;
+  });
+
+  const {
+    finalOrbGestureQa,
+    orbFreezeModes,
+    orbInvalidGestures,
+    orbModes,
+    syntheticDoubleClickCount,
+  } = await runStage('Orb standalone modes and gestures', async (stage) => {
+    stage.setDiagnosticTarget({ page, selector: '#scene' });
+    await page.goto(`${baseUrl}/exhibits/anime-liquid-orb/index.html`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator('#loading.is-hidden').waitFor({ state: 'attached' });
 
 const orbModes = [];
 for (let mode = 1; mode <= 4; mode += 1) {
@@ -1041,14 +1156,27 @@ if (syntheticDoubleClickCount !== 4) {
   throw new Error(`Orb QA expected 4 synthetic dblclick events, observed ${syntheticDoubleClickCount}.`);
 }
 
-await browser.close();
+    return {
+      finalOrbGestureQa,
+      orbFreezeModes,
+      orbInvalidGestures,
+      orbModes,
+      syntheticDoubleClickCount,
+    };
+  });
 
-if (tideSections.some(({ canvasCount }) => canvasCount !== 1)) {
-  throw new Error(`Unexpected Tide canvas counts: ${JSON.stringify(tideSections)}`);
-}
-if (consoleErrors.length > 0) {
-  throw new Error(`Exhibit console errors:\n${consoleErrors.join('\n')}`);
-}
+  await runStage('Final canvas and error audit', async (stage) => {
+    stage.setDiagnosticTarget({ page, selector: 'canvas' });
+    stage.deferCleanup(async () => {
+      await browser.close();
+      if (consoleErrors.length > 0) {
+        throw new Error(`Exhibit console errors:\n${consoleErrors.join('\n')}`);
+      }
+    });
+    if (tideSections.some(({ canvasCount }) => canvasCount !== 1)) {
+      throw new Error(`Unexpected Tide canvas counts: ${JSON.stringify(tideSections)}`);
+    }
+  });
 
 console.log(
   JSON.stringify(
@@ -1082,8 +1210,34 @@ console.log(
       orbToggleCount: finalOrbGestureQa.transitions.length,
       syntheticDoubleClickCount,
       consoleErrors: consoleErrors.length,
+      pageErrors: pageErrors.length,
     },
     null,
     2,
   ),
 );
+} catch (error) {
+  executionFailure = error;
+}
+
+let browserCleanupFailure = null;
+if (browser.isConnected()) {
+  try {
+    await browser.close();
+  } catch (error) {
+    browserCleanupFailure = error;
+  }
+}
+
+if (executionFailure !== null && browserCleanupFailure !== null) {
+  const cleanupMessage = browserCleanupFailure instanceof Error
+    ? browserCleanupFailure.message
+    : String(browserCleanupFailure);
+  throw new AggregateError(
+    [executionFailure, browserCleanupFailure],
+    `${executionFailure instanceof Error ? executionFailure.message : String(executionFailure)}\nbrowserCleanup=${cleanupMessage}`,
+    { cause: executionFailure },
+  );
+}
+if (executionFailure !== null) throw executionFailure;
+if (browserCleanupFailure !== null) throw browserCleanupFailure;
