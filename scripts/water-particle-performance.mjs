@@ -27,7 +27,7 @@ const STORM_ROUTE = '#/room/voxel-water?v=3&weather=storm&wind=2.1&rain=0.74&wav
 const WARMUP_SECONDS = 5;
 const MEASUREMENT_SECONDS = 15;
 const PAIR_COUNT = 5;
-const MINIMUM_PAIRED_SPEED_RATIO = 0.9;
+const MINIMUM_PAIRED_SPEED_RATIO = 0.95;
 const EXPECTED_DRAW_CALLS = 21;
 
 function median(values) {

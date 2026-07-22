@@ -621,11 +621,13 @@ describe('voxel water runtime contracts', () => {
     expect(rain.material.vertexShader).toContain('birthFade * deathFade');
     expect(rain.material.fragmentShader).toContain('taperedHalfWidth');
     expect(rain.material.fragmentShader).toContain('capsuleDistance');
+    expect(rain.material.fragmentShader).toContain('if (shapeAlpha <= 0.001) discard;');
     expect(spray.material.vertexShader).toContain('fract(uTime * 0.23 * aSpeed + aSeed)');
     expect(spray.material.vertexShader).toContain('0.5 * gravity * flightTime * flightTime');
     expect(spray.material.vertexShader).toContain('aLaunch');
     expect(spray.material.vertexShader).toContain('aVelocity');
     expect(spray.material.fragmentShader).toContain('teardropDistance');
+    expect(spray.material.fragmentShader).toContain('if (shapeAlpha <= 0.001) discard;');
     for (const particles of [rain, spray]) {
       expect(particles.material.vertexShader).toContain('#include <fog_pars_vertex>');
       expect(particles.material.vertexShader).toContain('#include <fog_vertex>');
@@ -670,10 +672,10 @@ describe('voxel water runtime contracts', () => {
     expect(spray.material.uniforms.uResolution.value.y).toBeCloseTo(495);
     expect(rain.material.vertexShader).toContain('1.25 + aScale * 0.55');
     expect(rain.material.uniforms.uOpacity.value).toBeCloseTo(0.64);
-    expect(rain.material.uniforms.uLength.value).toBeCloseTo(14 + 0.82 * 11 + 0.77 * 3);
+    expect(rain.material.uniforms.uLength.value).toBeCloseTo(12 + 0.82 * 9 + 0.77 * 2);
     expect(rain.material.uniforms.uWind.value).toBe(nextSettings.wind);
     expect(spray.material.uniforms.uOpacity.value).toBeCloseTo(0.36);
-    expect(spray.material.uniforms.uLength.value).toBeCloseTo(3.8 + 0.91 * 4.2);
+    expect(spray.material.uniforms.uLength.value).toBeCloseTo(3.4 + 0.91 * 3.6);
     expect(spray.material.uniforms.uWind.value).toBe(nextSettings.wind);
     expect(spray.material.uniforms.uFoam.value).toBe(nextSettings.foam);
     runtime.dispose();

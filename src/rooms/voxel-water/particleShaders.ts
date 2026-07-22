@@ -92,6 +92,7 @@ void main() {
   float capsuleDistance = max(abs(centeredUv.x) - taperedHalfWidth, abs(centeredUv.y) - 0.9);
   float edgeWidth = max(fwidth(capsuleDistance), 0.02);
   float shapeAlpha = 1.0 - smoothstep(-edgeWidth, edgeWidth, capsuleDistance);
+  if (shapeAlpha <= 0.001) discard;
   gl_FragColor = vec4(uColor, uOpacity * vParticleAlpha * shapeAlpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -114,6 +115,7 @@ void main() {
   float teardropDistance = length(vec2(centeredUv.x / teardropRadius, centeredUv.y));
   float edgeWidth = max(fwidth(teardropDistance), 0.025);
   float shapeAlpha = 1.0 - smoothstep(0.9 - edgeWidth, 0.9 + edgeWidth, teardropDistance);
+  if (shapeAlpha <= 0.001) discard;
   gl_FragColor = vec4(uColor, uOpacity * vParticleAlpha * shapeAlpha);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

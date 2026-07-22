@@ -204,8 +204,8 @@ export const WEATHER_LOOKS = {
 
 const PRESENTATION_DRIFT_AMPLITUDE = 0.003;
 const PRESENTATION_DRIFT_SPEED = 0.035;
-const RAIN_DROP_COUNT = 420;
-const SPRAY_DROP_COUNT = 220;
+const RAIN_DROP_COUNT = 300;
+const SPRAY_DROP_COUNT = 160;
 const WATER_PLANE_SIZE = 156;
 const WATER_PLANE_SEGMENTS = 72;
 const VOXEL_GRID_SIDE = 64;
@@ -775,11 +775,11 @@ export function createRoomRuntime(
 
     rainMaterial.uniforms.uOpacity.value = Math.min(0.64, settings.rain * 0.62 + weatherLook.strength * 0.2);
     rain.visible = settings.rain > 0.02 || settings.weather !== 'clear';
-    rainMaterial.uniforms.uLength.value = 14 + settings.rain * 11 + settings.surfaceDetail * 3;
+    rainMaterial.uniforms.uLength.value = 12 + settings.rain * 9 + settings.surfaceDetail * 2;
     rainMaterial.uniforms.uWind.value = settings.wind;
     spray.visible = settings.foam > 0.52 || settings.weather === 'storm';
     sprayMaterial.uniforms.uOpacity.value = Math.min(0.36, settings.foam * 0.24 + settings.rain * 0.12 + weatherLook.strength * 0.16);
-    sprayMaterial.uniforms.uLength.value = 3.8 + settings.foam * 4.2;
+    sprayMaterial.uniforms.uLength.value = 3.4 + settings.foam * 3.6;
     sprayMaterial.uniforms.uWind.value = settings.wind;
     sprayMaterial.uniforms.uFoam.value = settings.foam;
     cloudMaterial.opacity = weatherLook.cloudOpacityBase + settings.cloudCover * 0.44 + weatherLook.strength * 0.12;
