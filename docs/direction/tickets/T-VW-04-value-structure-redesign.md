@@ -1,6 +1,6 @@
 # [T-VW-04] 値構造を再設計する(ニアモノトーン圧縮の解消)
 
-- 状態: 実装・固定ゲート・独立審査完了（PR #45 CI・merge待ち、2026-07-22）
+- 状態: 完了（PR #45、main `b1b80a5`、Pages deploy・live検証済み、2026-07-22）
 - 分類: AD
 - 優先度: P2
 - 評価軸: 値構造 / サムネイルテスト
@@ -141,7 +141,8 @@ research-stylized-water.md §2.5(SoT: 「深水色⇔サブサーフェス色を
 - 太陽は width p10/p90 `73/73px`、height `76/77px`、aspect p10/p90 `0.948/0.961`、circularity p10 `0.972`、solidity p10 `0.977`、vertical-run ratio p90 `1.030` で固定形状門を通過した。
 - 同一 production build で RAF整列後の `qa:water-value` を連続2回実行し、4状態×16フレームの64 SHA-256 と report SHA-256 `35B7FE1408B8332E2A2C7A6AFA511C1C60C5F997C25FD9871DC0CEB24785A9AF` が一致した。console error は全状態0、report `passed=true`。
 - 独立 verifier も fresh process で同じ門を連続2回実行し、64フレームの差分0、同一 report SHA-256、全契約通過を再現した。さらに `qa:water` 三状態（seam default `0.167`、rain `0`、storm `0`）、44 files / 422 tests、lint、typecheck、build、foam=0/1 production probe を独立確認した。reviewer は RAF整列がロック済み Playwright 実装に一致し、閾値・ROI・製品経路を変えないこと、Clear `0.84` が Graphic Tide Atlas の暗部設計を維持することを確認し APPROVE とした。
-- PR [#45](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/45) を作成し、実装要約、決定性 SHA、独立 reviewer / verifier 結論、全ローカル門の結果を本文へ記録した。CI と main deploy の結果は merge 後に本票へ追記する。
+- PR [#45](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/45) に実装要約、決定性 SHA、独立 reviewer / verifier 結論、全ローカル門の結果を記録した。
+- PR #45 は3回目の PR workflow（run `29899770710`、production visual QAを含む33分16秒）を全緑で通過し、squash commit `b1b80a5` としてmainへmergeした。main workflow run `29901859329` はbuild 25分30秒・Pages deploy 9秒で成功した。live index は `index-C6DTENsH.js` / `index-BjmEADqz.css` を返し、配信物のSHA-256はローカルbuildとそれぞれ `197F25595064A7E2572C47C66EEE4ECDCA9DB57A2D7DD15CA31153ADD0E3E258` / `013724539265081C60B1CD4ACBDBCC1F063DA984F3ADCA836086FAC97D53CC31` で一致した。Pages URLに対する最終 `qa:water-value` も4状態・64フレーム・console error 0で通過し、report SHA-256は `35B7FE1408B8332E2A2C7A6AFA511C1C60C5F997C25FD9871DC0CEB24785A9AF` のまま一致した。
 - 既存 `qa:water` は default seam `0.167 <= 1.5`、rain `0 <= 1.5`、storm `0 <= 1.0` で通過し、motion/toon/contrast/coverage も維持した。`qa:visual` は14 captures、URL/i18n、mobile overflow/HUD overlap、console error 0 で通過した。
 - PR #45 の初回 Linux CI で見つかった capture 中の telemetry layout shift は、loader hidden / telemetry live readiness と `.shader-canvas` の逐フレーム寸法検査へ修正した。主線は default 2回・rain・storm の全32フレームが `862x735` で安定し、seam は `0.333 / 0 / 0`、独立 verifier は別の三態24フレームで `862x735` と `0.167 / 0 / 0` を再現した。独立 reviewer は crop/resize、閾値緩和、silent fallback がないことを確認し APPROVE とした。固定時刻 `qa:water-value` も同じ64 hashと全契約を維持した。
 - 固定時刻の production probe で ridge 探索域の `Y' >=192` pixel は `foam=0` の `10,615 (4.25%)` から `foam=1` の `58,662 (23.47%)` へ5.5倍増え、whitecap が foam control に実質応答し、0で残る空/水面由来高輝度だけを誤って消していないことを確認した。
