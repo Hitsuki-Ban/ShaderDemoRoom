@@ -593,10 +593,23 @@ function emptyLandmarkResult(frame) {
   };
 }
 
-export function measureLandmarkSilhouette(frame, region) {
-  assertFrame(frame);
-  const bounds = regionBounds(frame, region);
-  const centerX = Math.round(frame.width * 0.35);
+function qualifyingCenterRun(bounds, centerX, maximumRunWidth, predicate) {
+  if (!predicate(centerX)) return null;
+  let left = centerX;
+  let right = centerX;
+  while (left > bounds.x0 && predicate(left - 1)) left -= 1;
+  while (right + 1 < bounds.x1 && predicate(right + 1)) right += 1;
+  const width = right - left + 1;
+  if (
+    width < 8
+    || width > maximumRunWidth
+    || left === bounds.x0
+    || right === bounds.x1 - 1
+  ) return null;
+  return { left, right };
+}
+
+function landmarkCandidatesAtColumn(frame, bounds, centerX) {
   const centerSamples = [];
   for (let y = bounds.y0; y < bounds.y1; y += 1) {
     centerSamples.push({
@@ -627,57 +640,99 @@ export function measureLandmarkSilhouette(frame, region) {
     });
     stableStart = index;
   }
-  const body = stableRuns.sort((left, right) => right.length - left.length)[0];
   const minimumBodyHeight = Math.round(frame.height * 0.15);
-  if (!body || body.length < minimumBodyHeight) return emptyLandmarkResult(frame);
-
-  const warmRuns = [];
-  let warmStart = null;
-  for (const sample of centerSamples) {
-    if (sample.y >= body.start || !sample.warm) {
-      if (warmStart !== null) {
-        warmRuns.push({ start: warmStart, end: sample.y - 1 });
-        warmStart = null;
-      }
-      continue;
-    }
-    if (warmStart === null) warmStart = sample.y;
-  }
-  if (warmStart !== null) warmRuns.push({ start: warmStart, end: body.start - 1 });
   const maximumCapGap = Math.round(frame.height * 0.08);
-  const beacon = warmRuns
-    .filter((run) => run.end - run.start + 1 >= 5 && body.start - run.end <= maximumCapGap)
-    .sort((left, right) => (
-      (right.end - right.start) - (left.end - left.start) || right.end - left.end
-    ))[0];
-  if (!beacon) return emptyLandmarkResult(frame);
-
   const maximumRoofGap = 2;
-  const scanRoofRun = (start, direction, limit) => {
-    let y = start;
-    let gap = 0;
-    const withinLimit = () => (direction < 0 ? y >= limit : y <= limit);
-    while (
-      withinLimit()
-      && pixelLuma(frame, centerX, y) > body.luma - 32
-      && gap < maximumRoofGap
-    ) {
-      y += direction;
-      gap += 1;
-    }
-    let rows = 0;
-    while (withinLimit() && pixelLuma(frame, centerX, y) <= body.luma - 32) {
-      rows += 1;
-      y += direction;
-    }
-    return { gap, rows };
-  };
-  const roofBeforeBeacon = scanRoofRun(beacon.start - 1, -1, bounds.y0);
-  const roofAfterBeacon = scanRoofRun(beacon.end + 1, 1, body.start - 1);
+  const maximumRunWidth = Math.floor(frame.width * 0.14);
   const minimumRoofRun = 4;
-  if (Math.max(roofBeforeBeacon.rows, roofAfterBeacon.rows) < minimumRoofRun) {
-    return emptyLandmarkResult(frame);
+  const candidates = [];
+  for (const body of stableRuns.filter((run) => run.length >= minimumBodyHeight)) {
+    let bodySupport = 0;
+    for (let y = body.start; y <= body.end; y += 1) {
+      const run = qualifyingCenterRun(bounds, centerX, maximumRunWidth, (x) => (
+        pixelSaturation(frame, x, y) <= 0.35
+        && Math.abs(pixelLuma(frame, x, y) - body.luma) <= 4
+      ));
+      if (run) bodySupport += 1;
+    }
+    if (bodySupport < minimumBodyHeight) continue;
+    const warmRuns = [];
+    let warmStart = null;
+    for (const sample of centerSamples) {
+      if (sample.y >= body.start || !sample.warm) {
+        if (warmStart !== null) {
+          warmRuns.push({ start: warmStart, end: sample.y - 1 });
+          warmStart = null;
+        }
+        continue;
+      }
+      if (warmStart === null) warmStart = sample.y;
+    }
+    if (warmStart !== null) warmRuns.push({ start: warmStart, end: body.start - 1 });
+    const beacon = warmRuns
+      .filter((run) => run.end - run.start + 1 >= 5 && body.start - run.end <= maximumCapGap)
+      .sort((left, right) => (
+        (right.end - right.start) - (left.end - left.start) || right.end - left.end
+      ))[0];
+    if (!beacon) continue;
+
+    const scanRoofRun = (start, direction, limit) => {
+      let y = start;
+      let gap = 0;
+      const withinLimit = () => (direction < 0 ? y >= limit : y <= limit);
+      while (
+        withinLimit()
+        && pixelLuma(frame, centerX, y) > body.luma - 32
+        && gap < maximumRoofGap
+      ) {
+        y += direction;
+        gap += 1;
+      }
+      let rows = 0;
+      while (withinLimit() && pixelLuma(frame, centerX, y) <= body.luma - 32) {
+        rows += 1;
+        y += direction;
+      }
+      return { gap, rows };
+    };
+    const roofBeforeBeacon = scanRoofRun(beacon.start - 1, -1, bounds.y0);
+    const roofAfterBeacon = scanRoofRun(beacon.end + 1, 1, body.start - 1);
+    const roofRun = Math.max(roofBeforeBeacon.rows, roofAfterBeacon.rows);
+    if (roofRun < minimumRoofRun) continue;
+    candidates.push({
+      centerX,
+      body,
+      beacon,
+      beaconRun: beacon.end - beacon.start + 1,
+      bodySupport,
+      roofBeforeBeacon,
+      roofRun,
+    });
   }
+  return candidates;
+}
+
+export function measureLandmarkSilhouette(frame, region) {
+  assertFrame(frame);
+  const bounds = regionBounds(frame, region);
+  const roiCenterX = (bounds.x0 + bounds.x1 - 1) / 2;
+  const candidates = [];
+  for (let centerX = bounds.x0; centerX < bounds.x1; centerX += 1) {
+    candidates.push(...landmarkCandidatesAtColumn(frame, bounds, centerX));
+  }
+  const candidate = candidates.sort((left, right) => (
+    right.bodySupport - left.bodySupport
+    || right.body.length - left.body.length
+    || right.beaconRun - left.beaconRun
+    || right.roofRun - left.roofRun
+    || Math.abs(left.centerX - roiCenterX) - Math.abs(right.centerX - roiCenterX)
+    || left.centerX - right.centerX
+  ))[0];
+  if (!candidate) return emptyLandmarkResult(frame);
+  const {
+    centerX, body, beacon, roofBeforeBeacon,
+  } = candidate;
+  const minimumRoofRun = 4;
   const capTop = roofBeforeBeacon.rows >= minimumRoofRun
     ? beacon.start - roofBeforeBeacon.gap - roofBeforeBeacon.rows
     : beacon.start;
@@ -690,18 +745,9 @@ export function measureLandmarkSilhouette(frame, region) {
   let area = 0;
   const maximumRunWidth = Math.floor(frame.width * 0.14);
   const markCenterRun = (y, predicate) => {
-    if (!predicate(centerX)) return;
-    let left = centerX;
-    let right = centerX;
-    while (left > bounds.x0 && predicate(left - 1)) left -= 1;
-    while (right + 1 < bounds.x1 && predicate(right + 1)) right += 1;
-    const runWidth = right - left + 1;
-    if (
-      runWidth < 8
-      || runWidth > maximumRunWidth
-      || left === bounds.x0
-      || right === bounds.x1 - 1
-    ) return;
+    const run = qualifyingCenterRun(bounds, centerX, maximumRunWidth, predicate);
+    if (!run) return;
+    const { left, right } = run;
     const nextLeft = Math.min(bboxLeft, left);
     const nextRight = Math.max(bboxRight, right);
     if (nextRight - nextLeft + 1 > maximumRunWidth) return;

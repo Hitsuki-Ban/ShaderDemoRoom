@@ -211,6 +211,38 @@ describe('water value metrics', () => {
     expect(landmark.mask[70 * frame.width + 148]).toBe(0);
   });
 
+  it('measures a tower whose center has drifted within the landmark ROI', () => {
+    const frame = makeFrame(400, 300, [190, 190, 190, 255]);
+    paint(frame, (x, y) => x >= 143 && x <= 167 && y >= 60 && y <= 145,
+      [205, 205, 205, 255]);
+    paint(frame, (x, y) => x >= 137 && x <= 170 && y >= 60 && y <= 68,
+      [35, 58, 82, 255]);
+    paint(frame, (x, y) => (x - 155) ** 2 + (y - 70) ** 2 <= 5 ** 2,
+      [210, 120, 40, 255]);
+
+    const landmark = measureLandmarkSilhouette(frame, LANDMARK_TOWER_ROI);
+    expect(landmark.bbox).not.toBeNull();
+    expect(landmark.bbox.y).toBe(60);
+    expect(landmark.bbox.height).toBe(86);
+    expect(landmark.mask[100 * frame.width + 155]).toBe(1);
+    expect(landmark.mask[100 * frame.width + 140]).toBe(0);
+  });
+
+  it('does not combine spatially separate body, beacon, and roof features', () => {
+    const frame = makeFrame(400, 300, [190, 190, 190, 255]);
+    paint(frame, (x, y) => x >= 145 && x <= 165 && y >= 76 && y <= 145,
+      [205, 205, 205, 255]);
+    paint(frame, (x, y) => x >= 125 && x <= 141 && y >= 60 && y <= 68,
+      [35, 58, 82, 255]);
+    paint(frame, (x, y) => (x - 133) ** 2 + (y - 70) ** 2 <= 5 ** 2,
+      [210, 120, 40, 255]);
+
+    const landmark = measureLandmarkSilhouette(frame, LANDMARK_TOWER_ROI);
+    expect(landmark.area).toBe(0);
+    expect(landmark.bbox).toBeNull();
+    expect(landmark.supportAt160).toBe(0);
+  });
+
   it('rejects a stable gray tower and warm beacon when the dark roof cap is absent', () => {
     const frame = makeFrame(400, 300, [190, 190, 190, 255]);
     paint(frame, (x, y) => x >= 125 && x <= 155 && y >= 76 && y <= 145,
