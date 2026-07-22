@@ -363,8 +363,8 @@ describe('voxel water runtime contracts', () => {
       expect(particles.material.toneMapped).toBe(true);
       expect(particles.material.uniforms).not.toHaveProperty('map');
     }
-    expect(rain.count).toBe(240);
-    expect(spray.count).toBe(120);
+    expect(rain.count).toBe(200);
+    expect(spray.count).toBe(96);
 
     runtime.dispose();
   });
