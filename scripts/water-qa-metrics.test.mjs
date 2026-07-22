@@ -229,4 +229,15 @@ describe('water QA pixel metrics', () => {
     expect(seam.score).toBe(0);
     expect(seam.maxScore).toBeGreaterThan(50);
   });
+
+  it('reports every frame dimension when persistent seam input changes size', () => {
+    const frames = [
+      makeFrame(100, 100, Array.from({ length: 10_000 }, () => [80, 120, 140])),
+      makeFrame(100, 99, Array.from({ length: 9_900 }, () => [80, 120, 140])),
+    ];
+
+    expect(() => measurePersistentVerticalSeam(frames)).toThrow(
+      'received [100x100, 100x99] (first mismatch at frame 1)',
+    );
+  });
 });

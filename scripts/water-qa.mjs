@@ -46,7 +46,9 @@ page.on('console', (message) => {
 page.on('pageerror', (error) => consoleErrors.push(error.message));
 
 await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'load' });
-await page.locator('.shader-canvas').waitFor({ state: 'visible', timeout: 10000 });
+const canvas = page.locator('.shader-canvas');
+await canvas.waitFor({ state: 'visible', timeout: 10000 });
+await page.locator('.canvas-loader').waitFor({ state: 'hidden', timeout: 10000 });
 await page.locator('.language-select select').selectOption(locale);
 if (preset === 'storm') {
   await page.getByTestId('voxel-water-preset-storm').click();
@@ -55,17 +57,28 @@ if (preset === 'storm') {
 } else if (preset === 'rain') {
   await page.getByTestId('voxel-water-weather-rain').click();
 }
+await page.locator('[data-telemetry-state="live"]').waitFor({ state: 'visible', timeout: 10000 });
 await page.waitForTimeout(1200);
 
-const canvasShell = page.locator('.canvas-shell');
+const captureDimensions = await canvas.evaluate((target) => {
+  const rect = target.getBoundingClientRect();
+  return { width: Math.round(rect.width), height: Math.round(rect.height) };
+});
+
 const frames = [];
 for (let i = 0; i < frameCount; i += 1) {
   await page.waitForTimeout(frameDelayMs);
-  const screenshot = await canvasShell.screenshot();
+  const screenshot = await canvas.screenshot();
+  const frame = parsePng(screenshot);
+  if (frame.width !== captureDimensions.width || frame.height !== captureDimensions.height) {
+    throw new Error(
+      `Water canvas dimensions changed during capture: expected ${captureDimensions.width}x${captureDimensions.height}, received ${frame.width}x${frame.height} at frame ${i}.`,
+    );
+  }
   if (i === 0) {
     await writeFile(`${outputDir}/${label}-canvas.png`, screenshot);
   }
-  frames.push(parsePng(screenshot));
+  frames.push(frame);
 }
 
 const fullPagePath = `${outputDir}/${label}-page.png`;

@@ -372,8 +372,14 @@ export function measurePersistentVerticalSeam(frames, scan = DEFAULT_VERTICAL_SE
     throw new Error('Persistent vertical seam measurement requires at least one frame.');
   }
   const first = frames[0];
-  if (frames.some((frame) => frame.width !== first.width || frame.height !== first.height)) {
-    throw new Error('Persistent vertical seam frames must have identical dimensions.');
+  const mismatchedFrame = frames.findIndex(
+    (frame) => frame.width !== first.width || frame.height !== first.height,
+  );
+  if (mismatchedFrame !== -1) {
+    const dimensions = frames.map((frame) => `${frame.width}x${frame.height}`).join(', ');
+    throw new Error(
+      `Persistent vertical seam frames must have identical dimensions; received [${dimensions}] (first mismatch at frame ${mismatchedFrame}).`,
+    );
   }
   const bounds = verticalSeamBounds(first, scan);
   const frameMaxScores = Array.from({ length: frames.length }, () => -Infinity);
