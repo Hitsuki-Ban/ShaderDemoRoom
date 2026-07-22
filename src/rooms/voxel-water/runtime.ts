@@ -279,6 +279,7 @@ const PRESENTATION_DRIFT_AMPLITUDE = 0.003;
 const PRESENTATION_DRIFT_SPEED = 0.035;
 const RAIN_DROP_COUNT = 200;
 const SPRAY_DROP_COUNT = 96;
+const RAIN_RIPPLE_PHASE_OFFSETS = [0.08, 0.37, 0.61, 0.83, 0.94] as const;
 const CLOUD_CLUSTER_COUNT = 12;
 const CLOUD_VOXELS_PER_CLUSTER = 5;
 const CLOUD_VOXEL_COUNT = CLOUD_CLUSTER_COUNT * CLOUD_VOXELS_PER_CLUSTER;
@@ -293,6 +294,20 @@ const HEADLAND_SEGMENT_COUNT = 4;
 const LANDMARK_EMISSIVE_PROGRAM_KEY = 'voxel-water-landmark-emissive-v3';
 const LANDMARK_EMISSIVE_MARKER = '#include <emissivemap_fragment>';
 const LANDMARK_VERTEX_MARKER = '#include <begin_vertex>';
+
+function smoothstep(edge0: number, edge1: number, value: number) {
+  const progress = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
+  return progress * progress * (3 - 2 * progress);
+}
+
+function writeRainRippleStates(time: number, rain: number, states: Vector2[]) {
+  for (let index = 0; index < RAIN_RIPPLE_PHASE_OFFSETS.length; index += 1) {
+    const phase = (time * (0.34 + rain * 0.18) + RAIN_RIPPLE_PHASE_OFFSETS[index]) % 1;
+    const radius = 0.006 + (0.05 - 0.006) * phase;
+    const lifetime = smoothstep(0, 0.1, phase) * (1 - smoothstep(0.68, 1, phase));
+    states[index].set(radius, lifetime);
+  }
+}
 
 function createSeededRandom(seed: number) {
   let value = seed >>> 0;
@@ -355,6 +370,8 @@ export function createRoomRuntime(
   const random = createSeededRandom(0x5ea9f1);
   const initialWeatherLook = WEATHER_LOOKS[settings.weather];
   let effectiveSettings = resolveWeatherSettings(settings, initialWeatherLook);
+  const rainRippleStates = RAIN_RIPPLE_PHASE_OFFSETS.map(() => new Vector2());
+  writeRainRippleStates(0, effectiveSettings.rain, rainRippleStates);
   let colorRefreshRequested = true;
   let lastColumnColorStep = -1;
 
@@ -445,6 +462,7 @@ export function createRoomRuntime(
       uWeatherFogDensity: { value: initialWeatherLook.fogDensity },
       uRainCurtain: { value: initialWeatherLook.rainCurtain },
       uWeatherRippleStrength: { value: initialWeatherLook.rippleStrength },
+      uRainRippleStates: { value: rainRippleStates },
       uLightningPulse: { value: 0 },
       uVoxelSpacing: { value: VOXEL_SPACING },
       uWaterGridCellMultiple: { value: WATER_GRID_CELL_MULTIPLE },
@@ -1062,6 +1080,7 @@ export function createRoomRuntime(
         10,
       );
       waveUniforms.uTime.value = motionElapsed;
+      writeRainRippleStates(motionElapsed, effectiveSettings.rain, rainRippleStates);
       waterMaterial.uniforms.uSkyTime.value = animatedSkyTime;
       waterMaterial.uniforms.uWeatherFogDensity.value = Math.max(0.12, weatherLook.fogDensity + fogBreath);
       waterMaterial.uniforms.uRainCurtain.value = Math.max(effectiveSettings.rain * 0.42, weatherLook.rainCurtain);

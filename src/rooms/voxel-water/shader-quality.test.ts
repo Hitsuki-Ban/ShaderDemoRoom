@@ -17,6 +17,7 @@ import {
   ShaderMaterial,
   SpotLight,
   StaticDrawUsage,
+  Vector2,
   Vector3,
   Vector4,
   type Object3D,
@@ -567,8 +568,10 @@ describe('voxel water runtime contracts', () => {
   });
 
   it('uses local rain-impact rings and an explicit weather sun endpoint', () => {
-    expect(voxelWaterFragmentShader).toContain('float rainRipple(vec2 uv, vec2 center, float phaseOffset)');
+    expect(voxelWaterFragmentShader).toContain('float rainRipple(vec2 uv, vec2 center, vec2 rippleState)');
     expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(5);
+    expect(voxelWaterFragmentShader).toContain('uniform vec2 uRainRippleStates[5];');
+    expect(voxelWaterFragmentShader).not.toContain('fract(uTime * (0.34 + uRain * 0.18)');
     expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 1.8');
     expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
     expect(skyFragmentShader).not.toContain('normalize(uSunDirection)');
@@ -844,7 +847,11 @@ describe('voxel water runtime contracts', () => {
 
     runtime.render({ elapsed: 1, delta: 1 });
     const advancedTime = plane.material.uniforms.uTime.value as number;
+    const rippleStates = plane.material.uniforms.uRainRippleStates.value as Vector2[];
     expect(advancedTime).toBeGreaterThan(0);
+    expect(rippleStates).toHaveLength(5);
+    expect(rippleStates.every((state) => state.x >= 0.006 && state.x <= 0.05)).toBe(true);
+    expect(rippleStates.every((state) => state.y >= 0 && state.y <= 1)).toBe(true);
     for (let index = 0; index < particles.length; index += 1) {
       const object = particles[index];
       expect(object.material.uniforms.uTime).toBe(plane.material.uniforms.uTime);
