@@ -24,6 +24,8 @@ uniform float uStormGridCellMultiple;
 uniform vec2 uVoxelFieldOffset;
 uniform float uVoxelFieldYaw;
 uniform vec3 uSunDirection;
+uniform vec4 uHeadlandCapsules[4];
+uniform float uHeadlandRadii[4];
 
 /*__VOXEL_TOON_QUANTIZATION__*/
 
@@ -87,6 +89,25 @@ float fbm(vec2 p) {
     amplitude *= 0.58;
   }
   return value;
+}
+
+float signedDistanceToCapsule(vec2 position, vec4 capsule, float radius) {
+  vec2 start = capsule.xy;
+  vec2 segment = capsule.zw - start;
+  vec2 offset = position - start;
+  float projection = clamp(dot(offset, segment) / dot(segment, segment), 0.0, 1.0);
+  return length(offset - segment * projection) - radius;
+}
+
+float signedDistanceToHeadland(vec2 position) {
+  float distanceToHeadland = 100000.0;
+  for (int index = 0; index < 4; index++) {
+    distanceToHeadland = min(
+      distanceToHeadland,
+      signedDistanceToCapsule(position, uHeadlandCapsules[index], uHeadlandRadii[index])
+    );
+  }
+  return distanceToHeadland;
 }
 
 void main() {
@@ -391,6 +412,16 @@ void main() {
   foamMask = max(foamMask, max(distantRainFoamRidge, distantStormWhitecap));
   foamMask *= 1.0 - nearClearFoamSuppression;
   foamMask *= 1.0 - foregroundStormWindow * 0.9;
+  float headlandDistance = abs(signedDistanceToHeadland(vOceanXZ));
+  float contactBand = 1.0 - smoothstep(0.03, 0.38, headlandDistance);
+  float contactAgitation = smoothstep(0.2, 0.72, vRawWave + vSlope * 0.34);
+  float contactBreakup = mix(
+    0.58,
+    1.0,
+    smoothstep(0.3, 0.72, noise(vOceanXZ * 1.7 + vec2(uTime * 0.04, -uTime * 0.03)))
+  );
+  float contactFoam = contactBand * contactAgitation * contactBreakup * uFoam;
+  foamMask = max(foamMask, contactFoam * 0.72);
   float stormBackgroundCompression = stormValuePhase * 0.99
     * (1.0 - compositionMid * 0.965);
   color *= 1.0 - stormBackgroundCompression;

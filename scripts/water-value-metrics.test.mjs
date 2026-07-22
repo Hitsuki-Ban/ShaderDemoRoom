@@ -5,10 +5,18 @@ import {
   connectedComponents,
   encodedRec709Luma,
   fourBinCoverage,
+  measureLandmarkSilhouette,
+  measureRidgeMasks,
   measureSun,
+  measureWaterMetrics,
   percentile,
   posterizeFrame,
 } from './water-value-metrics.mjs';
+import {
+  LANDMARK_EXCLUSION_ROI,
+  LANDMARK_TOWER_ROI,
+  WATER_REGION_ROI,
+} from './water-roi-contract.mjs';
 
 function makeFrame(width, height, color = [30, 80, 100, 255]) {
   const pixels = Buffer.alloc(width * height * 4);
@@ -55,6 +63,176 @@ describe('water value metrics', () => {
       frame.pixels.set([value, value, value, 255], index * 4);
     });
     expect(fourBinCoverage(frame)).toEqual([0.25, 0.25, 0.25, 0.25]);
+  });
+
+  it('excludes landmark pixels from water measurements', () => {
+    const baseline = makeFrame(100, 100, [120, 120, 120, 255]);
+    const contaminated = makeFrame(100, 100, [120, 120, 120, 255]);
+    paint(contaminated, (x, y) => (
+      x >= 22 && x < 49 && y >= 16 && y < 97
+    ), [0, 0, 0, 255]);
+    const options = {
+      inclusion: WATER_REGION_ROI,
+      exclusion: LANDMARK_EXCLUSION_ROI,
+      sampleScale: 1,
+    };
+
+    expect(measureWaterMetrics(contaminated, options)).toEqual(measureWaterMetrics(baseline, options));
+  });
+
+  it('does not detect a ridge inside the landmark exclusion', () => {
+    const frame = makeFrame(100, 100, [20, 20, 20, 255]);
+    paint(frame, (x, y) => y === 50 && x >= 25 && x <= 45, [120, 120, 120, 255]);
+    const [ridge] = measureRidgeMasks(
+      frame,
+      { x0: 0, y0: 0, x1: 1, y1: 1 },
+      [{ threshold: 10, area: 3, width: 3, aspect: 1 }],
+      LANDMARK_EXCLUSION_ROI,
+    );
+
+    expect(ridge.pixelCount).toBe(0);
+  });
+
+  it('skips ridge samples whose vertical neighbors cross the exclusion boundary', () => {
+    const frame = makeFrame(100, 100, [20, 20, 20, 255]);
+    paint(frame, (x, y) => y === 15 && x >= 25 && x <= 45, [120, 120, 120, 255]);
+    const [ridge] = measureRidgeMasks(
+      frame,
+      { x0: 0, y0: 0, x1: 1, y1: 1 },
+      [{ threshold: 10, area: 3, width: 3, aspect: 1 }],
+      LANDMARK_EXCLUSION_ROI,
+    );
+
+    expect(ridge.pixelCount).toBe(0);
+  });
+
+  it('still detects a ridge outside the landmark exclusion', () => {
+    const frame = makeFrame(100, 100, [20, 20, 20, 255]);
+    paint(frame, (x, y) => y === 50 && x >= 65 && x <= 85, [120, 120, 120, 255]);
+    const [ridge] = measureRidgeMasks(
+      frame,
+      { x0: 0, y0: 0, x1: 1, y1: 1 },
+      [{ threshold: 10, area: 3, width: 3, aspect: 1 }],
+      LANDMARK_EXCLUSION_ROI,
+    );
+
+    expect(ridge.pixelCount).toBe(21);
+  });
+
+  it('measures a mutually exclusive weak transition beside a stronger foam core', () => {
+    const frame = makeFrame(120, 100, [20, 20, 20, 255]);
+    paint(frame, (x, y) => y === 40 && x >= 65 && x <= 94, [30, 30, 30, 255]);
+    paint(frame, (x, y) => y === 40 && x >= 72 && x <= 87, [60, 60, 60, 255]);
+    const [crest, foam] = measureRidgeMasks(
+      frame,
+      { x0: 0, y0: 0, x1: 1, y1: 1 },
+      [
+        {
+          threshold: 5,
+          area: 3,
+          width: 3,
+          aspect: 1,
+          strongerBoundaryRadius: 1,
+          strongerBoundaryMinimumNeighbors: 1,
+        },
+        { threshold: 15, area: 3, width: 3, aspect: 1 },
+      ],
+      LANDMARK_EXCLUSION_ROI,
+    );
+
+    expect(crest.pixelCount).toBe(2);
+    expect(crest.mask[40 * frame.width + 71]).toBe(1);
+    expect(crest.mask[40 * frame.width + 72]).toBe(0);
+    expect(crest.mask[40 * frame.width + 87]).toBe(0);
+    expect(crest.mask[40 * frame.width + 88]).toBe(1);
+    expect(crest.median).toBeCloseTo(30, 10);
+    expect(foam.pixelCount).toBe(16);
+    expect(foam.median).toBeCloseTo(60, 10);
+  });
+
+  it('keeps the crest transition exclusive when a fully strong foam component is also present', () => {
+    const frame = makeFrame(120, 100, [20, 20, 20, 255]);
+    paint(frame, (x, y) => y === 40 && x >= 65 && x <= 94, [30, 30, 30, 255]);
+    paint(frame, (x, y) => y === 40 && x >= 72 && x <= 87, [60, 60, 60, 255]);
+    paint(frame, (x, y) => y === 60 && x >= 65 && x <= 94, [60, 60, 60, 255]);
+    const [crest, foam] = measureRidgeMasks(
+      frame,
+      { x0: 0, y0: 0, x1: 1, y1: 1 },
+      [
+        {
+          threshold: 5,
+          area: 3,
+          width: 3,
+          aspect: 1,
+          strongerBoundaryRadius: 1,
+          strongerBoundaryMinimumNeighbors: 1,
+        },
+        { threshold: 15, area: 3, width: 3, aspect: 1 },
+      ],
+      LANDMARK_EXCLUSION_ROI,
+    );
+
+    expect(crest.pixelCount).toBe(2);
+    expect(crest.mask[40 * frame.width + 71]).toBe(1);
+    expect(crest.mask[40 * frame.width + 80]).toBe(0);
+    expect(crest.median).toBeCloseTo(30, 10);
+    expect(foam.pixelCount).toBe(46);
+    expect(foam.median).toBeCloseTo(60, 10);
+    for (let pixel = 0; pixel < crest.mask.length; pixel += 1) {
+      expect(crest.mask[pixel] && foam.mask[pixel]).toBeFalsy();
+    }
+  });
+
+  it('measures a tower component with deep roof and beacon core while excluding halo', () => {
+    const frame = makeFrame(400, 300, [190, 190, 190, 255]);
+    paint(frame, (x, y) => x >= 125 && x <= 155 && y >= 60 && y <= 145,
+      [205, 205, 205, 255]);
+    paint(frame, (x, y) => x >= 120 && x <= 160 && y >= 60 && y <= 68,
+      [35, 58, 82, 255]);
+    paint(frame, (x, y) => (x - 140) ** 2 + (y - 70) ** 2 <= 5 ** 2,
+      [210, 120, 40, 255]);
+    paint(frame, (x, y) => x >= 146
+      && (x - 140) ** 2 + (y - 70) ** 2 <= 9 ** 2
+      && (x - 140) ** 2 + (y - 70) ** 2 > 5 ** 2, [245, 235, 220, 255]);
+    paint(frame, (x, y) => x >= 114 && x <= 165 && y >= 150 && y <= 157,
+      [45, 45, 45, 255]);
+
+    const landmark = measureLandmarkSilhouette(frame, LANDMARK_TOWER_ROI);
+    expect(landmark.bbox).not.toBeNull();
+    expect(landmark.bbox.y).toBe(60);
+    expect(landmark.bbox.height).toBe(86);
+    expect(landmark.towerHeightRatio).toBeCloseTo(0.287, 2);
+    expect(landmark.widthRatio).toBeLessThanOrEqual(0.14);
+    expect(landmark.supportAt160).toBeGreaterThanOrEqual(64);
+    expect(landmark.localContrastP10).toBeGreaterThanOrEqual(12);
+    expect(landmark.mask[60 * frame.width + 120]).toBe(1);
+    expect(landmark.mask[100 * frame.width + 140]).toBe(1);
+    expect(landmark.mask[70 * frame.width + 140]).toBe(1);
+    expect(landmark.mask[70 * frame.width + 148]).toBe(0);
+  });
+
+  it('rejects a stable gray tower and warm beacon when the dark roof cap is absent', () => {
+    const frame = makeFrame(400, 300, [190, 190, 190, 255]);
+    paint(frame, (x, y) => x >= 125 && x <= 155 && y >= 76 && y <= 145,
+      [205, 205, 205, 255]);
+    paint(frame, (x, y) => (x - 140) ** 2 + (y - 70) ** 2 <= 5 ** 2,
+      [210, 120, 40, 255]);
+
+    const landmark = measureLandmarkSilhouette(frame, LANDMARK_TOWER_ROI);
+    expect(landmark.area).toBe(0);
+    expect(landmark.bbox).toBeNull();
+    expect(landmark.supportAt160).toBe(0);
+  });
+
+  it('rejects rows where a qualifying background fills the entire tower ROI', () => {
+    const frame = makeFrame(400, 300, [190, 190, 190, 255]);
+    paint(frame, (x, y) => x >= 112 && x < 172 && y >= 54 && y < 159,
+      [205, 205, 205, 255]);
+
+    const landmark = measureLandmarkSilhouette(frame, LANDMARK_TOWER_ROI);
+    expect(landmark.area).toBe(0);
+    expect(landmark.bbox).toBeNull();
+    expect(landmark.widthRatio).toBe(0);
   });
 
   it('finds diagonally connected pixels as one component', () => {
