@@ -49,6 +49,19 @@ function recolor(frame, transform) {
   return next;
 }
 
+function foamFrame(bands, background, crest) {
+  const frame = makeFrame(160, 136, background);
+  for (const baseY of bands) {
+    for (let x = 4; x < 156; x += 1) {
+      const y = baseY + Math.round(Math.sin(x * 0.22) * 5);
+      for (let thickness = 0; thickness < 2; thickness += 1) {
+        setPixel(frame, x, y + thickness, crest);
+      }
+    }
+  }
+  return frame;
+}
+
 describe('weather identity metrics', () => {
   it('uses BT.709 luma for the grayscale evidence row', () => {
     const frame = makeFrame(1, 1, [255, 0, 0, 255]);
@@ -139,19 +152,43 @@ describe('weather identity metrics', () => {
     expect(measureCloudLowerEdge(clustered).passesShape).toBe(true);
   });
 
-  it('requires spatially distributed bright foam support so uniform dark water fails', () => {
+  it('requires spatially distributed local-contrast foam support so uniform water fails', () => {
     const dark = makeFrame(160, 136, [14, 30, 40, 255]);
     expect(measureFoamSupport(dark).passesShape).toBe(false);
 
-    const foam = makeFrame(160, 136, [25, 65, 80, 255]);
-    for (let x = 4; x < 156; x += 1) {
-      const y = 82 + Math.round(Math.sin(x * 0.22) * 5);
-      for (let thickness = 0; thickness < 2; thickness += 1) {
-        setPixel(foam, x, y + thickness, [220, 245, 235, 255]);
-      }
-    }
-    expect(measureFoamSupport(foam).passesShape).toBe(true);
+    const darkFoam = foamFrame([82], [30, 30, 30, 255], [110, 110, 110, 255]);
+    const brightFoam = foamFrame([82], [150, 150, 150, 255], [230, 230, 230, 255]);
+    const darkResult = measureFoamSupport(darkFoam);
+    const brightResult = measureFoamSupport(brightFoam);
+    expect(darkResult.passesShape).toBe(true);
+    expect(brightResult.supportPixels).toBe(darkResult.supportPixels);
   });
+
+  it('requires Storm foam support to increase over aligned Clear support', () => {
+    const background = [25, 65, 80, 255];
+    const crest = [220, 245, 235, 255];
+    const clear = foamFrame([82], background, crest);
+    const strongerStorm = foamFrame([82, 105], background, crest);
+    const sampleTimesMs = [1600, 2400, 3200];
+    const repeated = (frame) => [frame, frame, frame];
+
+    const noGain = evaluateWeatherIdentitySeries({
+      clear: repeated(clear),
+      rain: repeated(clear),
+      storm: repeated(clear),
+    }, sampleTimesMs);
+    expect(noGain.cues.storm.foam.passRate).toBe(1);
+    expect(noGain.comparisons.stormFoamSupportRatioMinusClear.p25).toBe(0);
+    expect(noGain.gates.stormFoam).toBe(false);
+
+    const gain = evaluateWeatherIdentitySeries({
+      clear: repeated(clear),
+      rain: repeated(clear),
+      storm: repeated(strongerStorm),
+    }, sampleTimesMs);
+    expect(gain.comparisons.stormFoamSupportRatioMinusClear.p25).toBeGreaterThan(0);
+    expect(gain.gates.stormFoam).toBe(true);
+  }, 10_000);
 
   it('fails the overall structure gate for global hue-only and luma-only variants', () => {
     const clear = structuredFrame();

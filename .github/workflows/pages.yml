@@ -60,6 +60,7 @@ jobs:
         env:
           QA_SETTLE_SCALE: '2'
           SHOWROOM_URL: http://127.0.0.1:4173/ShaderDemoRoom
+          TELEMETRY_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           mkdir -p output/playwright output/water-qa output/water-value-qa output/weather-identity
           preview_log="output/showroom-preview.log"

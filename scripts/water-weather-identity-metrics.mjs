@@ -14,11 +14,13 @@ export const WEATHER_IDENTITY_THRESHOLDS = Object.freeze({
   stormCloudTurns: 3,
   minimumStormCloudPassRate: 0.75,
   maximumClearCloudPassRate: 0.625,
+  foamLocalContrast: 20,
   foamSupportRatio: 0.0015,
   foamSpatialCells: 3,
   stormFoamSupportPixels: 100,
   stormFoamSpatialCells: 2,
   minimumStormFoamPassRate: 0.625,
+  minimumStormFoamSupportGainRatio: 0.004,
 });
 
 const SKY_ROI = Object.freeze({ x0: 0.04, y0: 0.04, x1: 0.96, y1: 0.57 });
@@ -462,7 +464,8 @@ export function measureFoamSupport(
   assertFrame(frame);
   const source = localMask(frame, region, exclusion, (x, y) => {
     const luma = lumaAt(frame, x, y);
-    return luma >= 112 && luma - localMean(frame, x, y, 3) >= 10;
+    return luma - localMean(frame, x, y, 3)
+      >= WEATHER_IDENTITY_THRESHOLDS.foamLocalContrast;
   });
   const qualifying = connectedComponents(source.mask, source.width, source.height).filter(
     (component) => component.area >= 12
@@ -583,8 +586,8 @@ export function evaluateWeatherIdentity(frames) {
       / Math.max(1, cues.clear.waterRings.supportPixels),
     stormCloudTurnsMinusClear: cues.storm.cloudLowerEdge.turns
       - cues.clear.cloudLowerEdge.turns,
-    stormFoamSupportVsClear: cues.storm.foam.supportRatio
-      / Math.max(Number.EPSILON, cues.clear.foam.supportRatio),
+    stormFoamSupportRatioMinusClear: cues.storm.foam.supportRatio
+      - cues.clear.foam.supportRatio,
   };
   const gates = {
     structure: structure.pass,
@@ -601,7 +604,9 @@ export function evaluateWeatherIdentity(frames) {
       && !cues.clear.cloudLowerEdge.passesShape,
     stormFoam: cues.storm.foam.passesShape
       && cues.storm.foam.supportPixels >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSupportPixels
-      && cues.storm.foam.spatialCells >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSpatialCells,
+      && cues.storm.foam.spatialCells >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSpatialCells
+      && comparisons.stormFoamSupportRatioMinusClear
+        >= WEATHER_IDENTITY_THRESHOLDS.minimumStormFoamSupportGainRatio,
   };
   return {
     pass: Object.values(gates).every(Boolean),
@@ -719,16 +724,16 @@ export function evaluateWeatherIdentitySeries(frameSeries, sampleTimesMs) {
     frameMetrics.storm[index].cues.cloudLowerEdge.turns
       - frameMetrics.clear[index].cues.cloudLowerEdge.turns
   ));
-  const foamRatios = aligned((index) => (
+  const foamSupportRatioDeltas = aligned((index) => (
     frameMetrics.storm[index].cues.foam.supportRatio
-      / Math.max(Number.EPSILON, frameMetrics.clear[index].cues.foam.supportRatio)
+      - frameMetrics.clear[index].cues.foam.supportRatio
   ));
   const comparisons = {
     rainRingSupportVsClear: robustStats(ringRatios),
     rainRingP25SupportVsClearP25: cues.rain.waterRings.supportPixels.p25
       / Math.max(1, cues.clear.waterRings.supportPixels.p25),
     stormCloudTurnsMinusClear: robustStats(cloudTurnDeltas),
-    stormFoamSupportVsClear: robustStats(foamRatios),
+    stormFoamSupportRatioMinusClear: robustStats(foamSupportRatioDeltas),
   };
   const gates = {
     structure: structure.pass,
@@ -750,7 +755,9 @@ export function evaluateWeatherIdentitySeries(frameSeries, sampleTimesMs) {
       && cues.storm.foam.supportPixels.p25
         >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSupportPixels
       && cues.storm.foam.spatialCells.p25
-        >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSpatialCells,
+        >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSpatialCells
+      && comparisons.stormFoamSupportRatioMinusClear.p25
+        >= WEATHER_IDENTITY_THRESHOLDS.minimumStormFoamSupportGainRatio,
   };
   return {
     pass: Object.values(gates).every(Boolean),

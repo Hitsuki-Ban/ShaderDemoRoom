@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { parsePng } from './water-qa-metrics.mjs';
 import {
   areaAverageResize,
   composeContactSheet,
+  encodedRec709Luma,
   encodePng,
 } from './water-value-metrics.mjs';
 import {
@@ -18,13 +20,96 @@ const VIEWPORT = Object.freeze({ width: 1440, height: 900 });
 const THUMBNAIL = Object.freeze({ width: 160, height: 136 });
 const CLOCK_EPOCH = '2026-01-01T00:00:00.000Z';
 const BOOT_TIME_MS = 12_000;
-const SAMPLE_TIMES_MS = Object.freeze([1600, 2400, 3200, 4000, 4800, 5600, 6400, 7200]);
+export const WEATHER_IDENTITY_PREWARM_TIMES_MS = Object.freeze([1600, 3200, 4800]);
+const REQUIRED_CONSECUTIVE_RENDERABLE_PREWARM_FRAMES = 2;
+export const WEATHER_IDENTITY_SAMPLE_TIMES_MS = Object.freeze([
+  1600, 2400, 3200, 4000, 4800, 5600, 6400, 7200,
+]);
 const STATES = Object.freeze(['clear', 'rain', 'storm']);
+export const RENDERABLE_CONTENT_THRESHOLDS = Object.freeze({
+  maximumNearWhiteRatio: 0.9,
+  maximumNearBlackRatio: 0.9,
+  minimumLumaStandardDeviation: 10,
+  minimumLumaDynamicRange: 35,
+  minimumActiveLumaBins: 4,
+});
 
-function parseArguments(argv) {
+function quantile(sorted, fraction) {
+  const position = (sorted.length - 1) * fraction;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  if (lower === upper) return sorted[lower];
+  return sorted[lower] * (upper - position) + sorted[upper] * (position - lower);
+}
+
+export function measureRenderableContent(frame) {
+  if (frame?.width !== THUMBNAIL.width || frame?.height !== THUMBNAIL.height
+    || frame?.bytesPerPixel !== 4
+    || frame.pixels?.length !== THUMBNAIL.width * THUMBNAIL.height * 4) {
+    throw new Error(`Renderable content validation requires a ${THUMBNAIL.width}x${THUMBNAIL.height} RGBA thumbnail.`);
+  }
+  const lumas = [];
+  const bins = new Uint32Array(16);
+  let total = 0;
+  let nearWhite = 0;
+  let nearBlack = 0;
+  for (let pixel = 0; pixel < frame.width * frame.height; pixel += 1) {
+    const offset = pixel * 4;
+    const luma = encodedRec709Luma(
+      frame.pixels[offset], frame.pixels[offset + 1], frame.pixels[offset + 2],
+    );
+    lumas.push(luma);
+    total += luma;
+    if (luma >= 248) nearWhite += 1;
+    if (luma <= 7) nearBlack += 1;
+    bins[Math.min(15, Math.floor(luma / 16))] += 1;
+  }
+  lumas.sort((left, right) => left - right);
+  const mean = total / lumas.length;
+  const variance = lumas.reduce((sum, value) => sum + (value - mean) ** 2, 0) / lumas.length;
+  const p05 = quantile(lumas, 0.05);
+  const p95 = quantile(lumas, 0.95);
+  const minimumBinSupport = lumas.length * 0.005;
+  const metrics = {
+    mean,
+    standardDeviation: Math.sqrt(variance),
+    p05,
+    p95,
+    dynamicRange: p95 - p05,
+    nearWhiteRatio: nearWhite / lumas.length,
+    nearBlackRatio: nearBlack / lumas.length,
+    activeLumaBins: [...bins].filter((count) => count >= minimumBinSupport).length,
+  };
+  return {
+    ...metrics,
+    valid: metrics.nearWhiteRatio <= RENDERABLE_CONTENT_THRESHOLDS.maximumNearWhiteRatio
+      && metrics.nearBlackRatio <= RENDERABLE_CONTENT_THRESHOLDS.maximumNearBlackRatio
+      && metrics.standardDeviation >= RENDERABLE_CONTENT_THRESHOLDS.minimumLumaStandardDeviation
+      && metrics.dynamicRange >= RENDERABLE_CONTENT_THRESHOLDS.minimumLumaDynamicRange
+      && metrics.activeLumaBins >= RENDERABLE_CONTENT_THRESHOLDS.minimumActiveLumaBins,
+  };
+}
+
+export function assertRenderableContent(frame, label) {
+  const result = measureRenderableContent(frame);
+  if (!result.valid) {
+    throw new Error(`${label} is not renderable content: ${JSON.stringify(result)}.`);
+  }
+  return result;
+}
+
+export function requireSourceRevision(environment) {
+  const revision = environment.TELEMETRY_SOURCE_REVISION;
+  if (typeof revision !== 'string' || !/^[0-9a-f]{40}$/i.test(revision)) {
+    throw new Error('TELEMETRY_SOURCE_REVISION must be the required full 40-character source commit SHA.');
+  }
+  return revision.toLowerCase();
+}
+
+function parseArguments(argv, environment) {
   const options = {
     mode: 'gate',
-    baseUrl: process.env.SHOWROOM_URL ?? DEFAULT_BASE_URL,
+    baseUrl: environment.SHOWROOM_URL ?? DEFAULT_BASE_URL,
     outputDir: DEFAULT_OUTPUT_DIR,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -66,6 +151,78 @@ function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
+async function prewarmRenderer(browser, baseUrl) {
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    deviceScaleFactor: 1,
+    locale: 'en',
+    reducedMotion: 'no-preference',
+  });
+  const page = await context.newPage();
+  const epoch = new Date(CLOCK_EPOCH);
+  await page.clock.install({ time: epoch });
+  const browserErrors = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(`console: ${message.text()}`);
+  });
+  page.on('pageerror', (error) => browserErrors.push(`pageerror: ${error.message}`));
+
+  try {
+    await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'load' });
+    const canvas = page.locator('.shader-canvas');
+    await canvas.waitFor({ state: 'visible', timeout: 10_000 });
+    await page.locator('.canvas-loader').waitFor({ state: 'hidden', timeout: 10_000 });
+    await page.locator('.language-select select').selectOption('en');
+    await page.clock.pauseAt(new Date(epoch.getTime() + BOOT_TIME_MS));
+
+    let elapsedMs = 0;
+    const checks = [];
+    for (let index = 0; index < WEATHER_IDENTITY_PREWARM_TIMES_MS.length; index += 1) {
+      const sampleTimeMs = WEATHER_IDENTITY_PREWARM_TIMES_MS[index];
+      await page.clock.runFor(sampleTimeMs - elapsedMs);
+      elapsedMs = sampleTimeMs;
+      await page.locator('[data-telemetry-state="live"]').waitFor({
+        state: 'visible',
+        timeout: 10_000,
+      });
+      const buffer = await canvas.screenshot({ type: 'png' });
+      const frame = parsePng(buffer);
+      const thumbnail = areaAverageResize(frame, THUMBNAIL.width, THUMBNAIL.height);
+      checks.push({
+        index,
+        sampleTimeMs,
+        sha256: sha256(buffer),
+        validation: measureRenderableContent(thumbnail),
+      });
+    }
+
+    const consecutiveChecks = checks.slice(-REQUIRED_CONSECUTIVE_RENDERABLE_PREWARM_FRAMES);
+    const passed = consecutiveChecks.length === REQUIRED_CONSECUTIVE_RENDERABLE_PREWARM_FRAMES
+      && consecutiveChecks.every((check) => check.validation.valid);
+    if (!passed) {
+      throw new Error(
+        'Weather identity renderer prewarm did not produce two consecutive renderable frames: '
+        + `${JSON.stringify(checks)}.`,
+      );
+    }
+    if (browserErrors.length > 0) {
+      throw new Error(`Weather identity renderer prewarm browser errors:\n${browserErrors.join('\n')}`);
+    }
+    return {
+      route: '#/room/voxel-water',
+      checks,
+      validation: {
+        requiredConsecutiveRenderableFrames: REQUIRED_CONSECUTIVE_RENDERABLE_PREWARM_FRAMES,
+        evaluatedSampleTimesMs: consecutiveChecks.map((check) => check.sampleTimeMs),
+        passed,
+      },
+      browserErrors,
+    };
+  } finally {
+    await context.close();
+  }
+}
+
 async function captureState(browser, baseUrl, outputDir, weather) {
   const context = await browser.newContext({
     viewport: VIEWPORT,
@@ -90,10 +247,10 @@ async function captureState(browser, baseUrl, outputDir, weather) {
     await page.locator('.language-select select').selectOption('en');
     await page.clock.pauseAt(new Date(epoch.getTime() + BOOT_TIME_MS));
     await page.getByTestId(`voxel-water-weather-${weather}`).click();
-    const frameCaptures = [];
     let elapsedMs = 0;
-    for (let index = 0; index < SAMPLE_TIMES_MS.length; index += 1) {
-      const sampleTimeMs = SAMPLE_TIMES_MS[index];
+    const frameCaptures = [];
+    for (let index = 0; index < WEATHER_IDENTITY_SAMPLE_TIMES_MS.length; index += 1) {
+      const sampleTimeMs = WEATHER_IDENTITY_SAMPLE_TIMES_MS[index];
       await page.clock.runFor(sampleTimeMs - elapsedMs);
       elapsedMs = sampleTimeMs;
       await page.locator('[data-telemetry-state="live"]').waitFor({
@@ -102,6 +259,11 @@ async function captureState(browser, baseUrl, outputDir, weather) {
       });
       const buffer = await canvas.screenshot({ type: 'png' });
       const frame = parsePng(buffer);
+      const thumbnail = areaAverageResize(frame, THUMBNAIL.width, THUMBNAIL.height);
+      const validation = assertRenderableContent(
+        thumbnail,
+        `${weather} formal frame ${index} at ${sampleTimeMs}ms`,
+      );
       const path = `${outputDir}/${weather}-frame-${String(index).padStart(2, '0')}.png`;
       await writeFile(path, buffer);
       frameCaptures.push({
@@ -109,8 +271,9 @@ async function captureState(browser, baseUrl, outputDir, weather) {
         sampleTimeMs,
         buffer,
         frame,
-        thumbnail: areaAverageResize(frame, THUMBNAIL.width, THUMBNAIL.height),
-        evidence: { path, sha256: sha256(buffer) },
+        thumbnail,
+        validation,
+        evidence: { path, sha256: sha256(buffer), validation },
       });
     }
 
@@ -228,98 +391,127 @@ function assertEquivalentControls(captures) {
   }
 }
 
-const options = parseArguments(process.argv.slice(2));
-await mkdir(options.outputDir, { recursive: true });
-const browser = await chromium.launch({ headless: true });
-let captures;
-try {
-  captures = [];
-  for (const weather of STATES) {
-    captures.push(await captureState(browser, options.baseUrl, options.outputDir, weather));
+export async function runWeatherIdentity({
+  environment = process.env,
+  argumentsList = process.argv.slice(2),
+} = {}) {
+  const sourceRevision = requireSourceRevision(environment);
+  const options = parseArguments(argumentsList, environment);
+  await mkdir(options.outputDir, { recursive: true });
+  const browser = await chromium.launch({ headless: true });
+  let prewarm;
+  let captures;
+  try {
+    prewarm = await prewarmRenderer(browser, options.baseUrl);
+    captures = [];
+    for (const weather of STATES) {
+      captures.push(await captureState(browser, options.baseUrl, options.outputDir, weather));
+    }
+  } finally {
+    await browser.close();
   }
-} finally {
-  await browser.close();
-}
-assertEquivalentControls(captures);
+  assertEquivalentControls(captures);
 
-const thumbnailSeries = Object.fromEntries(captures.map((capture) => (
-  [capture.weather, capture.frames.map((frame) => frame.thumbnail)]
-)));
-const evaluation = evaluateWeatherIdentitySeries(thumbnailSeries, SAMPLE_TIMES_MS);
-const thumbnails = Object.fromEntries(captures.map((capture) => [
-  capture.weather,
-  capture.frames[evaluation.aggregation.medoids[capture.weather].index].thumbnail,
-]));
-for (const capture of captures) {
-  const medoid = evaluation.aggregation.medoids[capture.weather];
-  const representative = capture.frames[medoid.index];
-  const canvasPath = `${options.outputDir}/${capture.weather}-canvas.png`;
-  await writeFile(canvasPath, representative.buffer);
-  capture.evidence.canvas = canvasPath;
-  capture.evidence.canvasSha256 = representative.evidence.sha256;
-  capture.evidence.representativeIndex = medoid.index;
-  capture.evidence.representativeSampleTimeMs = medoid.sampleTimeMs;
-}
-const sheet = composeContactSheet([
-  thumbnails.clear,
-  thumbnails.rain,
-  thumbnails.storm,
-  toRec709Grayscale(thumbnails.clear),
-  toRec709Grayscale(thumbnails.rain),
-  toRec709Grayscale(thumbnails.storm),
-], 3);
-const sheetPath = `${options.outputDir}/weather-identity-sheet.png`;
-await writeFile(sheetPath, encodePng(sheet));
+  const thumbnailSeries = Object.fromEntries(captures.map((capture) => (
+    [capture.weather, capture.frames.map((frame) => frame.thumbnail)]
+  )));
+  const evaluation = evaluateWeatherIdentitySeries(
+    thumbnailSeries,
+    WEATHER_IDENTITY_SAMPLE_TIMES_MS,
+  );
+  const thumbnails = Object.fromEntries(captures.map((capture) => [
+    capture.weather,
+    capture.frames[evaluation.aggregation.medoids[capture.weather].index].thumbnail,
+  ]));
+  for (const capture of captures) {
+    const medoid = evaluation.aggregation.medoids[capture.weather];
+    const representative = capture.frames[medoid.index];
+    const canvasPath = `${options.outputDir}/${capture.weather}-canvas.png`;
+    await writeFile(canvasPath, representative.buffer);
+    capture.evidence.canvas = canvasPath;
+    capture.evidence.canvasSha256 = representative.evidence.sha256;
+    capture.evidence.representativeIndex = medoid.index;
+    capture.evidence.representativeSampleTimeMs = medoid.sampleTimeMs;
+  }
+  const sheet = composeContactSheet([
+    thumbnails.clear,
+    thumbnails.rain,
+    thumbnails.storm,
+    toRec709Grayscale(thumbnails.clear),
+    toRec709Grayscale(thumbnails.rain),
+    toRec709Grayscale(thumbnails.storm),
+  ], 3);
+  const sheetPath = `${options.outputDir}/weather-identity-sheet.png`;
+  await writeFile(sheetPath, encodePng(sheet));
 
-const raw = {
-  protocol: {
+  const generatedAt = new Date().toISOString();
+  const protocol = {
     mode: options.mode,
     baseUrl: options.baseUrl,
     viewport: VIEWPORT,
     thumbnail: THUMBNAIL,
     clockEpoch: CLOCK_EPOCH,
     bootTimeMs: BOOT_TIME_MS,
-    sampleTimesMs: SAMPLE_TIMES_MS,
-    frameCountPerState: SAMPLE_TIMES_MS.length,
+    prewarmTimesMs: WEATHER_IDENTITY_PREWARM_TIMES_MS,
+    requiredConsecutiveRenderablePrewarmFrames:
+      REQUIRED_CONSECUTIVE_RENDERABLE_PREWARM_FRAMES,
+    prewarmPolicy: 'independent context before all weather captures; excluded from statistics',
+    sampleTimesMs: WEATHER_IDENTITY_SAMPLE_TIMES_MS,
+    frameCountPerState: WEATHER_IDENTITY_SAMPLE_TIMES_MS.length,
     representativePolicy: 'within-state structure medoid',
     robustGateQuantile: evaluation.aggregation.robustGateQuantile,
     minimumPassRate: evaluation.aggregation.minimumPassRate,
+    renderableContentThresholds: RENDERABLE_CONTENT_THRESHOLDS,
     weatherOnly: true,
     stateOrder: STATES,
-  },
-  states: Object.fromEntries(captures.map((capture) => [capture.weather, {
-    state: capture.state,
-    evidence: capture.evidence,
-    browserErrors: capture.browserErrors,
-  }])),
-  metrics: evaluation,
-};
-const rawPath = `${options.outputDir}/weather-identity-raw.json`;
-await writeFile(rawPath, json(raw));
+  };
+  const raw = {
+    generatedAt,
+    sourceRevision,
+    protocol,
+    prewarm,
+    states: Object.fromEntries(captures.map((capture) => [capture.weather, {
+      state: capture.state,
+      evidence: capture.evidence,
+      browserErrors: capture.browserErrors,
+    }])),
+    metrics: evaluation,
+  };
+  const rawPath = `${options.outputDir}/weather-identity-raw.json`;
+  await writeFile(rawPath, json(raw));
 
-const report = {
-  pass: evaluation.pass,
-  mode: options.mode,
-  artifacts: {
-    sheet: sheetPath,
-    raw: rawPath,
-    states: Object.fromEntries(captures.map((capture) => [capture.weather, capture.evidence])),
-  },
-  protocol: raw.protocol,
-  thresholds: evaluation.thresholds,
-  aggregation: evaluation.aggregation,
-  structure: evaluation.structure,
-  cues: evaluation.cues,
-  comparisons: evaluation.comparisons,
-  gates: evaluation.gates,
-};
-const reportPath = `${options.outputDir}/weather-identity-report.json`;
-await writeFile(reportPath, json(report));
-console.log(json(report));
+  const report = {
+    generatedAt,
+    sourceRevision,
+    pass: evaluation.pass,
+    mode: options.mode,
+    prewarm,
+    artifacts: {
+      sheet: sheetPath,
+      raw: rawPath,
+      states: Object.fromEntries(captures.map((capture) => [capture.weather, capture.evidence])),
+    },
+    protocol,
+    thresholds: evaluation.thresholds,
+    aggregation: evaluation.aggregation,
+    structure: evaluation.structure,
+    cues: evaluation.cues,
+    comparisons: evaluation.comparisons,
+    gates: evaluation.gates,
+  };
+  const reportPath = `${options.outputDir}/weather-identity-report.json`;
+  await writeFile(reportPath, json(report));
+  console.log(json(report));
 
-if (options.mode === 'gate' && !evaluation.pass) {
-  const failedGates = Object.entries(evaluation.gates)
-    .filter(([, passed]) => !passed)
-    .map(([name]) => name);
-  throw new Error(`Weather identity gates failed: ${failedGates.join(', ')}.`);
+  if (options.mode === 'gate' && !evaluation.pass) {
+    const failedGates = Object.entries(evaluation.gates)
+      .filter(([, passed]) => !passed)
+      .map(([name]) => name);
+    throw new Error(`Weather identity gates failed: ${failedGates.join(', ')}.`);
+  }
+  return report;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await runWeatherIdentity();
 }
