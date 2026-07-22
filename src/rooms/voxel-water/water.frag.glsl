@@ -73,10 +73,14 @@ float hash(vec2 p) {
 float rainRipple(vec2 uv, vec2 center, float phaseOffset) {
   float phase = fract(uTime * (0.34 + uRain * 0.18) + phaseOffset);
   vec2 delta = (uv - center) * vec2(1.0, 1.36);
-  float distanceFromImpact = length(delta);
+  float distanceSquared = dot(delta, delta);
   float radius = mix(0.006, 0.05, phase);
-  float ringWidth = max(0.0022, fwidth(distanceFromImpact) * 1.25);
-  float ring = 1.0 - smoothstep(ringWidth, ringWidth * 2.4, abs(distanceFromImpact - radius));
+  float ringWidthSquared = max(0.0044 * radius, fwidth(distanceSquared) * 1.25);
+  float ring = 1.0 - smoothstep(
+    ringWidthSquared,
+    ringWidthSquared * 2.4,
+    abs(distanceSquared - radius * radius)
+  );
   float lifetime = smoothstep(0.0, 0.1, phase) * (1.0 - smoothstep(0.68, 1.0, phase));
   return ring * lifetime;
 }

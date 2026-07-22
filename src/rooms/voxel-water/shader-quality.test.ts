@@ -562,6 +562,8 @@ describe('voxel water runtime contracts', () => {
   it('uses local rain-impact rings and an explicit weather sun endpoint', () => {
     expect(voxelWaterFragmentShader).toContain('float rainRipple(vec2 uv, vec2 center, float phaseOffset)');
     expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(5);
+    expect(voxelWaterFragmentShader).toContain('float distanceSquared = dot(delta, delta);');
+    expect(voxelWaterFragmentShader).not.toContain('float distanceFromImpact = length(delta);');
     expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 1.8');
     expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
     expect(skyFragmentShader).toContain('sunDisc * uSunVisibility');
