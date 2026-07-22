@@ -106,6 +106,7 @@ describe('voxel water runtime contracts', () => {
       expect(look.precipitationBase).toBeGreaterThanOrEqual(0);
       expect(look.precipitationResponse).toBeGreaterThanOrEqual(0);
       expect(look.rainStreakLength).toBeGreaterThan(0);
+      expect(look.rainStreakColor).toBeInstanceOf(Color);
       expect(look.rippleStrength).toBeGreaterThanOrEqual(0);
       expect(look.waveHeightScale).toBeGreaterThan(0);
       expect(look.waveHeightFloor).toBeGreaterThanOrEqual(voxelWaterDomains.waveHeight.min);
@@ -238,8 +239,10 @@ describe('voxel water runtime contracts', () => {
     expect(voxelWaterFragmentShader).toContain('* mix(1.0, 0.32, distanceConvergence);');
     expect(voxelWaterFragmentShader).toContain('* smoothstep(0.0, 0.35, uFoam);');
     expect(voxelWaterFragmentShader).toContain(
-      'vec3 valueFoamColor = mix(foamColor, vec3(2.7, 2.9, 2.2), stormValuePhase);',
+      'vec3 valueFoamColor = mix(foamColor, vec3(8.0, 8.3, 6.1), stormValuePhase);',
     );
+    expect(voxelWaterFragmentShader).toContain('step(0.55, foamMask)');
+    expect(voxelWaterFragmentShader).toContain('smoothstep(0.1, 0.7, visibleFoamMask)');
     expect(peakStage).toBeGreaterThan(0);
     expect(valueFoamStage).toBeGreaterThan(peakStage);
     expect(nearSuppressionStage).toBeGreaterThan(valueFoamStage);
@@ -558,8 +561,8 @@ describe('voxel water runtime contracts', () => {
 
   it('uses local rain-impact rings and an explicit weather sun endpoint', () => {
     expect(voxelWaterFragmentShader).toContain('float rainRipple(vec2 uv, vec2 center, float phaseOffset)');
-    expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(4);
-    expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 1.05');
+    expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(5);
+    expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 1.8');
     expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
     expect(skyFragmentShader).toContain('sunDisc * uSunVisibility');
     expect(skyFragmentShader).not.toContain('1.0 - uStorm * 0.78');

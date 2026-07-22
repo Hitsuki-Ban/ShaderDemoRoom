@@ -91,6 +91,7 @@ export type WeatherLook = {
   precipitationBase: number;
   precipitationResponse: number;
   rainStreakLength: number;
+  rainStreakColor: Color;
   rippleStrength: number;
   waveHeightScale: number;
   waveHeightFloor: number;
@@ -138,6 +139,7 @@ export const WEATHER_LOOKS = {
     precipitationBase: 0,
     precipitationResponse: 0.12,
     rainStreakLength: 12,
+    rainStreakColor: new Color(0xe5f8ff),
     rippleStrength: 0,
     waveHeightScale: 0.72,
     waveHeightFloor: 0.1,
@@ -182,7 +184,8 @@ export const WEATHER_LOOKS = {
     rainCurtain: 0.38,
     precipitationBase: 0.42,
     precipitationResponse: 0.38,
-    rainStreakLength: 72,
+    rainStreakLength: 90,
+    rainStreakColor: new Color(0x527b8d),
     rippleStrength: 0.72,
     waveHeightScale: 1,
     waveHeightFloor: 0.62,
@@ -227,7 +230,8 @@ export const WEATHER_LOOKS = {
     rainCurtain: 0.6,
     precipitationBase: 0.68,
     precipitationResponse: 0.32,
-    rainStreakLength: 82,
+    rainStreakLength: 98,
+    rainStreakColor: new Color(0xe5f8ff),
     rippleStrength: 0.94,
     waveHeightScale: 1,
     waveHeightFloor: 0.95,
@@ -919,6 +923,7 @@ export function createRoomRuntime(
     columnWeatherStrengthUniform.value = weatherLook.strength;
 
     rainMaterial.uniforms.uOpacity.value = Math.min(0.78, effectiveSettings.rain * 1.5 + weatherLook.strength * 0.18);
+    rainMaterial.uniforms.uColor.value.copy(weatherLook.rainStreakColor);
     rain.visible = effectiveSettings.rain > 0.04;
     rainMaterial.uniforms.uLength.value = Math.max(
       weatherLook.rainStreakLength,

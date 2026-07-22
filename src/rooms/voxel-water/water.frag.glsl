@@ -204,13 +204,14 @@ void main() {
     ripple += rainRipple(vUv, vec2(0.39, 0.58), 0.37);
     ripple += rainRipple(vUv, vec2(0.63, 0.43), 0.61);
     ripple += rainRipple(vUv, vec2(0.82, 0.66), 0.83);
+    ripple += rainRipple(vUv, vec2(0.34, 0.72), 0.94);
     rainCurtain = smoothstep(
       0.5,
       0.86,
       noise(vWorldPosition.xz * 0.055 + vec2(-uTime * 0.08, uTime * 0.035))
     ) * uRainCurtain;
     color += rainSpark * vec3(0.28, 0.54, 0.78);
-    float rippleAccent = clamp(ripple * uRain * uWeatherRippleStrength * 1.05, 0.0, 0.78);
+    float rippleAccent = clamp(ripple * uRain * uWeatherRippleStrength * 1.8, 0.0, 0.78);
     color = mix(color, vec3(0.62, 0.92, 1.08), rippleAccent);
     color = mix(color, uWeatherFogColor, rainCurtain * 0.14);
   }
@@ -323,7 +324,7 @@ void main() {
   color *= 1.0 - rainValuePhase * 0.66;
   color *= 1.0 - stormValuePhase * 0.94;
   float compositionMid = 1.0 - smoothstep(2.0, 7.0, length(vWorldPosition.xz - vec2(4.7, -6.6)));
-  vec3 compositionMidColor = mix(vec3(0.063, 0.252, 0.222), vec3(0.29, 0.63, 0.57), uStorm);
+  vec3 compositionMidColor = mix(vec3(0.063, 0.252, 0.222), vec3(0.27, 0.58, 0.52), uStorm);
   color = mix(color, compositionMidColor, compositionMid * (0.7 - uStorm * 0.05));
   color *= 1.0 - clearValuePhase * 0.08;
   vec3 weatherCrestColor = mix(crestMint, vec3(0.37, 0.7, 0.5), rainValuePhase);
@@ -429,7 +430,7 @@ void main() {
   foamMask *= 1.0 - nearClearFoamSuppression;
   foamMask *= 1.0 - foregroundStormWindow * 0.9;
   float stormWhitecapPatch = smoothstep(0.03, 0.16, toonEdgeAccent + vSlope * 0.35)
-    * smoothstep(0.46, 0.62, noise(vOceanXZ * 0.19 + vec2(uTime * 0.025, -uTime * 0.018)))
+    * smoothstep(0.6, 0.72, noise(vOceanXZ * 0.19 + vec2(uTime * 0.025, -uTime * 0.018)))
     * smoothstep(0.42, 0.64, uFoam)
     * stormValuePhase;
   foamMask = max(foamMask, stormWhitecapPatch);
@@ -446,8 +447,13 @@ void main() {
   float stormBackgroundCompression = stormValuePhase * 0.99
     * (1.0 - compositionMid * 0.965);
   color *= 1.0 - stormBackgroundCompression;
-  vec3 valueFoamColor = mix(foamColor, vec3(2.7, 2.9, 2.2), stormValuePhase);
-  color = mix(color, valueFoamColor, clamp(foamMask, 0.0, 1.0));
+  vec3 valueFoamColor = mix(foamColor, vec3(8.0, 8.3, 6.1), stormValuePhase);
+  float visibleFoamMask = mix(
+    foamMask,
+    step(0.55, foamMask),
+    stormValuePhase
+  );
+  color = mix(color, valueFoamColor, clamp(visibleFoamMask, 0.0, 1.0));
   float strongestClearRidge = smoothstep(0.62, 0.88, verticalRidgeShare)
     * smoothstep(0.9, 0.995, toonEdgeAccent)
     * (1.0 - foamWeatherPhase);
@@ -455,10 +461,11 @@ void main() {
   color += strongestClearRidge * strongestClearRidgeLift * vec3(1.0, 1.0, 0.78);
   float weatherTransparency = uStorm * 0.04 + foregroundStormWindow * 0.08 + uRainCurtain * 0.03;
   float surfaceAlpha = clamp((mix(0.66, 0.82, uClarity) - weatherTransparency) * mix(0.86, 1.0, edgeFade), 0.28, 0.84);
-  surfaceAlpha = mix(
-    surfaceAlpha,
-    0.88,
-    smoothstep(0.1, 0.7, foamMask) * (1.0 - stormValuePhase)
+  float foamAlphaLift = mix(
+    smoothstep(0.1, 0.7, foamMask) * (1.0 - stormValuePhase),
+    smoothstep(0.1, 0.7, visibleFoamMask),
+    stormValuePhase
   );
+  surfaceAlpha = mix(surfaceAlpha, mix(0.88, 0.9, stormValuePhase), foamAlphaLift);
   gl_FragColor = vec4(color, surfaceAlpha);
 }
