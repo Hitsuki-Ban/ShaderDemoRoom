@@ -8,6 +8,7 @@ import {
   LineSegments,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
   Points,
@@ -26,6 +27,11 @@ import {
   WEATHER_LOOKS,
 } from './runtime';
 import { voxelWaterDefaults } from './state';
+import {
+  ACTIVE_LANDMARK_CANDIDATE,
+  landmarkCoversVoxelColumnWorldOcean,
+  LANDMARK_INSTANCE_BUDGET,
+} from './landmarkModel';
 import {
   COLUMN_WAVE_PROGRAM_KEY,
   STORM_GRID_CELL_MULTIPLE,
@@ -211,6 +217,13 @@ describe('voxel water runtime contracts', () => {
         && object instanceof InstancedMesh
         && object.material instanceof MeshStandardMaterial,
     );
+    const landmark = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshBasicMaterial> =>
+        object.name === 'voxel-water-landmark'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshBasicMaterial,
+    );
     const spray = findObject(
       objects,
       (object): object is Points => object.name === 'voxel-water-spray' && object instanceof Points,
@@ -226,6 +239,7 @@ describe('voxel water runtime contracts', () => {
 
     expect(sky.renderOrder).toBe(0);
     expect(columns.renderOrder).toBe(1);
+    expect(landmark.renderOrder).toBe(1);
     expect(plane.renderOrder).toBe(2);
     expect(plane.renderOrder).toBeLessThan(spray.renderOrder);
     expect(spray.renderOrder).toBeLessThan(rain.renderOrder);
@@ -239,6 +253,15 @@ describe('voxel water runtime contracts', () => {
     expect(columns.material.depthWrite).toBe(true);
     expect(columns.material.opacity).toBe(1);
     expect(columns.material.vertexColors).toBe(true);
+    expect(landmark.material.transparent).toBe(false);
+    expect(landmark.material.depthTest).toBe(true);
+    expect(landmark.material.depthWrite).toBe(true);
+    expect(landmark.material.vertexColors).toBe(false);
+    expect(landmark.instanceColor).not.toBeNull();
+    expect(Math.max(...(landmark.instanceColor?.array ?? []))).toBeGreaterThan(0.4);
+    expect(landmark.count).toBe(ACTIVE_LANDMARK_CANDIDATE.instances.length);
+    expect(landmark.count).toBeLessThanOrEqual(LANDMARK_INSTANCE_BUDGET);
+    expect(landmark.userData.candidateId).toBe(ACTIVE_LANDMARK_CANDIDATE.id);
     expect(plane.material.transparent).toBe(true);
     expect(plane.material.depthTest).toBe(true);
     expect(plane.material.depthWrite).toBe(false);
@@ -287,7 +310,7 @@ describe('voxel water runtime contracts', () => {
     runtime.dispose();
   });
 
-  it('builds a seamless square instanced field and deterministic seeded rain layout', () => {
+  it('builds a deterministic seamless field with landmark-covered columns removed', () => {
     const first = createRuntimeHarness();
     const second = createRuntimeHarness();
     const firstColumns = findObject(
@@ -308,14 +331,50 @@ describe('voxel water runtime contracts', () => {
     );
 
     expect(firstColumns.count).toBeGreaterThan(0);
-    expect(Number.isInteger(Math.sqrt(firstColumns.count))).toBe(true);
+    expect(firstColumns.count).toBe(4050);
+    expect(firstColumns.userData.landmarkExcludedCount).toBe(46);
     expect(secondColumns.count).toBe(firstColumns.count);
+    expect(firstColumns.instanceMatrix.array).toEqual(secondColumns.instanceMatrix.array);
+    const oceanCoordinates = firstColumns.geometry.getAttribute('aOceanXZ');
+    expect(oceanCoordinates.count).toBe(firstColumns.count);
+    for (let index = 0; index < oceanCoordinates.count; index += 1) {
+      expect(landmarkCoversVoxelColumnWorldOcean({
+        worldX: oceanCoordinates.getX(index),
+        worldZ: oceanCoordinates.getY(index),
+      })).toBe(false);
+    }
+
+    const localPositions: Vector3[] = [];
+    const positionIndex = new Map<string, number>();
+    const keyFor = (position: Vector3) => `${position.x.toFixed(5)},${position.z.toFixed(5)}`;
+    for (let index = 0; index < firstColumns.count; index += 1) {
+      const instanceMatrix = new Matrix4();
+      firstColumns.getMatrixAt(index, instanceMatrix);
+      const position = new Vector3().setFromMatrixPosition(instanceMatrix);
+      localPositions.push(position);
+      positionIndex.set(keyFor(position), index);
+    }
+    const firstIndex = localPositions.findIndex((position) => (
+      positionIndex.has(keyFor(position.clone().add(new Vector3(VOXEL_SPACING, 0, 0))))
+      && positionIndex.has(keyFor(position.clone().add(new Vector3(0, 0, VOXEL_SPACING))))
+    ));
+    expect(firstIndex).toBeGreaterThanOrEqual(0);
+    const firstPosition = localPositions[firstIndex];
+    const adjacentIndex = positionIndex.get(keyFor(
+      firstPosition.clone().add(new Vector3(VOXEL_SPACING, 0, 0)),
+    ));
+    const nextRowIndex = positionIndex.get(keyFor(
+      firstPosition.clone().add(new Vector3(0, 0, VOXEL_SPACING)),
+    ));
+    if (adjacentIndex === undefined || nextRowIndex === undefined) {
+      throw new Error('Expected two surviving adjacent voxel-water columns.');
+    }
     const firstColumnMatrix = new Matrix4();
     const adjacentColumnMatrix = new Matrix4();
     const nextRowColumnMatrix = new Matrix4();
-    firstColumns.getMatrixAt(0, firstColumnMatrix);
-    firstColumns.getMatrixAt(1, adjacentColumnMatrix);
-    firstColumns.getMatrixAt(Math.sqrt(firstColumns.count), nextRowColumnMatrix);
+    firstColumns.getMatrixAt(firstIndex, firstColumnMatrix);
+    firstColumns.getMatrixAt(adjacentIndex, adjacentColumnMatrix);
+    firstColumns.getMatrixAt(nextRowIndex, nextRowColumnMatrix);
     const firstColumnPosition = new Vector3().setFromMatrixPosition(firstColumnMatrix);
     const adjacentColumnPosition = new Vector3().setFromMatrixPosition(adjacentColumnMatrix);
     const nextRowColumnPosition = new Vector3().setFromMatrixPosition(nextRowColumnMatrix);
@@ -504,6 +563,20 @@ describe('voxel water runtime contracts', () => {
         object.name === 'voxel-water-columns' && object instanceof InstancedMesh,
     );
     const disposeSpy = vi.spyOn(columns, 'dispose');
+
+    runtime.dispose();
+
+    expect(disposeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('disposes the instanced landmark object exactly once', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const landmark = findObject(
+      objects,
+      (object): object is InstancedMesh =>
+        object.name === 'voxel-water-landmark' && object instanceof InstancedMesh,
+    );
+    const disposeSpy = vi.spyOn(landmark, 'dispose');
 
     runtime.dispose();
 

@@ -41,6 +41,10 @@ import skyFragmentShader from './sky.frag.glsl?raw';
 import skyVertexShader from './sky.vert.glsl?raw';
 import vertexShaderTemplate from './water.vert.glsl?raw';
 import {
+  ACTIVE_LANDMARK_CANDIDATE,
+  landmarkCoversVoxelColumnWorldOcean,
+} from './landmarkModel';
+import {
   buildColumnVertexShader,
   buildColumnFragmentShader,
   buildWaterFragmentShader,
@@ -331,6 +335,39 @@ export function createRoomRuntime(
   plane.userData.oceanStrategy = INFINITE_OCEAN_STRATEGY;
   root.add(plane);
 
+  const landmarkGeometry = new BoxGeometry(1, 1, 1);
+  const landmarkMaterial = new MeshBasicMaterial({
+    color: 0xffffff,
+    toneMapped: false,
+    transparent: false,
+    depthTest: true,
+    depthWrite: true,
+  });
+  const landmark = new InstancedMesh(
+    landmarkGeometry,
+    landmarkMaterial,
+    ACTIVE_LANDMARK_CANDIDATE.instances.length,
+  );
+  const landmarkColors = {
+    'headland-dark': new Color(0x172b37),
+    'tower-light': new Color(0xb7b9ab),
+    'roof-dark': new Color(0x38464b),
+  } as const;
+  for (let index = 0; index < ACTIVE_LANDMARK_CANDIDATE.instances.length; index += 1) {
+    const instance = ACTIVE_LANDMARK_CANDIDATE.instances[index];
+    matrix.makeScale(...instance.scale);
+    matrix.setPosition(...instance.worldPosition);
+    landmark.setMatrixAt(index, matrix);
+    landmark.setColorAt(index, landmarkColors[instance.colorRole]);
+  }
+  landmark.instanceMatrix.needsUpdate = true;
+  if (landmark.instanceColor) landmark.instanceColor.needsUpdate = true;
+  landmark.frustumCulled = false;
+  landmark.name = 'voxel-water-landmark';
+  landmark.renderOrder = 1;
+  landmark.userData.candidateId = ACTIVE_LANDMARK_CANDIDATE.id;
+  root.add(landmark);
+
   const columnMaterial = new MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.58,
@@ -353,7 +390,21 @@ export function createRoomRuntime(
   };
   columnMaterial.customProgramCacheKey = () => COLUMN_WAVE_PROGRAM_KEY;
   const columnsPerSide = VOXEL_GRID_SIDE;
-  const columnCount = columnsPerSide * columnsPerSide;
+  const gridOffset = ((columnsPerSide - 1) * VOXEL_SPACING) / 2;
+  const fieldYawCosine = Math.cos(VOXEL_FIELD_YAW);
+  const fieldYawSine = Math.sin(VOXEL_FIELD_YAW);
+  const columnCells = [];
+  for (let z = 0; z < columnsPerSide; z += 1) {
+    for (let x = 0; x < columnsPerSide; x += 1) {
+      const px = x * VOXEL_SPACING - gridOffset + VOXEL_FIELD_OFFSET.x;
+      const pz = z * VOXEL_SPACING - gridOffset + VOXEL_FIELD_OFFSET.z;
+      const oceanX = px * fieldYawCosine + pz * fieldYawSine;
+      const oceanZ = -px * fieldYawSine + pz * fieldYawCosine;
+      if (landmarkCoversVoxelColumnWorldOcean({ worldX: oceanX, worldZ: oceanZ })) continue;
+      columnCells.push({ x, z, px, pz, oceanX, oceanZ });
+    }
+  }
+  const columnCount = columnCells.length;
   const columnGeometry = new BoxGeometry(VOXEL_SIZE, 1, VOXEL_SIZE);
   const columnNormals = columnGeometry.getAttribute('normal');
   const columnFaceColors = new Float32Array(columnNormals.count * 3);
@@ -375,31 +426,23 @@ export function createRoomRuntime(
   columns.frustumCulled = false;
   columns.name = 'voxel-water-columns';
   columns.renderOrder = 1;
+  columns.userData.landmarkExcludedCount = columnsPerSide * columnsPerSide - columnCount;
   root.add(columns);
 
   const oceanCoordinates = new Float32Array(columnCount * 2);
   const cellEdgeFade = new Float32Array(columnCount);
   const cellDepthFade = new Float32Array(columnCount);
   const cellNoise = new Float32Array(columnCount);
-  const gridOffset = ((columnsPerSide - 1) * VOXEL_SPACING) / 2;
-  const fieldYawCosine = Math.cos(VOXEL_FIELD_YAW);
-  const fieldYawSine = Math.sin(VOXEL_FIELD_YAW);
-  for (let z = 0; z < columnsPerSide; z += 1) {
-    for (let x = 0; x < columnsPerSide; x += 1) {
-      const index = z * columnsPerSide + x;
-      const px = x * VOXEL_SPACING - gridOffset + VOXEL_FIELD_OFFSET.x;
-      const pz = z * VOXEL_SPACING - gridOffset + VOXEL_FIELD_OFFSET.z;
-      const edgeDistance = Math.min(x, z, columnsPerSide - 1 - x, columnsPerSide - 1 - z) / (columnsPerSide * 0.18);
-      const oceanX = px * fieldYawCosine + pz * fieldYawSine;
-      const oceanZ = -px * fieldYawSine + pz * fieldYawCosine;
-      oceanCoordinates[index * 2] = oceanX;
-      oceanCoordinates[index * 2 + 1] = oceanZ;
-      cellEdgeFade[index] = Math.min(1, Math.max(0, edgeDistance));
-      cellDepthFade[index] = Math.min(1, Math.max(0, (oceanZ + gridOffset) / (gridOffset * 2)));
-      cellNoise[index] = hashCell(x, z) - 0.5;
-      matrix.makeTranslation(px, 0, pz);
-      columns.setMatrixAt(index, matrix);
-    }
+  for (let index = 0; index < columnCells.length; index += 1) {
+    const { x, z, px, pz, oceanX, oceanZ } = columnCells[index];
+    const edgeDistance = Math.min(x, z, columnsPerSide - 1 - x, columnsPerSide - 1 - z) / (columnsPerSide * 0.18);
+    oceanCoordinates[index * 2] = oceanX;
+    oceanCoordinates[index * 2 + 1] = oceanZ;
+    cellEdgeFade[index] = Math.min(1, Math.max(0, edgeDistance));
+    cellDepthFade[index] = Math.min(1, Math.max(0, (oceanZ + gridOffset) / (gridOffset * 2)));
+    cellNoise[index] = hashCell(x, z) - 0.5;
+    matrix.makeTranslation(px, 0, pz);
+    columns.setMatrixAt(index, matrix);
   }
   columnGeometry.setAttribute('aOceanXZ', new InstancedBufferAttribute(oceanCoordinates, 2));
   columns.instanceMatrix.needsUpdate = true;
@@ -665,6 +708,7 @@ export function createRoomRuntime(
     },
     dispose() {
       columns.dispose();
+      landmark.dispose();
       disposeObject(root);
       sky.geometry.dispose();
       [waterMaterial, skyMaterial, columnMaterial, rainMaterial, sprayMaterial, cloudMaterial, gridLineMaterial].forEach((material: Material) =>

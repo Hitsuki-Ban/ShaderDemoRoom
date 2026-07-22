@@ -1,5 +1,6 @@
 # [T-VW-01] 焦点ランドマークを導入する(構図再建)
 
+- 状態: 段階1グレーボックス完了（人間Gate A BLOCK、2026-07-22）
 - 分類: AD
 - 優先度: P1
 - 評価軸: 焦点階層 / 構図 / ヒーローショット成立性
@@ -49,3 +50,24 @@ research-exhibition-direction.md §3(weenie=視覚磁石)・§2(値ヒエラル�
 - **qa:water ベースライン**: ランドマークが水域リージョンに入ると `waterLuma` / `waterCoverage` / `toonBandSeparation` の基準値がシフトする。`scripts/water-qa-metrics.mjs` のリージョン定義とレポート基準値の再較正を完了条件に含める(T-QA-02 のメトリクスバジェットと調整)。
 - **新規設定を追加しない**: ランドマークのトグル等を VoxelWaterSettings に足す場合は T-SH-05 の URL スキーマと i18n カタログ整合(T-I18N-01 のパリティテスト)が連動する。初版は設定なし(常時表示)を推奨。
 - 灯台の点滅は T-VW-07(稲妻の照明化)と光の語彙を揃えること(同じ emissive パルス経路)。
+
+## 着手時の疑問・決定（2026-07-22、段階1固定）
+
+- 疑問: 本票はカメラを観測スポットとして「再設計」するとしているが、依存先 T-VW-04 は現カメラ `(5.8,7.2,13.8) → (0,-0.08,-5)` から4値ROI、暗台地、静かなwater-mid、太陽探索域を反投影し、PR #45 で固定した。ここで先にカメラを動かすと、ランドマークを評価する前に依存票の契約を無効化する。決定: 現カメラを観測スポットとして確定し、まず幾何で3層構図を作る。人間Gate Aが全候補の画角を明確に否決した場合だけ、カメラ変更と全ROI/太陽契約の再固定を別判断として扱う。
+- 疑問: T-VW-04 のcolumn-side ROIが暗い「穴」に見える一方、その暗部面積は4値門を支える。決定: world `(1.4,4.8)` の暗台地を消さず、同じ場所から後左の灯台基台 `xz≈(-0.8,0)` へ連なる一つの前景岩礁として実体化する。`(2.15,4.52)` は `VOXEL_FIELD_YAW=-0.16` の逆変換後のinstance-local座標であり、world座標として再利用しない。右側の静かなwater-mid `(4.7,-6.6)` は負の空間として残し、第二の暗島を置かない。
+- 画面上の固定目安は `862x735` canvasで、暗台地 `(314,617)`、灯台中心 `x≈307`、基台頂 `y≈347`、灯頭 `y≈148` とする。灯頭 `y≈5.5`、基台頂 `y≈2.0` を初期値とし、塔身が画面高の25–33%を占める候補だけを残す。
+- 段階1は2–3案の**不透明グレーボックス**に限定する。各案は同じ単一連結footprint、同じカメラ、同じ右側負空間を共有し、岬角のscreen占有率・塔身の収束・屋根silhouetteだけを変える。beacon glow、接触泡、weather色、追加ライト、透明beam、ディテールはGate A前に作らない。
+- グレーボックス材質は候補の形と4値を照明変動から切り離して比較するため、段階1だけ固定neutral値の不透明unlit材質を使う。これは最終材質のfallbackではない。Gate A後は採用形を既存Ambient/Directional/Fogへ応答する単一opaque `MeshStandardMaterial` に置き換え、未採用候補と段階1材質を残さない。
+- 岩礁・塔・屋根は決定論的な純データlayoutを単一SoTとし、`Math.random()`を使わない。静的 `InstancedMesh` 1 draw、512 instance / 約6144 triangles以下を段階1の上限とする。波柱を持ち上げて陸地に見せず、同じfootprintで覆われるcolumn instanceを生成時に除外する。fragment discard、polygon offset、別深度経路は置かない。
+- Gate A候補はclear/rain/stormの原色、grayscale、4値、160pxを同じcontact sheetへ並べる。人間判断は「最初に灯台+岬角を読む」「煙突やUI柱に見えない」「左の暗質量が海面を潰さない」「3天候で同じidentity」の4点に限定し、承認前に段階2へ進まない。これは本票に明記された唯一の人間BLOCKである。
+- 現 `COLUMN_SIDE_ROI` は候補の岩礁と重なるため、最終実装後も同名で使うと偽のcolumn-side合格になる。Gate A後に旧ROIを `landmarkDarkAnchor` として分離し、landmark外の右前景へ実column-side ROIを再固定する。water luma/toonは岩礁を除外した水面ROI、crest/foamは灯頭/glowを除外した探索域へ再定義する。段階1では既存閾値を緩和せず、候補比較用の別artifactとして測る。
+- パフォーマンスは絶対15.37 FPSの異環境比較ではなく、deploy済み T-VW-04 baseline とcandidateを同一SwiftShader sessionでAB/BA 5組計測し、paired speed ratio median `>=0.90` を満たす。段階2の目標draw callsはdefault 19→21、storm 20→22以内とし、実測前に改善を主張しない。
+
+## Gate A 提示（2026-07-22、人間判断 BLOCK）
+
+- 3候補の決定論的layout、単一opaque `InstancedMesh`、同一SDF footprint、covered column生成除外まで実装した。候補は `sheltered=49`、`balanced=50`、`monumental=51` instancesで、いずれも512 budget内。64×64の4096 column中46本を、center-in-SDFまたは回転済み0.62角柱と0.5岩blockのSAT overlapで生成対象から除外し、残る4050本がfootprint/岩blockの双方と交差しないことをテストした。右側water-mid `(4.7,-6.6)` のSDFは `+7.5713` で負の空間を維持する。
+- Gate A contact sheet: `docs/direction/captures/t-vw-01-gate-a-contact-sheet.png`、SHA-256 `71cfbb1d946ebefa6f0cb6d7fda7dc3bec2ed2d7092005d4481eae4df021740d`。機械可読の候補・行・列順、共通study revision、各候補のsource/build asset provenanceは `docs/direction/captures/t-vw-01-gate-a-study.json`、SHA-256 `3b483dde1a6eafec33190edb82b7d8417fa46903f898ef7b9c2d3be411f4ceee`。3候補はactive IDだけを正規化した同一study revision `020c07c154065ec5a72676b26f84d62ab37b288d8cf480b48f72dfc23af17dc7` から、各capture直前にfresh buildしている。
+- sheetの候補順は上から `sheltered` / `balanced` / `monumental`。各候補内の行順はclear / rain / storm、列順はoriginal / grayscale / four-value / 160px thumbnail。`balanced` をコード上の暫定activeとするが、Gate A承認前の採用決定ではない。
+- 実装側の暫定推奨は `balanced`。`sheltered` は岬角が軽い反面、広いslab roofが煙突寄りに読まれやすい。`monumental` はspireで灯台性が強い反面、左暗質量が最も重い。`balanced` は3天候で同じidentityを保ち、岬角の重量と階段roofの識別の中間にある。ただし「3秒で最初にランドマークを読むか」は自動指標で確定しない。
+- **人間への疑問（本票のGate A）**: `sheltered` / `balanced` / `monumental` のどれを段階2へ進めるか。判断は「最初に灯台+岬角を読む」「煙突やUI柱に見えない」「左の暗質量が海面を潰さない」「3天候で同じidentity」の4点だけで行う。3案すべてが不合格なら、その旨を記録して段階1を再設計する。選択前にbeacon、接触泡、weather材質、ROI再較正、performance比較へ進まない。
+- 既存 `qa:water-value` を最終暫定balancedで再実行すると4件失敗した（rain/storm crest p90、default waterLuma、default-rain separation）。これは旧 `WATER_REGION` が新landmarkを水面として、ridge探索域がlandmark edgeをcrestとして集計し、旧 `COLUMN_SIDE_ROI` も本来のcolumn-sideではなくlandmark暗部へ変わる、着手時に予測済みの意味衝突である。既存閾値は変更していない。Gate A後に採用silhouetteを固定してからlandmark/water/crest ROIを分離し、同じ門を再成立させる。

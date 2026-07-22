@@ -1,0 +1,53 @@
+{
+  "candidateOrder": [
+    "sheltered",
+    "balanced",
+    "monumental"
+  ],
+  "rowOrderWithinCandidate": [
+    "clear",
+    "rain",
+    "storm"
+  ],
+  "columnOrder": [
+    "original",
+    "grayscale",
+    "four-value",
+    "160px-thumbnail"
+  ],
+  "contactSheet": "docs/direction/captures/t-vw-01-gate-a-contact-sheet.png",
+  "contactSheetSha256": "71cfbb1d946ebefa6f0cb6d7fda7dc3bec2ed2d7092005d4481eae4df021740d",
+  "studyRevisionSha256": "020c07c154065ec5a72676b26f84d62ab37b288d8cf480b48f72dfc23af17dc7",
+  "candidates": [
+    {
+      "candidateId": "sheltered",
+      "sourceSha256": "7a1f904371a3ed8451c1c20835e8c8cb13fb285ed03380c1dbd4d0ab69bd7286",
+      "studyRevisionSha256": "020c07c154065ec5a72676b26f84d62ab37b288d8cf480b48f72dfc23af17dc7",
+      "build": {
+        "distIndexSha256": "f0424d3a833187348219571030686d0291225e25d911118f68cd9cdada3ac3e0",
+        "candidateAsset": "runtime-7zAQz6BA.js",
+        "candidateAssetSha256": "9b29dd099da2856b9054c23122b5d7017c42756c4977583ebb5b0d0ded11a21a"
+      }
+    },
+    {
+      "candidateId": "balanced",
+      "sourceSha256": "680488fc24d7c0f8d8650cdf19c92b8ac7da9b934f14c06e5f84c6662c63db66",
+      "studyRevisionSha256": "020c07c154065ec5a72676b26f84d62ab37b288d8cf480b48f72dfc23af17dc7",
+      "build": {
+        "distIndexSha256": "d5bfa106d6e3854d929203e7884a01bf864fa28208b96e06b8feab0812cecf6e",
+        "candidateAsset": "runtime-CLNjKJhY.js",
+        "candidateAssetSha256": "078a75482ac58ad0a4c7a682f05c18ddd6f0e841109793ed50a51e27ecc103a0"
+      }
+    },
+    {
+      "candidateId": "monumental",
+      "sourceSha256": "10ec268c44e04b5ddc282dd4d954189b2bd8dd4c2fbf0598bb2d40f0297fee54",
+      "studyRevisionSha256": "020c07c154065ec5a72676b26f84d62ab37b288d8cf480b48f72dfc23af17dc7",
+      "build": {
+        "distIndexSha256": "074cc3a905af81b54f680f784b08b2751300b8e6c1294e18ce163deae293567d",
+        "candidateAsset": "runtime-JLd0P6jU.js",
+        "candidateAssetSha256": "98c73bf43a886e2a57b9e513c2346ca8a485c38e18d0eba9db957651bcbe1404"
+      }
+    }
+  ]
+}
