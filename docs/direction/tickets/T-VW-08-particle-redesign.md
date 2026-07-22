@@ -1,6 +1,6 @@
 # [T-VW-08] 雨・スプレーのパーティクルを再設計する(一斉テレポートと剛体円盤の解消)
 
-- 状態: 実装・検証完了（PR作成待ち、`3acfed9c9bd805757a42255875d7591838338921`、2026-07-23）
+- 状態: 実装・検証完了（PR #49 draft / CI待ち、product `3acfed9c9bd805757a42255875d7591838338921`、2026-07-23）
 - 分類: AD / TA
 - 優先度: P2
 - 評価軸: モーション言語 / フレームバジェット / リソースライフサイクル
@@ -66,7 +66,8 @@ research-stylized-water.md §2.7(Cyanilux Rain Effects Breakdown / GPU パーテ
   unique resource の exact-once dispose を接続した。
 - performance harness `pnpm qa:water-particle-performance` は Storm topology を正確に
   21 calls へ固定し、console error / pageerror、SwiftShader renderer、full source revision を
-  fail-fast で検査する。0.90 の暫定門は、票面の「悪化しない」と T-VW-05 の先例に合わせて
+  raw report に記録する。最終 raw には candidate / baseline の full SHA を明示した。
+  0.90 の暫定門は、票面の「悪化しない」と T-VW-05 の先例に合わせて
   `paired median >= 0.95` へ是正した。
 
 ### 検証
