@@ -29,7 +29,7 @@ import {
   voxelWaterVertexShader,
   WEATHER_LOOKS,
 } from './runtime';
-import { voxelWaterDefaults } from './state';
+import { voxelWaterDefaults, voxelWaterDomains } from './state';
 import {
   HEADLAND_SEGMENTS_WORLD_OCEAN,
   LANDMARK_MODEL,
@@ -103,6 +103,18 @@ describe('voxel water runtime contracts', () => {
       expect(look.fogDensity).toBeGreaterThanOrEqual(0);
       expect(look.rainCurtain).toBeGreaterThanOrEqual(0);
       expect(look.rainCurtain).toBeLessThanOrEqual(1);
+      expect(look.precipitationBase).toBeGreaterThanOrEqual(0);
+      expect(look.precipitationResponse).toBeGreaterThanOrEqual(0);
+      expect(look.rippleStrength).toBeGreaterThanOrEqual(0);
+      expect(look.waveHeightFloor).toBeGreaterThanOrEqual(voxelWaterDomains.waveHeight.min);
+      expect(look.chopFloor).toBeGreaterThanOrEqual(voxelWaterDomains.chop.min);
+      expect(look.foamFloor).toBeGreaterThanOrEqual(voxelWaterDomains.foam.min);
+      expect(look.sunVisibility).toBeGreaterThanOrEqual(0);
+      expect(look.sunVisibility).toBeLessThanOrEqual(1);
+      expect(look.cloudContrast).toBeGreaterThanOrEqual(0);
+      expect(look.cloudContrast).toBeLessThanOrEqual(1);
+      expect(look.cloudBaseHeight).toBeGreaterThan(0);
+      expect(look.cloudHeightScale).toBeGreaterThan(0);
       expect(look).not.toHaveProperty('columnOpacity');
       expect(look.waterTint).toBeInstanceOf(Color);
       expect(look.fogColor).toBeInstanceOf(Color);
@@ -119,6 +131,10 @@ describe('voxel water runtime contracts', () => {
 
     expect(WEATHER_LOOKS.clear.strength).toBeLessThan(WEATHER_LOOKS.rain.strength);
     expect(WEATHER_LOOKS.rain.strength).toBeLessThan(WEATHER_LOOKS.storm.strength);
+    expect(WEATHER_LOOKS.clear.precipitationBase).toBeLessThan(WEATHER_LOOKS.rain.precipitationBase);
+    expect(WEATHER_LOOKS.rain.precipitationBase).toBeLessThan(WEATHER_LOOKS.storm.precipitationBase);
+    expect(WEATHER_LOOKS.clear.sunVisibility).toBeGreaterThan(WEATHER_LOOKS.rain.sunVisibility);
+    expect(WEATHER_LOOKS.rain.sunVisibility).toBeGreaterThan(WEATHER_LOOKS.storm.sunVisibility);
   });
 
   it('binds every declared water shader uniform at runtime', () => {
@@ -403,8 +419,13 @@ describe('voxel water runtime contracts', () => {
     runtime.updateSettings(nextSettings);
 
     expect(plane.material.uniforms.uWind.value).toBe(nextSettings.wind);
-    expect(plane.material.uniforms.uRain.value).toBe(nextSettings.rain);
+    expect(plane.material.uniforms.uRain.value).toBeCloseTo(
+      WEATHER_LOOKS.storm.precipitationBase
+        + nextSettings.rain * WEATHER_LOOKS.storm.precipitationResponse,
+    );
     expect(plane.material.uniforms.uWaveHeight.value).toBe(nextSettings.waveHeight);
+    expect(plane.material.uniforms.uChop.value).toBe(WEATHER_LOOKS.storm.chopFloor);
+    expect(plane.material.uniforms.uFoam.value).toBe(WEATHER_LOOKS.storm.foamFloor);
     expect(plane.material.uniforms.uStorm.value).toBe(WEATHER_LOOKS.storm.strength);
     expect(columns.material.transparent).toBe(false);
     expect(columns.material.opacity).toBe(1);
@@ -444,6 +465,98 @@ describe('voxel water runtime contracts', () => {
       uniforms: {} as Record<string, { value: unknown }>,
     } as never, {} as never)).toThrow(/role-emissive injection markers/);
     runtime.dispose();
+  });
+
+  it('resolves distinct weather-only endpoints without changing non-weather controls', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<BufferGeometry, ShaderMaterial> => (
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial
+      ),
+    );
+    const rain = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> => (
+        object.name === 'voxel-water-rain'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial
+      ),
+    );
+    const clouds = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshBasicMaterial> => (
+        object.name === 'voxel-water-clouds'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshBasicMaterial
+      ),
+    );
+    const sky = findObject(
+      objects,
+      (object): object is Mesh<BufferGeometry, ShaderMaterial> => (
+        object instanceof Mesh
+        && object.material instanceof ShaderMaterial
+        && 'uSunVisibility' in object.material.uniforms
+      ),
+    );
+    const endpoints = (['clear', 'rain', 'storm'] as const).map((weather) => {
+      runtime.updateSettings({ ...voxelWaterDefaults, weather });
+      return {
+        weather,
+        rain: plane.material.uniforms.uRain.value as number,
+        waveHeight: plane.material.uniforms.uWaveHeight.value as number,
+        chop: plane.material.uniforms.uChop.value as number,
+        foam: plane.material.uniforms.uFoam.value as number,
+        ripple: plane.material.uniforms.uWeatherRippleStrength.value as number,
+        sun: sky.material.uniforms.uSunVisibility.value as number,
+        cloudBase: clouds.position.y,
+        cloudHeightScale: clouds.scale.y,
+        rainVisible: rain.visible,
+      };
+    });
+
+    expect(endpoints.map(({ rainVisible }) => rainVisible)).toEqual([false, true, true]);
+    expect(endpoints[0].rain).toBeLessThan(0.04);
+    expect(endpoints[1].rain).toBeGreaterThan(0.4);
+    expect(endpoints[2].rain).toBeGreaterThan(endpoints[1].rain);
+    expect(endpoints.map(({ waveHeight }) => waveHeight)).toEqual([
+      voxelWaterDefaults.waveHeight,
+      WEATHER_LOOKS.rain.waveHeightFloor,
+      WEATHER_LOOKS.storm.waveHeightFloor,
+    ]);
+    expect(endpoints.map(({ chop }) => chop)).toEqual([
+      voxelWaterDefaults.chop,
+      WEATHER_LOOKS.rain.chopFloor,
+      WEATHER_LOOKS.storm.chopFloor,
+    ]);
+    expect(endpoints.map(({ foam }) => foam)).toEqual([
+      voxelWaterDefaults.foam,
+      WEATHER_LOOKS.rain.foamFloor,
+      WEATHER_LOOKS.storm.foamFloor,
+    ]);
+    expect(endpoints.map(({ ripple }) => ripple)).toEqual([
+      WEATHER_LOOKS.clear.rippleStrength,
+      WEATHER_LOOKS.rain.rippleStrength,
+      WEATHER_LOOKS.storm.rippleStrength,
+    ]);
+    expect(endpoints.map(({ sun }) => sun)).toEqual([1, 0.46, 0]);
+    expect(endpoints.map(({ cloudBase }) => cloudBase)).toEqual([5, 4.25, 3.8]);
+    expect(endpoints.map(({ cloudHeightScale }) => cloudHeightScale)).toEqual([0.58, 0.9, 1.18]);
+    expect(clouds.count).toBe(60);
+    expect(clouds.material.transparent).toBe(false);
+    expect(clouds.instanceColor).not.toBeNull();
+    runtime.dispose();
+  });
+
+  it('uses local rain-impact rings and an explicit weather sun endpoint', () => {
+    expect(voxelWaterFragmentShader).toContain('float rainRipple(vec2 uv, vec2 center, float phaseOffset)');
+    expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(4);
+    expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 0.13');
+    expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
+    expect(skyFragmentShader).toContain('sunDisc * uSunVisibility');
+    expect(skyFragmentShader).not.toContain('1.0 - uStorm * 0.78');
   });
 
   it('builds a deterministic seamless field with landmark-covered columns removed', () => {
@@ -674,7 +787,9 @@ describe('voxel water runtime contracts', () => {
     expect(spray.material.uniforms.uResolution.value.y).toBeCloseTo(495);
     expect(rain.material.vertexShader).toContain('1.25 + aScale * 0.55');
     expect(rain.material.uniforms.uOpacity.value).toBeCloseTo(0.64);
-    expect(rain.material.uniforms.uLength.value).toBeCloseTo(12 + 0.82 * 9 + 0.77 * 2);
+    const effectiveRain = WEATHER_LOOKS.storm.precipitationBase
+      + nextSettings.rain * WEATHER_LOOKS.storm.precipitationResponse;
+    expect(rain.material.uniforms.uLength.value).toBeCloseTo(12 + effectiveRain * 9 + 0.77 * 2);
     expect(rain.material.uniforms.uWind.value).toBe(nextSettings.wind);
     expect(spray.material.uniforms.uOpacity.value).toBeCloseTo(0.36);
     expect(spray.material.uniforms.uLength.value).toBeCloseTo(3.4 + 0.91 * 3.6);
@@ -959,7 +1074,7 @@ describe('voxel water runtime contracts', () => {
     for (const disposeSpy of spies) expect(disposeSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('disposes every unique landmark and shared cloud resource exactly once', () => {
+  it('disposes every unique landmark and instanced cloud resource exactly once', () => {
     const { objects, runtime } = createRuntimeHarness();
     const landmark = findObject(
       objects,
@@ -968,20 +1083,21 @@ describe('voxel water runtime contracts', () => {
         && object instanceof InstancedMesh
         && object.material instanceof MeshStandardMaterial,
     );
-    const cloudMaterials = objects
-      .filter((object): object is Mesh<BufferGeometry, MeshBasicMaterial> => (
-        object instanceof Mesh && object.material instanceof MeshBasicMaterial
-      ))
-      .map(({ material }) => material);
-    const sharedCloudMaterial = cloudMaterials.find((material, index) => (
-      cloudMaterials.indexOf(material) !== index
-    ));
-    if (!sharedCloudMaterial) throw new Error('Expected a shared voxel-water cloud material.');
+    const clouds = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, MeshBasicMaterial> => (
+        object.name === 'voxel-water-clouds'
+        && object instanceof InstancedMesh
+        && object.material instanceof MeshBasicMaterial
+      ),
+    );
 
     const spies = [
       vi.spyOn(landmark.geometry, 'dispose'),
       vi.spyOn(landmark.material, 'dispose'),
-      vi.spyOn(sharedCloudMaterial, 'dispose'),
+      vi.spyOn(clouds, 'dispose'),
+      vi.spyOn(clouds.geometry, 'dispose'),
+      vi.spyOn(clouds.material, 'dispose'),
     ];
     runtime.dispose();
 

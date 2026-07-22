@@ -27,6 +27,11 @@ if (!['no-preference', 'reduce'].includes(reducedMotion)) {
     `QA_REDUCED_MOTION must be "no-preference" or "reduce"; received "${reducedMotion}".`,
   );
 }
+if (!['default', 'calm', 'rain', 'storm', 'weather-storm'].includes(preset)) {
+  throw new Error(
+    `QA_PRESET must be default, calm, rain, storm, or weather-storm; received "${preset}".`,
+  );
+}
 
 await mkdir(outputDir, { recursive: true });
 
@@ -52,6 +57,8 @@ await page.locator('.canvas-loader').waitFor({ state: 'hidden', timeout: 10000 }
 await page.locator('.language-select select').selectOption(locale);
 if (preset === 'storm') {
   await page.getByTestId('voxel-water-preset-storm').click();
+} else if (preset === 'weather-storm') {
+  await page.getByTestId('voxel-water-weather-storm').click();
 } else if (preset === 'calm') {
   await page.getByTestId('voxel-water-preset-calm').click();
 } else if (preset === 'rain') {
@@ -103,7 +110,7 @@ const stormForegroundSeam = measurePersistentVerticalSeam(frames, {
   xStartRatio: 0.75,
   xEndRatio: 0.95,
 });
-const verticalSeamGate = preset === 'storm'
+const verticalSeamGate = preset === 'storm' || preset === 'weather-storm'
   ? { ...stormForegroundSeam, maxAllowed: MAX_STORM_FOREGROUND_SEAM_SCORE, scan: 'storm-foreground' }
   : { ...verticalSeam, maxAllowed: MAX_VERTICAL_SEAM_SCORE, scan: 'full-water' };
 

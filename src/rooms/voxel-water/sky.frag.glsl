@@ -8,6 +8,7 @@ uniform vec3 uWeatherHorizonTint;
 uniform vec3 uWeatherCloudTint;
 uniform vec3 uWeatherLightningTint;
 uniform float uLightningPulse;
+uniform float uSunVisibility;
 uniform vec3 uSunDirection;
 
 varying vec3 vWorldDirection;
@@ -73,9 +74,8 @@ void main() {
   float sunAngle = acos(clamp(dot(direction, normalize(uSunDirection)), -1.0, 1.0));
   float sunGlow = 1.0 - smoothstep(0.04, 0.085, sunAngle);
   float sunDisc = 1.0 - smoothstep(0.032, 0.04, sunAngle);
-  float sunVisibility = 1.0 - uStorm * 0.78;
-  color += sunGlow * sunVisibility * vec3(1.0, 0.687, 0.328) * (0.018 + warmMix * 0.012);
-  color = mix(color, vec3(1.0, 0.687, 0.328), sunDisc * sunVisibility);
+  color += sunGlow * uSunVisibility * vec3(1.0, 0.687, 0.328) * (0.018 + warmMix * 0.012);
+  color = mix(color, vec3(1.0, 0.687, 0.328), sunDisc * uSunVisibility);
   float clearMorningLift = (1.0 - smoothstep(0.28, 0.48, uSkyTime)) * (1.0 - uStorm);
   color += clearMorningLift * vec3(0.12, 0.11, 0.07);
   color += uLightningPulse * uWeatherLightningTint * (0.18 + cloudBand * 0.46);

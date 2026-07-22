@@ -17,6 +17,7 @@ uniform vec3 uWeatherRimColor;
 uniform vec3 uWeatherLightningTint;
 uniform float uWeatherFogDensity;
 uniform float uRainCurtain;
+uniform float uWeatherRippleStrength;
 uniform float uLightningPulse;
 uniform float uVoxelSpacing;
 uniform float uWaterGridCellMultiple;
@@ -67,6 +68,17 @@ vec2 voxelGridPosition(vec2 oceanPosition) {
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float rainRipple(vec2 uv, vec2 center, float phaseOffset) {
+  float phase = fract(uTime * (0.34 + uRain * 0.18) + phaseOffset);
+  vec2 delta = (uv - center) * vec2(1.0, 1.36);
+  float distanceFromImpact = length(delta);
+  float radius = mix(0.004, 0.028, phase);
+  float ringWidth = max(0.0018, fwidth(distanceFromImpact) * 1.2);
+  float ring = 1.0 - smoothstep(ringWidth, ringWidth * 2.4, abs(distanceFromImpact - radius));
+  float lifetime = smoothstep(0.0, 0.1, phase) * (1.0 - smoothstep(0.68, 1.0, phase));
+  return ring * lifetime;
 }
 
 float noise(vec2 p) {
@@ -188,14 +200,17 @@ void main() {
     float rainPulse = 1.0 - smoothstep(0.0, 0.24, abs(rainPhase - 0.12));
     float rainChance = smoothstep(0.82 - uRain * 0.12, 0.96 - uRain * 0.04, rainCell);
     float rainSpark = rainPulse * rainChance * uRain;
-    float ripple = smoothstep(0.46, 0.5, abs(fract(length(vUv * 18.0 + rainCell) - uTime * 1.8) - 0.5));
+    float ripple = rainRipple(vUv, vec2(0.18, 0.36), 0.08);
+    ripple += rainRipple(vUv, vec2(0.39, 0.58), 0.37);
+    ripple += rainRipple(vUv, vec2(0.63, 0.43), 0.61);
+    ripple += rainRipple(vUv, vec2(0.82, 0.66), 0.83);
     rainCurtain = smoothstep(
       0.5,
       0.86,
       noise(vWorldPosition.xz * 0.055 + vec2(-uTime * 0.08, uTime * 0.035))
     ) * uRainCurtain;
     color += rainSpark * vec3(0.28, 0.54, 0.78);
-    color += ripple * uRain * 0.022 * vec3(0.46, 0.78, 0.92);
+    color += ripple * uRain * uWeatherRippleStrength * 0.13 * vec3(0.46, 0.78, 0.92);
     color = mix(color, uWeatherFogColor, rainCurtain * 0.14);
   }
 
