@@ -90,7 +90,9 @@ export type WeatherLook = {
   rainCurtain: number;
   precipitationBase: number;
   precipitationResponse: number;
+  rainStreakLength: number;
   rippleStrength: number;
+  waveHeightScale: number;
   waveHeightFloor: number;
   chopFloor: number;
   foamFloor: number;
@@ -102,8 +104,10 @@ export type WeatherLook = {
   columnBrightness: number;
   columnLightFloor: number;
   cloudContrast: number;
+  cloudCoverage: number;
   cloudBaseHeight: number;
   cloudHeightScale: number;
+  cloudJaggedness: number;
   landmarkEmissive: Color;
   landmarkEmissiveIntensity: number;
   landmarkEmissiveLift: number;
@@ -133,7 +137,9 @@ export const WEATHER_LOOKS = {
     rainCurtain: 0.02,
     precipitationBase: 0,
     precipitationResponse: 0.12,
+    rainStreakLength: 12,
     rippleStrength: 0,
+    waveHeightScale: 0.72,
     waveHeightFloor: 0.1,
     chopFloor: 0,
     foamFloor: 0,
@@ -145,8 +151,10 @@ export const WEATHER_LOOKS = {
     columnBrightness: 0.84,
     columnLightFloor: 0.02,
     cloudContrast: 0.22,
+    cloudCoverage: 0.25,
     cloudBaseHeight: 5,
     cloudHeightScale: 0.58,
+    cloudJaggedness: 0.08,
     landmarkEmissive: new Color(0x050c12),
     landmarkEmissiveIntensity: 0.08,
     landmarkEmissiveLift: 0.55,
@@ -174,10 +182,12 @@ export const WEATHER_LOOKS = {
     rainCurtain: 0.38,
     precipitationBase: 0.42,
     precipitationResponse: 0.38,
+    rainStreakLength: 72,
     rippleStrength: 0.72,
-    waveHeightFloor: 0.52,
-    chopFloor: 0.36,
-    foamFloor: 0.38,
+    waveHeightScale: 1,
+    waveHeightFloor: 0.62,
+    chopFloor: 0.44,
+    foamFloor: 0.42,
     sunVisibility: 0.46,
     lightningIntensity: 0.06,
     ambientBase: 0.44,
@@ -186,8 +196,10 @@ export const WEATHER_LOOKS = {
     columnBrightness: 0.18,
     columnLightFloor: 0.01,
     cloudContrast: 0.68,
-    cloudBaseHeight: 4.25,
+    cloudCoverage: 0.78,
+    cloudBaseHeight: 4,
     cloudHeightScale: 0.9,
+    cloudJaggedness: 0.24,
     landmarkEmissive: new Color(0x050b12),
     landmarkEmissiveIntensity: 0.1,
     landmarkEmissiveLift: 0.75,
@@ -215,10 +227,12 @@ export const WEATHER_LOOKS = {
     rainCurtain: 0.6,
     precipitationBase: 0.68,
     precipitationResponse: 0.32,
+    rainStreakLength: 82,
     rippleStrength: 0.94,
-    waveHeightFloor: 0.86,
-    chopFloor: 0.7,
-    foamFloor: 0.68,
+    waveHeightScale: 1,
+    waveHeightFloor: 0.95,
+    chopFloor: 0.78,
+    foamFloor: 0.72,
     sunVisibility: 0,
     lightningIntensity: 0.42,
     ambientBase: 0.18,
@@ -227,8 +241,10 @@ export const WEATHER_LOOKS = {
     columnBrightness: 0.08,
     columnLightFloor: 0,
     cloudContrast: 1,
+    cloudCoverage: 0.82,
     cloudBaseHeight: 3.8,
-    cloudHeightScale: 1.18,
+    cloudHeightScale: 1.16,
+    cloudJaggedness: 0.86,
     landmarkEmissive: new Color(0x040a10),
     landmarkEmissiveIntensity: 0.12,
     landmarkEmissiveLift: 1,
@@ -246,7 +262,10 @@ function resolveWeatherSettings(
   return {
     ...settings,
     rain: Math.min(1, weatherLook.precipitationBase + settings.rain * weatherLook.precipitationResponse),
-    waveHeight: Math.max(settings.waveHeight, weatherLook.waveHeightFloor),
+    waveHeight: Math.max(
+      settings.waveHeight * weatherLook.waveHeightScale,
+      weatherLook.waveHeightFloor,
+    ),
     chop: Math.max(settings.chop, weatherLook.chopFloor),
     foam: Math.max(settings.foam, weatherLook.foamFloor),
   };
@@ -697,7 +716,7 @@ export function createRoomRuntime(
     uniforms: {
       uTime: waveUniforms.uTime,
       uResolution: rainResolutionUniform,
-      uColor: { value: new Color(0xa8ddf5) },
+      uColor: { value: new Color(0xe5f8ff) },
       uOpacity: { value: 0.36 },
       uLength: { value: 18 },
       uWind: { value: settings.wind },
@@ -790,6 +809,12 @@ export function createRoomRuntime(
   const cloudGeometry = new BoxGeometry(1, 1, 1);
   const cloudDeck = new InstancedMesh(cloudGeometry, cloudMaterial, CLOUD_VOXEL_COUNT);
   const cloudVoxel = new Object3D();
+  const cloudVoxels: Array<{
+    position: [number, number, number];
+    rotationY: number;
+    scale: [number, number, number];
+    jaggedOffset: number;
+  }> = [];
   const cloudShade = new Color();
   const cloudBlockOffsets = [
     [-0.95, 0.02, -0.04, 1.28, 0.46, 0.62, 0.82],
@@ -798,7 +823,6 @@ export function createRoomRuntime(
     [0.18, 0.42, -0.03, 0.92, 0.48, 0.52, 1.04],
     [-0.22, -0.38, 0.06, 1.18, 0.36, 0.5, 0.48],
   ] as const;
-  let cloudIndex = 0;
   for (let cluster = 0; cluster < CLOUD_CLUSTER_COUNT; cluster += 1) {
     const baseX = (random() - 0.5) * 22;
     const baseZ = -5.2 - random() * 8.6;
@@ -806,28 +830,50 @@ export function createRoomRuntime(
     const clusterScale = 0.78 + random() * 0.52;
     const cosine = Math.cos(yaw);
     const sine = Math.sin(yaw);
-    for (const [offsetX, offsetY, offsetZ, scaleX, scaleY, scaleZ, shade] of cloudBlockOffsets) {
+    for (let block = 0; block < cloudBlockOffsets.length; block += 1) {
+      const [offsetX, offsetY, offsetZ, scaleX, scaleY, scaleZ, shade]
+        = cloudBlockOffsets[block];
       const localX = offsetX * clusterScale;
       const localZ = offsetZ * clusterScale;
-      cloudVoxel.position.set(
+      const position: [number, number, number] = [
         baseX + localX * cosine - localZ * sine,
         offsetY * (0.84 + random() * 0.32),
         baseZ + localX * sine + localZ * cosine,
-      );
-      cloudVoxel.rotation.set(0, yaw + (random() - 0.5) * 0.08, 0);
-      cloudVoxel.scale.set(
+      ];
+      const rotationY = yaw + (random() - 0.5) * 0.08;
+      const scale: [number, number, number] = [
         scaleX * clusterScale * (0.88 + random() * 0.24),
         scaleY * (0.86 + random() * 0.28),
         scaleZ * clusterScale * (0.88 + random() * 0.24),
-      );
-      cloudVoxel.updateMatrix();
-      cloudDeck.setMatrixAt(cloudIndex, cloudVoxel.matrix);
+      ];
+      const clusterStep = ((cluster * 5) % 7 - 3) * 0.24;
+      const blockStep = [-0.05, 0.12, -0.18, 0.22, -0.4][block];
+      cloudVoxels.push({
+        position,
+        rotationY,
+        scale,
+        jaggedOffset: clusterStep + blockStep,
+      });
       cloudShade.setRGB(shade, shade, shade);
-      cloudDeck.setColorAt(cloudIndex, cloudShade);
-      cloudIndex += 1;
+      cloudDeck.setColorAt(cloudVoxels.length - 1, cloudShade);
     }
   }
-  cloudDeck.instanceMatrix.needsUpdate = true;
+  const applyCloudShape = (weatherLook: WeatherLook) => {
+    for (let index = 0; index < cloudVoxels.length; index += 1) {
+      const cloud = cloudVoxels[index];
+      cloudVoxel.position.set(
+        cloud.position[0],
+        cloud.position[1] + cloud.jaggedOffset * weatherLook.cloudJaggedness,
+        cloud.position[2],
+      );
+      cloudVoxel.rotation.set(0, cloud.rotationY, 0);
+      cloudVoxel.scale.set(...cloud.scale);
+      cloudVoxel.updateMatrix();
+      cloudDeck.setMatrixAt(index, cloudVoxel.matrix);
+    }
+    cloudDeck.instanceMatrix.needsUpdate = true;
+  };
+  applyCloudShape(initialWeatherLook);
   if (cloudDeck.instanceColor) cloudDeck.instanceColor.needsUpdate = true;
   cloudDeck.position.y = initialWeatherLook.cloudBaseHeight;
   cloudDeck.scale.y = initialWeatherLook.cloudHeightScale;
@@ -872,9 +918,12 @@ export function createRoomRuntime(
     skyMaterial.uniforms.uSunVisibility.value = weatherLook.sunVisibility;
     columnWeatherStrengthUniform.value = weatherLook.strength;
 
-    rainMaterial.uniforms.uOpacity.value = Math.min(0.64, effectiveSettings.rain * 0.78 + weatherLook.strength * 0.12);
+    rainMaterial.uniforms.uOpacity.value = Math.min(0.78, effectiveSettings.rain * 1.5 + weatherLook.strength * 0.18);
     rain.visible = effectiveSettings.rain > 0.04;
-    rainMaterial.uniforms.uLength.value = 12 + effectiveSettings.rain * 9 + settings.surfaceDetail * 2;
+    rainMaterial.uniforms.uLength.value = Math.max(
+      weatherLook.rainStreakLength,
+      12 + effectiveSettings.rain * 9 + settings.surfaceDetail * 2,
+    );
     rainMaterial.uniforms.uWind.value = settings.wind;
     spray.visible = effectiveSettings.foam > 0.52 || settings.weather === 'storm';
     sprayMaterial.uniforms.uOpacity.value = Math.min(0.36, effectiveSettings.foam * 0.24 + effectiveSettings.rain * 0.12 + weatherLook.strength * 0.16);
@@ -889,6 +938,8 @@ export function createRoomRuntime(
     }
     cloudDeck.position.y = weatherLook.cloudBaseHeight;
     cloudDeck.scale.y = weatherLook.cloudHeightScale;
+    cloudDeck.count = Math.round(CLOUD_VOXEL_COUNT * weatherLook.cloudCoverage);
+    applyCloudShape(weatherLook);
     cloudMaterial.color.copy(cloudDeckColor
       .copy(weatherLook.backgroundColor)
       .lerp(weatherLook.cloudColor, weatherLook.cloudContrast));

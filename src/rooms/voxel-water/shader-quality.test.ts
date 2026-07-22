@@ -105,7 +105,9 @@ describe('voxel water runtime contracts', () => {
       expect(look.rainCurtain).toBeLessThanOrEqual(1);
       expect(look.precipitationBase).toBeGreaterThanOrEqual(0);
       expect(look.precipitationResponse).toBeGreaterThanOrEqual(0);
+      expect(look.rainStreakLength).toBeGreaterThan(0);
       expect(look.rippleStrength).toBeGreaterThanOrEqual(0);
+      expect(look.waveHeightScale).toBeGreaterThan(0);
       expect(look.waveHeightFloor).toBeGreaterThanOrEqual(voxelWaterDomains.waveHeight.min);
       expect(look.chopFloor).toBeGreaterThanOrEqual(voxelWaterDomains.chop.min);
       expect(look.foamFloor).toBeGreaterThanOrEqual(voxelWaterDomains.foam.min);
@@ -113,8 +115,11 @@ describe('voxel water runtime contracts', () => {
       expect(look.sunVisibility).toBeLessThanOrEqual(1);
       expect(look.cloudContrast).toBeGreaterThanOrEqual(0);
       expect(look.cloudContrast).toBeLessThanOrEqual(1);
+      expect(look.cloudCoverage).toBeGreaterThan(0);
+      expect(look.cloudCoverage).toBeLessThanOrEqual(1);
       expect(look.cloudBaseHeight).toBeGreaterThan(0);
       expect(look.cloudHeightScale).toBeGreaterThan(0);
+      expect(look.cloudJaggedness).toBeGreaterThanOrEqual(0);
       expect(look).not.toHaveProperty('columnOpacity');
       expect(look.waterTint).toBeInstanceOf(Color);
       expect(look.fogColor).toBeInstanceOf(Color);
@@ -513,6 +518,7 @@ describe('voxel water runtime contracts', () => {
         sun: sky.material.uniforms.uSunVisibility.value as number,
         cloudBase: clouds.position.y,
         cloudHeightScale: clouds.scale.y,
+        cloudCount: clouds.count,
         rainVisible: rain.visible,
       };
     });
@@ -522,7 +528,7 @@ describe('voxel water runtime contracts', () => {
     expect(endpoints[1].rain).toBeGreaterThan(0.4);
     expect(endpoints[2].rain).toBeGreaterThan(endpoints[1].rain);
     expect(endpoints.map(({ waveHeight }) => waveHeight)).toEqual([
-      voxelWaterDefaults.waveHeight,
+      voxelWaterDefaults.waveHeight * WEATHER_LOOKS.clear.waveHeightScale,
       WEATHER_LOOKS.rain.waveHeightFloor,
       WEATHER_LOOKS.storm.waveHeightFloor,
     ]);
@@ -542,9 +548,9 @@ describe('voxel water runtime contracts', () => {
       WEATHER_LOOKS.storm.rippleStrength,
     ]);
     expect(endpoints.map(({ sun }) => sun)).toEqual([1, 0.46, 0]);
-    expect(endpoints.map(({ cloudBase }) => cloudBase)).toEqual([5, 4.25, 3.8]);
-    expect(endpoints.map(({ cloudHeightScale }) => cloudHeightScale)).toEqual([0.58, 0.9, 1.18]);
-    expect(clouds.count).toBe(60);
+    expect(endpoints.map(({ cloudBase }) => cloudBase)).toEqual([5, 4, 3.8]);
+    expect(endpoints.map(({ cloudHeightScale }) => cloudHeightScale)).toEqual([0.58, 0.9, 1.16]);
+    expect(endpoints.map(({ cloudCount }) => cloudCount)).toEqual([15, 47, 49]);
     expect(clouds.material.transparent).toBe(false);
     expect(clouds.instanceColor).not.toBeNull();
     runtime.dispose();
@@ -553,7 +559,7 @@ describe('voxel water runtime contracts', () => {
   it('uses local rain-impact rings and an explicit weather sun endpoint', () => {
     expect(voxelWaterFragmentShader).toContain('float rainRipple(vec2 uv, vec2 center, float phaseOffset)');
     expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(4);
-    expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 0.13');
+    expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 1.05');
     expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
     expect(skyFragmentShader).toContain('sunDisc * uSunVisibility');
     expect(skyFragmentShader).not.toContain('1.0 - uStorm * 0.78');
@@ -785,11 +791,9 @@ describe('voxel water runtime contracts', () => {
     expect(rain.material.uniforms.uResolution.value.y).toBeCloseTo(495);
     expect(spray.material.uniforms.uResolution.value.x).toBeCloseTo(880);
     expect(spray.material.uniforms.uResolution.value.y).toBeCloseTo(495);
-    expect(rain.material.vertexShader).toContain('1.25 + aScale * 0.55');
-    expect(rain.material.uniforms.uOpacity.value).toBeCloseTo(0.64);
-    const effectiveRain = WEATHER_LOOKS.storm.precipitationBase
-      + nextSettings.rain * WEATHER_LOOKS.storm.precipitationResponse;
-    expect(rain.material.uniforms.uLength.value).toBeCloseTo(12 + effectiveRain * 9 + 0.77 * 2);
+    expect(rain.material.vertexShader).toContain('3.6 + aScale');
+    expect(rain.material.uniforms.uOpacity.value).toBeCloseTo(0.78);
+    expect(rain.material.uniforms.uLength.value).toBe(WEATHER_LOOKS.storm.rainStreakLength);
     expect(rain.material.uniforms.uWind.value).toBe(nextSettings.wind);
     expect(spray.material.uniforms.uOpacity.value).toBeCloseTo(0.36);
     expect(spray.material.uniforms.uLength.value).toBeCloseTo(3.4 + 0.91 * 3.6);

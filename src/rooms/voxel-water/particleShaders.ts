@@ -24,7 +24,7 @@ void main() {
   vec4 worldCenter = modelMatrix * instanceMatrix * vec4(localCenter, 1.0);
   vec4 mvPosition = viewMatrix * worldCenter;
   vec4 clipPosition = projectionMatrix * mvPosition;
-  float internalPixelWidth = (1.25 + aScale * 0.55) * lifeScale;
+  float internalPixelWidth = (3.6 + aScale) * lifeScale;
   float internalPixelLength = uLength * mix(0.72, 1.18, aScale) * lifeScale;
   vec2 streakOffset = vec2(
     position.x * internalPixelWidth + position.y * uWind * 0.9,
