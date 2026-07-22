@@ -18,7 +18,7 @@ uniform vec3 uWeatherLightningTint;
 uniform float uWeatherFogDensity;
 uniform float uRainCurtain;
 uniform float uWeatherRippleStrength;
-uniform vec2 uRainRippleStates[5];
+uniform vec2 uRainRippleStates[4];
 uniform float uLightningPulse;
 uniform float uVoxelSpacing;
 uniform float uWaterGridCellMultiple;
@@ -180,8 +180,12 @@ void main() {
   }
   grid = max(grid * gridDistanceFade, voxelSurfaceGrid);
   float stormSurfaceContour = 0.0;
+  float stormSurfaceNoise = 0.0;
   if (uStorm > 0.02) {
-    float stormContourPhase = vWave * (uToonSteps + 2.0) + noise(vWorldPosition.xz * 0.18) * 0.34;
+    stormSurfaceNoise = noise(
+      vOceanXZ * 0.19 + vec2(uTime * 0.025, -uTime * 0.018)
+    );
+    float stormContourPhase = vWave * (uToonSteps + 2.0) + stormSurfaceNoise * 0.34;
     float stormContourDistance = min(fract(stormContourPhase), 1.0 - fract(stormContourPhase));
     stormSurfaceContour = 1.0 - smoothstep(0.035, 0.14 + fwidth(stormContourPhase), stormContourDistance);
     stormSurfaceContour *= stormToonContrast * (1.0 - smoothstep(24.0, 72.0, viewDistance));
@@ -201,7 +205,6 @@ void main() {
     ripple += rainRipple(vUv, vec2(0.39, 0.58), uRainRippleStates[1]);
     ripple += rainRipple(vUv, vec2(0.63, 0.43), uRainRippleStates[2]);
     ripple += rainRipple(vUv, vec2(0.82, 0.66), uRainRippleStates[3]);
-    ripple += rainRipple(vUv, vec2(0.34, 0.72), uRainRippleStates[4]);
     rainCurtain = smoothstep(
       0.5,
       0.86,
@@ -428,7 +431,7 @@ void main() {
   foamMask *= 1.0 - nearClearFoamSuppression;
   foamMask *= 1.0 - foregroundStormWindow * 0.9;
   float stormWhitecapPatch = smoothstep(0.03, 0.16, toonEdgeAccent + vSlope * 0.35)
-    * smoothstep(0.6, 0.72, noise(vOceanXZ * 0.19 + vec2(uTime * 0.025, -uTime * 0.018)))
+    * smoothstep(0.6, 0.72, stormSurfaceNoise)
     * smoothstep(0.42, 0.64, uFoam)
     * stormValuePhase;
   foamMask = max(foamMask, stormWhitecapPatch);
