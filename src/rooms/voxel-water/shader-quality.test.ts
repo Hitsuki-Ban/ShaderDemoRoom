@@ -253,7 +253,7 @@ describe('voxel water runtime contracts', () => {
   });
 
   it('renders one feathered three-dimensional sun disc from the shared direction', () => {
-    expect(skyFragmentShader).toContain('dot(direction, normalize(uSunDirection))');
+    expect(skyFragmentShader).toContain('dot(direction, uSunDirection)');
     expect(skyFragmentShader).toContain('smoothstep(0.032, 0.04, sunAngle)');
     expect(skyFragmentShader).not.toContain('uSunDirection.xz');
   });
@@ -562,10 +562,12 @@ describe('voxel water runtime contracts', () => {
   it('uses local rain-impact rings and an explicit weather sun endpoint', () => {
     expect(voxelWaterFragmentShader).toContain('float rainRipple(vec2 uv, vec2 center, float phaseOffset)');
     expect(voxelWaterFragmentShader.match(/rainRipple\(vUv, vec2\(/g)).toHaveLength(5);
-    expect(voxelWaterFragmentShader).toContain('float distanceSquared = dot(delta, delta);');
-    expect(voxelWaterFragmentShader).not.toContain('float distanceFromImpact = length(delta);');
     expect(voxelWaterFragmentShader).toContain('uRain * uWeatherRippleStrength * 1.8');
     expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
+    expect(skyFragmentShader).toContain('if (uSunVisibility > 0.0)');
+    expect(skyFragmentShader).not.toContain('normalize(uSunDirection)');
+    expect(voxelWaterFragmentShader).not.toContain('normalize(uSunDirection)');
+    expect(voxelWaterFragmentShader).toContain('if (foamWeatherPhase < 1.0)');
     expect(skyFragmentShader).toContain('sunDisc * uSunVisibility');
     expect(skyFragmentShader).not.toContain('1.0 - uStorm * 0.78');
   });

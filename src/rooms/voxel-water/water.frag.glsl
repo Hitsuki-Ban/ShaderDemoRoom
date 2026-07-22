@@ -73,14 +73,10 @@ float hash(vec2 p) {
 float rainRipple(vec2 uv, vec2 center, float phaseOffset) {
   float phase = fract(uTime * (0.34 + uRain * 0.18) + phaseOffset);
   vec2 delta = (uv - center) * vec2(1.0, 1.36);
-  float distanceSquared = dot(delta, delta);
+  float distanceFromImpact = length(delta);
   float radius = mix(0.006, 0.05, phase);
-  float ringWidthSquared = max(0.0044 * radius, fwidth(distanceSquared) * 1.25);
-  float ring = 1.0 - smoothstep(
-    ringWidthSquared,
-    ringWidthSquared * 2.4,
-    abs(distanceSquared - radius * radius)
-  );
+  float ringWidth = max(0.0022, fwidth(distanceFromImpact) * 1.25);
+  float ring = 1.0 - smoothstep(ringWidth, ringWidth * 2.4, abs(distanceFromImpact - radius));
   float lifetime = smoothstep(0.0, 0.1, phase) * (1.0 - smoothstep(0.68, 1.0, phase));
   return ring * lifetime;
 }
@@ -243,7 +239,7 @@ void main() {
     0.0,
     normalRipple.y * 0.07 * normalDetailFade
   ));
-  vec3 lightDir = normalize(uSunDirection);
+  vec3 lightDir = uSunDirection;
   float fresnel = pow(1.0 - clamp(dot(normal, viewDir), 0.0, 1.0), 5.0);
   float specular = pow(max(dot(reflect(-lightDir, normal), viewDir), 0.0), mix(18.0, 62.0, uClarity));
   float sunwardSlope = smoothstep(0.18, 0.82, dot(normal, lightDir) * 0.5 + 0.5);
@@ -366,12 +362,14 @@ void main() {
   float clearFoamDetail = smoothstep(0.03, 0.12, crestFoam)
     * smoothstep(0.3, 0.65, vRawWave);
   foamMask *= mix(clearFoamDetail, 1.0, smoothstep(0.0, 0.48, uStorm));
-  float clearFoamPatch = mix(
-    0.0,
-    0.3,
-    smoothstep(0.35, 0.6, noise(vOceanXZ * 0.16 + vec2(2.3, -1.7)))
-  );
-  foamMask *= mix(clearFoamPatch, 1.0, max(foamWeatherPhase, clearMorningFoamLift));
+  if (foamWeatherPhase < 1.0) {
+    float clearFoamPatch = mix(
+      0.0,
+      0.3,
+      smoothstep(0.35, 0.6, noise(vOceanXZ * 0.16 + vec2(2.3, -1.7)))
+    );
+    foamMask *= mix(clearFoamPatch, 1.0, max(foamWeatherPhase, clearMorningFoamLift));
+  }
   float clearMorningFoamPatch = smoothstep(
     0.55,
     0.72,
