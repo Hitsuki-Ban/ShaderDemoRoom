@@ -290,59 +290,65 @@ export function regionMetrics(frame, sampleScale) {
 export const MAX_VERTICAL_SEAM_SCORE = 1.5;
 export const MAX_STORM_FOREGROUND_SEAM_SCORE = 1.0;
 
-export function measureVerticalSeam(frame, scan = {
+const DEFAULT_VERTICAL_SEAM_SCAN = Object.freeze({
   yStartRatio: 0.28,
   yEndRatio: 0.94,
   xStartRatio: 0.08,
   xEndRatio: 0.92,
-}) {
+});
+
+function verticalSeamBounds(frame, scan) {
   const yStart = Math.floor(frame.height * scan.yStartRatio);
   const yEnd = Math.floor(frame.height * scan.yEndRatio);
   const xStart = Math.floor(frame.width * scan.xStartRatio);
   const xEnd = Math.floor(frame.width * scan.xEndRatio);
-  const neighborOffset = 5;
+  return { yStart, yEnd, xStart, xEnd, pathHeight: yEnd - yStart - 1 };
+}
+
+function verticalSeamPathScore(frame, bounds, xTop, slope) {
+  const neighborOffset = 2;
+  const rowScores = [];
+  for (let y = bounds.yStart; y < bounds.yEnd; y += 1) {
+    const x = Math.round(xTop + slope * (y - bounds.yStart));
+    if (x < neighborOffset || x >= frame.width - neighborOffset) continue;
+
+    const centerIndex = (y * frame.width + x) * frame.bytesPerPixel;
+    const leftIndex = (y * frame.width + x - neighborOffset) * frame.bytesPerPixel;
+    const rightIndex = (y * frame.width + x + neighborOffset) * frame.bytesPerPixel;
+    let rowScore = 0;
+    for (let channel = 0; channel < 3; channel += 1) {
+      const left = frame.pixels[leftIndex + channel];
+      const right = frame.pixels[rightIndex + channel];
+      const center = frame.pixels[centerIndex + channel];
+      rowScore += Math.min(Math.abs(center - left), Math.abs(center - right)) / 3;
+    }
+    rowScores.push(rowScore);
+  }
+  if (rowScores.length === 0) return -Infinity;
+  rowScores.sort((left, right) => left - right);
+  return rowScores[Math.floor((rowScores.length - 1) * 0.4)];
+}
+
+function median(values) {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+export function measureVerticalSeam(frame, scan = DEFAULT_VERTICAL_SEAM_SCAN) {
+  const bounds = verticalSeamBounds(frame, scan);
   let bestScore = -Infinity;
-  let bestXTop = xStart;
+  let bestXTop = bounds.xStart;
   let bestSlope = 0;
 
   for (let slopeStep = -15; slopeStep <= 0; slopeStep += 1) {
     const slope = slopeStep / 100;
-    const pathHeight = yEnd - yStart - 1;
-    for (let xTop = xStart; xTop < xEnd; xTop += 1) {
-      const xBottom = Math.round(xTop + slope * pathHeight);
-      if (xBottom < xStart || xBottom >= xEnd) {
-        continue;
-      }
-      const rowScores = [];
-
-      for (let y = yStart; y < yEnd; y += 1) {
-        const x = Math.round(xTop + slope * (y - yStart));
-        if (x < neighborOffset || x >= frame.width - neighborOffset) {
-          continue;
-        }
-
-        const centerIndex = (y * frame.width + x) * frame.bytesPerPixel;
-        const leftIndex = (y * frame.width + x - neighborOffset) * frame.bytesPerPixel;
-        const rightIndex = (y * frame.width + x + neighborOffset) * frame.bytesPerPixel;
-        let rowScore = 0;
-        for (let channel = 0; channel < 3; channel += 1) {
-          const left = frame.pixels[leftIndex + channel];
-          const right = frame.pixels[rightIndex + channel];
-          const center = frame.pixels[centerIndex + channel];
-          rowScore += Math.min(
-            Math.abs(center - left),
-            Math.abs(center - right),
-          ) / 3;
-        }
-        rowScores.push(rowScore);
-      }
-
-      if (rowScores.length === 0) {
-        continue;
-      }
-      rowScores.sort((left, right) => left - right);
-      const continuityIndex = Math.floor((rowScores.length - 1) * 0.4);
-      const score = rowScores[continuityIndex];
+    for (let xTop = bounds.xStart; xTop < bounds.xEnd; xTop += 1) {
+      const xBottom = Math.round(xTop + slope * bounds.pathHeight);
+      if (xBottom < bounds.xStart || xBottom >= bounds.xEnd) continue;
+      const score = verticalSeamPathScore(frame, bounds, xTop, slope);
       if (score > bestScore) {
         bestScore = score;
         bestXTop = xTop;
@@ -351,41 +357,63 @@ export function measureVerticalSeam(frame, scan = {
     }
   }
 
-  const pathHeight = yEnd - yStart - 1;
   return {
     score: bestScore,
     xTop: bestXTop,
-    yTop: yStart,
-    xBottom: Math.round(bestXTop + bestSlope * pathHeight),
-    yBottom: yEnd - 1,
+    yTop: bounds.yStart,
+    xBottom: Math.round(bestXTop + bestSlope * bounds.pathHeight),
+    yBottom: bounds.yEnd - 1,
     slope: bestSlope,
   };
 }
 
-export function measurePersistentVerticalSeam(frames, scan) {
+export function measurePersistentVerticalSeam(frames, scan = DEFAULT_VERTICAL_SEAM_SCAN) {
   if (frames.length === 0) {
     throw new Error('Persistent vertical seam measurement requires at least one frame.');
   }
+  const first = frames[0];
+  if (frames.some((frame) => frame.width !== first.width || frame.height !== first.height)) {
+    throw new Error('Persistent vertical seam frames must have identical dimensions.');
+  }
+  const bounds = verticalSeamBounds(first, scan);
+  const frameMaxScores = Array.from({ length: frames.length }, () => -Infinity);
+  let bestScore = -Infinity;
+  let bestXTop = bounds.xStart;
+  let bestSlope = 0;
+  let bestFrameScores = [];
 
-  const seams = frames.map((frame, frameIndex) => ({
-    ...measureVerticalSeam(frame, scan),
-    frameIndex,
-  }));
-  const sorted = [...seams].sort((left, right) => left.score - right.score);
-  const middle = Math.floor(sorted.length / 2);
-  const persistentScore = sorted.length % 2 === 0
-    ? (sorted[middle - 1].score + sorted[middle].score) / 2
-    : sorted[middle].score;
-  const representative = sorted.reduce((closest, seam) => (
-    Math.abs(seam.score - persistentScore) < Math.abs(closest.score - persistentScore)
-      ? seam
-      : closest
-  ));
+  for (let slopeStep = -15; slopeStep <= 0; slopeStep += 1) {
+    const slope = slopeStep / 100;
+    for (let xTop = bounds.xStart; xTop < bounds.xEnd; xTop += 1) {
+      const xBottom = Math.round(xTop + slope * bounds.pathHeight);
+      if (xBottom < bounds.xStart || xBottom >= bounds.xEnd) continue;
+      const frameScores = frames.map((frame, frameIndex) => {
+        const score = verticalSeamPathScore(frame, bounds, xTop, slope);
+        frameMaxScores[frameIndex] = Math.max(frameMaxScores[frameIndex], score);
+        return score;
+      });
+      const persistentScore = median(frameScores);
+      if (persistentScore > bestScore) {
+        bestScore = persistentScore;
+        bestXTop = xTop;
+        bestSlope = slope;
+        bestFrameScores = frameScores;
+      }
+    }
+  }
+  const frameIndex = bestFrameScores.reduce((closest, score, index) => (
+    Math.abs(score - bestScore) < Math.abs(bestFrameScores[closest] - bestScore) ? index : closest
+  ), 0);
 
   return {
-    ...representative,
-    score: persistentScore,
-    maxScore: sorted.at(-1).score,
-    frameScores: seams.map((seam) => seam.score),
+    score: bestScore,
+    xTop: bestXTop,
+    yTop: bounds.yStart,
+    xBottom: Math.round(bestXTop + bestSlope * bounds.pathHeight),
+    yBottom: bounds.yEnd - 1,
+    slope: bestSlope,
+    frameIndex,
+    maxScore: Math.max(...frameMaxScores),
+    frameScores: bestFrameScores,
   };
 }

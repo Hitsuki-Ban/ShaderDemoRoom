@@ -128,6 +128,17 @@ describe('water QA pixel metrics', () => {
     expect(measureVerticalSeam(makeFrame(width, height, colors)).score).toBe(0);
   });
 
+  it('does not mistake a five-pixel value band for a one-pixel seam', () => {
+    const width = 100;
+    const height = 100;
+    const colors = Array.from({ length: width * height }, () => [80, 120, 140]);
+    for (let y = Math.floor(height * 0.28); y < Math.floor(height * 0.94); y += 1) {
+      for (let x = 48; x <= 52; x += 1) colors[y * width + x] = [10, 20, 30];
+    }
+
+    expect(measureVerticalSeam(makeFrame(width, height, colors)).score).toBe(0);
+  });
+
   it('detects a thin intermediate-color seam laid over a broad object edge', () => {
     const width = 100;
     const height = 100;
@@ -201,5 +212,21 @@ describe('water QA pixel metrics', () => {
     expect(transient.score).toBe(0);
     expect(transient.maxScore).toBeGreaterThan(50);
     expect(persistent.score).toBeGreaterThan(50);
+  });
+
+  it('does not combine different per-frame paths into one persistent seam', () => {
+    const width = 100;
+    const height = 100;
+    const frames = [28, 39, 50, 61, 72].map((seamX) => {
+      const colors = Array.from({ length: width * height }, () => [80, 120, 140]);
+      for (let y = Math.floor(height * 0.28); y < Math.floor(height * 0.94); y += 1) {
+        colors[y * width + seamX] = [10, 20, 30];
+      }
+      return makeFrame(width, height, colors);
+    });
+
+    const seam = measurePersistentVerticalSeam(frames);
+    expect(seam.score).toBe(0);
+    expect(seam.maxScore).toBeGreaterThan(50);
   });
 });

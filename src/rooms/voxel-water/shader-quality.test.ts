@@ -18,6 +18,7 @@ import {
   type Object3D,
 } from 'three';
 import type { RoomRuntimeContext, VoxelWaterSettings } from '../types';
+import skyFragmentShader from './sky.frag.glsl?raw';
 import {
   createRoomRuntime,
   voxelWaterFragmentShader,
@@ -26,6 +27,7 @@ import {
 } from './runtime';
 import { voxelWaterDefaults } from './state';
 import {
+  COLUMN_WAVE_PROGRAM_KEY,
   STORM_GRID_CELL_MULTIPLE,
   VOXEL_FIELD_OFFSET,
   VOXEL_FIELD_YAW,
@@ -145,6 +147,47 @@ describe('voxel water runtime contracts', () => {
     runtime.dispose();
   });
 
+  it('keeps the four-value water roles, peak subsurface, and foam as separate stages', () => {
+    const peakStage = voxelWaterFragmentShader.indexOf('float peakMask =');
+    const valueFoamStage = voxelWaterFragmentShader.indexOf('float valueFoamRidge =');
+    const nearSuppressionStage = voxelWaterFragmentShader.indexOf(
+      'foamMask *= 1.0 - nearClearFoamSuppression;',
+    );
+    const weatherSuppressionStage = voxelWaterFragmentShader.indexOf(
+      'foamMask *= 1.0 - foregroundStormWindow * 0.9;',
+    );
+    const foamStage = voxelWaterFragmentShader.lastIndexOf('color = mix(color, valueFoamColor');
+    const fogStage = voxelWaterFragmentShader.indexOf('vec3 horizonWaterColor =');
+
+    expect(voxelWaterFragmentShader).toContain('float valueBand = quantizeWave(toonColorRamp, 4.0);');
+    expect(voxelWaterFragmentShader).toContain('float sunwardSlope =');
+    expect(voxelWaterFragmentShader).toContain('* mix(1.0, 0.32, distanceConvergence);');
+    expect(voxelWaterFragmentShader).toContain('* smoothstep(0.0, 0.35, uFoam);');
+    expect(voxelWaterFragmentShader).toContain(
+      'vec3 valueFoamColor = mix(foamColor, vec3(2.7, 2.9, 2.2), stormValuePhase);',
+    );
+    expect(peakStage).toBeGreaterThan(0);
+    expect(valueFoamStage).toBeGreaterThan(peakStage);
+    expect(nearSuppressionStage).toBeGreaterThan(valueFoamStage);
+    expect(weatherSuppressionStage).toBeGreaterThan(nearSuppressionStage);
+    expect(foamStage).toBeGreaterThan(weatherSuppressionStage);
+    expect(foamStage).toBeGreaterThan(fogStage);
+    expect(foamStage).toBeGreaterThan(peakStage);
+  });
+
+  it('renders one feathered three-dimensional sun disc from the shared direction', () => {
+    expect(skyFragmentShader).toContain('dot(direction, normalize(uSunDirection))');
+    expect(skyFragmentShader).toContain('smoothstep(0.032, 0.04, sunAngle)');
+    expect(skyFragmentShader).not.toContain('uSunDirection.xz');
+  });
+
+  it('uses directional light to separate dark column sides across weather states', () => {
+    expect(WEATHER_LOOKS.clear.ambientBase).toBeLessThan(0.7);
+    expect(WEATHER_LOOKS.clear.sunBase).toBeGreaterThan(WEATHER_LOOKS.clear.ambientBase * 4);
+    expect(WEATHER_LOOKS.clear.columnBrightness).toBeGreaterThan(WEATHER_LOOKS.rain.columnBrightness);
+    expect(WEATHER_LOOKS.rain.columnBrightness).toBeGreaterThan(WEATHER_LOOKS.storm.columnBrightness);
+  });
+
   it('separates opaque occluders from the ordered transparent water composition', () => {
     const { objects, runtime } = createRuntimeHarness();
     const sky = findObject(
@@ -195,9 +238,11 @@ describe('voxel water runtime contracts', () => {
     expect(columns.material.depthTest).toBe(true);
     expect(columns.material.depthWrite).toBe(true);
     expect(columns.material.opacity).toBe(1);
+    expect(columns.material.vertexColors).toBe(true);
     expect(plane.material.transparent).toBe(true);
     expect(plane.material.depthTest).toBe(true);
     expect(plane.material.depthWrite).toBe(false);
+    expect(plane.material.polygonOffset).toBe(false);
     for (const object of [spray, rain, grid]) {
       const material = Array.isArray(object.material) ? object.material[0] : object.material;
       expect(material.transparent).toBe(true);
@@ -384,7 +429,7 @@ describe('voxel water runtime contracts', () => {
     );
     const shader = {
       vertexShader: '#include <common>\nvoid main() {\n#include <begin_vertex>\n}',
-      fragmentShader: '',
+      fragmentShader: '#include <common>\nvoid main() {\n#include <emissivemap_fragment>\n}',
       uniforms: {},
     };
     columns.material.onBeforeCompile(shader as never, {} as never);
@@ -392,12 +437,17 @@ describe('voxel water runtime contracts', () => {
     expect(shader.vertexShader).toContain('attribute vec2 aOceanXZ;');
     expect(shader.vertexShader).toContain('WaveSample sampleWaveField');
     expect(shader.vertexShader).toContain('float columnSurfaceY = waveSurfaceY');
+    expect(shader.fragmentShader).toContain('float voxelTopFace = step(0.72, normal.y);');
+    expect(shader.fragmentShader).toContain('varying float vColumnWave;');
+    expect(shader.fragmentShader).toContain('* smoothstep(0.0, 0.35, uColumnFoam);');
     expect(shader.uniforms).toMatchObject({
       uTime: plane.material.uniforms.uTime,
       uWaveHeight: plane.material.uniforms.uWaveHeight,
       uWind: plane.material.uniforms.uWind,
+      uColumnWeatherStrength: { value: 0 },
+      uColumnFoam: plane.material.uniforms.uFoam,
     });
-    expect(columns.material.customProgramCacheKey()).toContain('sampleWaveField');
+    expect(columns.material.customProgramCacheKey()).toBe(COLUMN_WAVE_PROGRAM_KEY);
     runtime.dispose();
   });
 

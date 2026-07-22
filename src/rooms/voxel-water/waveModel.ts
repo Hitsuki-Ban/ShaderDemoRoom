@@ -4,13 +4,19 @@ export const VOXEL_SPACING = 0.62;
 export const WATER_GRID_CELL_MULTIPLE = 9;
 export const STORM_GRID_CELL_MULTIPLE = 22;
 export const VOXEL_FIELD_OFFSET = { x: 8, z: 0 } as const;
-export const VOXEL_FIELD_YAW = -0.045;
+export const VOXEL_FIELD_YAW = -0.16;
+export const COLUMN_COLOR_FPS = 8 / 3;
 export const OCEAN_SNAP_CELL_MULTIPLE = 8;
 
 const WAVE_NORMALIZATION = { base: 1.02, swell: 0.54 } as const;
 const WAVE_ELEVATION_SCALE = { base: 0.72, swell: 0.34 } as const;
 const COLUMN_BOTTOM_Y = -0.24;
-const SUN_ORBIT = { radius: 5, baseHeight: 3.2, heightAmplitude: 5.8 } as const;
+const SUN_ORBIT = {
+  radius: 5,
+  baseHeight: -3.25,
+  heightAmplitude: 5.8,
+  azimuthPhase: 0.51,
+} as const;
 
 type WaveInfluence = Partial<Record<'swell' | 'chop' | 'surfaceDetail', number>>;
 
@@ -154,8 +160,16 @@ export function quantizeWave(value: number, steps: number) {
   return Math.floor(clamp01(value) * intervals + 0.5) / intervals;
 }
 
+export function quantizeColumnColorTime(elapsed: number) {
+  const step = Math.floor(Math.max(0, elapsed) * COLUMN_COLOR_FPS + 1e-6);
+  return {
+    step,
+    time: step / COLUMN_COLOR_FPS,
+  };
+}
+
 export function writeSunDirection(skyTime: number, target: MutableVector3) {
-  const azimuth = skyTime * Math.PI * 2;
+  const azimuth = (skyTime + SUN_ORBIT.azimuthPhase) * Math.PI * 2;
   const x = Math.cos(azimuth) * SUN_ORBIT.radius;
   const y = SUN_ORBIT.baseHeight + Math.sin(skyTime * Math.PI) * SUN_ORBIT.heightAmplitude;
   const z = Math.sin(azimuth) * SUN_ORBIT.radius;
@@ -272,10 +286,14 @@ export function buildWaterFragmentShader(template: string) {
 export function buildColumnVertexShader(source: string) {
   const declarations = `#include <common>
 attribute vec2 aOceanXZ;
+varying float vColumnWave;
+varying vec2 vColumnOceanXZ;
 ${WAVE_MODEL_GLSL}`;
   const displacement = `#include <begin_vertex>
 WaveSample columnWave = sampleWaveField(aOceanXZ);
 float normalizedColumnWave = clamp(columnWave.height, 0.0, 1.0);
+vColumnWave = normalizedColumnWave;
+vColumnOceanXZ = aOceanXZ;
 float columnSurfaceY = waveSurfaceY(normalizedColumnWave);
 float columnHeight = columnSurfaceY - ${glslFloat(COLUMN_BOTTOM_Y)};
 transformed.y = ${glslFloat(COLUMN_BOTTOM_Y)} + (position.y + 0.5) * columnHeight;`;
@@ -286,4 +304,95 @@ transformed.y = ${glslFloat(COLUMN_BOTTOM_Y)} + (position.y + 0.5) * columnHeigh
   );
 }
 
-export const COLUMN_WAVE_PROGRAM_KEY = `voxel-water-column-wave:${WAVE_MODEL_GLSL}`;
+export function buildColumnFragmentShader(source: string) {
+  const declarations = `#include <common>
+uniform float uColumnWeatherStrength;
+uniform float uColumnFoam;
+varying float vColumnWave;
+varying vec2 vColumnOceanXZ;`;
+  const crestEmission = `#include <emissivemap_fragment>
+float voxelTopFace = step(0.72, normal.y);
+float columnRainFoamPhase = smoothstep(0.28, 0.46, uColumnWeatherStrength)
+  * (1.0 - smoothstep(0.58, 0.72, uColumnWeatherStrength));
+float columnStormFoamPhase = smoothstep(0.65, 0.9, uColumnWeatherStrength);
+float columnCrestMinimum = mix(0.42, 0.1, uColumnWeatherStrength);
+float columnCrestMaximum = mix(0.62, 0.3, uColumnWeatherStrength);
+columnCrestMinimum = mix(columnCrestMinimum, -0.08, columnStormFoamPhase);
+columnCrestMaximum = mix(columnCrestMaximum, 0.18, columnStormFoamPhase);
+float voxelCrestValue = smoothstep(columnCrestMinimum, columnCrestMaximum, vColumnWave);
+float columnFoamMinimum = mix(0.8, 0.61, columnRainFoamPhase);
+float columnFoamMaximum = mix(0.94, 0.78, columnRainFoamPhase);
+columnFoamMinimum = mix(columnFoamMinimum, 0.08, columnStormFoamPhase);
+columnFoamMaximum = mix(columnFoamMaximum, 0.28, columnStormFoamPhase);
+float voxelFoamValue = smoothstep(
+  columnFoamMinimum,
+  columnFoamMaximum,
+  vColumnWave
+) * smoothstep(0.0, 0.35, uColumnFoam);
+float columnFoamDistanceRelease = mix(
+  1.0,
+  smoothstep(22.0, 32.0, length(vViewPosition)),
+  columnStormFoamPhase
+);
+float stormDistanceRelease = mix(
+  1.0,
+  smoothstep(20.0, 32.0, length(vViewPosition)),
+  smoothstep(0.65, 0.85, uColumnWeatherStrength)
+);
+float stormCompositionProtection = smoothstep(0.65, 0.85, uColumnWeatherStrength);
+float columnCompositionRelease = mix(
+  mix(0.12, 0.6, stormCompositionProtection),
+  1.0,
+  smoothstep(2.0, 7.0, length(vColumnOceanXZ - vec2(4.7, -6.6)))
+);
+float rainColumnPhase = smoothstep(0.18, 0.45, uColumnWeatherStrength)
+  * (1.0 - smoothstep(0.55, 0.82, uColumnWeatherStrength));
+float rainColumnEmissionCompression = mix(1.0, 0.7, rainColumnPhase);
+totalEmissiveRadiance += rainColumnEmissionCompression * stormDistanceRelease
+  * columnCompositionRelease * voxelTopFace * (
+  mix(
+    mix(vec3(0.05, 0.1, 0.06), vec3(0.4, 0.5, 0.34), columnRainFoamPhase),
+    vec3(0.35, 0.45, 0.3),
+    columnStormFoamPhase
+  )
+    * voxelCrestValue
+  + mix(
+    mix(vec3(0.4, 0.5, 0.35), vec3(2.9, 3.1, 2.3), columnRainFoamPhase),
+    vec3(18.0, 18.5, 13.5),
+    columnStormFoamPhase
+  ) * voxelFoamValue * columnFoamDistanceRelease
+);`;
+  return replaceExactlyOnce(
+    replaceExactlyOnce(source, '#include <common>', declarations),
+    '#include <emissivemap_fragment>',
+    crestEmission,
+  );
+}
+
+function hashProgramSignature(source: string) {
+  let first = 0xdeadbeef ^ source.length;
+  let second = 0x41c6ce57 ^ source.length;
+  for (let index = 0; index < source.length; index += 1) {
+    const code = source.charCodeAt(index);
+    first = Math.imul(first ^ code, 2654435761);
+    second = Math.imul(second ^ code, 1597334677);
+  }
+  first = Math.imul(first ^ (first >>> 16), 2246822507)
+    ^ Math.imul(second ^ (second >>> 13), 3266489909);
+  second = Math.imul(second ^ (second >>> 16), 2246822507)
+    ^ Math.imul(first ^ (first >>> 13), 3266489909);
+  return `${(first >>> 0).toString(16).padStart(8, '0')}${(second >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+export function buildColumnWaveProgramKey(vertexTemplate: string, fragmentTemplate: string) {
+  return [
+    'voxel-water-column-wave',
+    hashProgramSignature(buildColumnVertexShader(vertexTemplate)),
+    hashProgramSignature(buildColumnFragmentShader(fragmentTemplate)),
+  ].join(':');
+}
+
+export const COLUMN_WAVE_PROGRAM_KEY = buildColumnWaveProgramKey(
+  '#include <common>\n#include <begin_vertex>',
+  '#include <common>\n#include <emissivemap_fragment>',
+);
