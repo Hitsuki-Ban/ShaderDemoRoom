@@ -5,6 +5,10 @@
 
 各チケットは [review-framework.md](../review-framework.md) のテンプレート準拠。
 
+## 追加チケット
+
+- **QA**: [T-QA-03](T-QA-03-exhibit-smoke-observability.md) — `qa:exhibits` の長時間・無出力実行を段階化し、Ninth Tide `#audio` timeout のような波動を retry や閾値緩和なしで診断可能にする（2026-07-22、T-VW-04 検収中に起票）
+
 ---
 
 # 第2バッチ — 各展示のビジュアル/AD調整(36本)
