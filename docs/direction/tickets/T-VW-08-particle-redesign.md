@@ -1,6 +1,6 @@
 # [T-VW-08] 雨・スプレーのパーティクルを再設計する(一斉テレポートと剛体円盤の解消)
 
-- 状態: 実装・検証完了（PR #49 draft / CI待ち、product `3acfed9c9bd805757a42255875d7591838338921`、2026-07-23）
+- 状態: 完了（PR #49、main `63d20b35f9ec59a1227057e3b0693b73b5458438`、Pages 配信・live 検証済み、2026-07-23）
 - 分類: AD / TA
 - 優先度: P2
 - 評価軸: モーション言語 / フレームバジェット / リソースライフサイクル
@@ -50,6 +50,17 @@ research-stylized-water.md §2.7(Cyanilux Rain Effects Breakdown / GPU パーテ
 ## 完了報告 (2026-07-23)
 
 - Product revision: `3acfed9c9bd805757a42255875d7591838338921`。
+- PR #49 は最終 head `ae4af951d9f0e5189d3ae633ffbac37cbc1cb5c4` の required workflow
+  `29941648485`（lint / typecheck / 46 files・455 tests / build / production visual QA / artifact upload）を
+  通過後、独立 reviewer の APPROVE に基づいて squash merge した。main revision は
+  `63d20b35f9ec59a1227057e3b0693b73b5458438`。
+- main workflow `29943894528` は build と production visual QA を通過し、GitHub Pages deploy も成功した。
+  live `https://hitsuki-ban.github.io/ShaderDemoRoom/` は HTTP 200、production bundle
+  `assets/index-BpwpBu0y.js` の SHA-256 は
+  `0dcb26c0371466e27202f145589ba816f3733c800755e1eecf7fc07c0c4e94fc` で、local main build と一致した。
+- live Rain / Storm を `pnpm qa:water` で再検証した。Rain は
+  `meanDelta=36.960`、`strongRatio=0.38262`、seam `0.667 <= 1.5`、Storm は
+  `meanDelta=39.703`、`strongRatio=0.37780`、seam `0 <= 1.0`。両 run とも browser error 0件で通過した。
 - 雨とスプレーを、それぞれ1つの `InstancedMesh + ShaderMaterial` に置換した。最終構成は
   rain 200 instance / spray 96 instance、各1 draw、追加 texture 0。旧 `Points` / `PointsMaterial`
   と render loop の `rain.position` / `spray.position` / `spray.rotation` 更新は削除した。
