@@ -13,7 +13,6 @@ import {
   MeshStandardMaterial,
   PerspectiveCamera,
   PointLight,
-  Points,
   Scene,
   ShaderMaterial,
   SpotLight,
@@ -274,11 +273,17 @@ describe('voxel water runtime contracts', () => {
     );
     const spray = findObject(
       objects,
-      (object): object is Points => object.name === 'voxel-water-spray' && object instanceof Points,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-spray'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
     );
     const rain = findObject(
       objects,
-      (object): object is Points => object.name === 'voxel-water-rain' && object instanceof Points,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-rain'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
     );
     const grid = findObject(
       objects,
@@ -342,10 +347,21 @@ describe('voxel water runtime contracts', () => {
     expect(plane.material.depthTest).toBe(true);
     expect(plane.material.depthWrite).toBe(false);
     expect(plane.material.polygonOffset).toBe(false);
+    expect(spray.renderOrder).toBe(3);
+    expect(rain.renderOrder).toBe(4);
+    expect(objects.filter(({ name }) => name === 'voxel-water-spray')).toHaveLength(1);
+    expect(objects.filter(({ name }) => name === 'voxel-water-rain')).toHaveLength(1);
     for (const object of [spray, rain, grid]) {
       const material = Array.isArray(object.material) ? object.material[0] : object.material;
       expect(material.transparent).toBe(true);
       expect(material.depthWrite).toBe(false);
+    }
+    for (const particles of [spray, rain]) {
+      expect(particles.frustumCulled).toBe(false);
+      expect(particles.material.depthTest).toBe(true);
+      expect(particles.material.fog).toBe(true);
+      expect(particles.material.toneMapped).toBe(true);
+      expect(particles.material.uniforms).not.toHaveProperty('map');
     }
 
     runtime.dispose();
@@ -441,11 +457,31 @@ describe('voxel water runtime contracts', () => {
     );
     const firstRain = findObject(
       first.objects,
-      (object): object is Points => object.name === 'voxel-water-rain' && object instanceof Points,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-rain'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
     );
     const secondRain = findObject(
       second.objects,
-      (object): object is Points => object.name === 'voxel-water-rain' && object instanceof Points,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-rain'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const firstSpray = findObject(
+      first.objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-spray'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const secondSpray = findObject(
+      second.objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-spray'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
     );
 
     expect(firstColumns.count).toBeGreaterThan(0);
@@ -509,14 +545,180 @@ describe('voxel water runtime contracts', () => {
     expect(Math.abs(columnAxisZ.dot(gridAxisZ.clone().normalize()))).toBeCloseTo(1, 6);
     expect(gridAxisX.length() - columnGeometry.parameters.width).toBeLessThan(0.00001);
     expect(gridAxisZ.length() - columnGeometry.parameters.depth).toBeLessThan(0.00001);
-    expect(firstRain.geometry.getAttribute('position').count).toBeGreaterThan(0);
-    expect(secondRain.geometry.getAttribute('position').count)
-      .toBe(firstRain.geometry.getAttribute('position').count);
-    expect(firstRain.geometry.getAttribute('position').array)
-      .toEqual(secondRain.geometry.getAttribute('position').array);
+    for (const attributeName of ['aSeed', 'aSpeed', 'aScale']) {
+      const firstAttribute = firstRain.geometry.getAttribute(attributeName);
+      const secondAttribute = secondRain.geometry.getAttribute(attributeName);
+      expect(firstAttribute.count).toBe(firstRain.count);
+      expect(secondAttribute.array).toEqual(firstAttribute.array);
+    }
+    for (const attributeName of ['aSeed', 'aSpeed', 'aScale', 'aLaunch', 'aVelocity']) {
+      const firstAttribute = firstSpray.geometry.getAttribute(attributeName);
+      const secondAttribute = secondSpray.geometry.getAttribute(attributeName);
+      expect(firstAttribute.count).toBe(firstSpray.count);
+      expect(secondAttribute.array).toEqual(firstAttribute.array);
+    }
+    expect(secondRain.instanceMatrix.array).toEqual(firstRain.instanceMatrix.array);
+    expect(secondSpray.instanceMatrix.array).toEqual(firstSpray.instanceMatrix.array);
 
     first.runtime.dispose();
     second.runtime.dispose();
+  });
+
+  it('gives each rain and spray instance deterministic independent lifecycle data', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const rain = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-rain'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const spray = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-spray'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+
+    for (const particles of [rain, spray]) {
+      const phases = [...particles.geometry.getAttribute('aSeed').array] as number[];
+      const speeds = [...particles.geometry.getAttribute('aSpeed').array] as number[];
+      const scales = [...particles.geometry.getAttribute('aScale').array] as number[];
+      expect(new Set(phases).size).toBeGreaterThan(particles.count * 0.95);
+      expect(new Set(speeds).size).toBeGreaterThan(particles.count * 0.95);
+      expect(Math.min(...phases)).toBeGreaterThanOrEqual(0);
+      expect(Math.max(...phases)).toBeLessThan(1);
+      expect(Math.min(...speeds)).toBeGreaterThanOrEqual(0.7);
+      expect(Math.max(...speeds)).toBeLessThanOrEqual(1.7);
+      expect(Math.min(...scales)).toBeGreaterThan(0);
+    }
+    expect(spray.geometry.getAttribute('aLaunch').count).toBe(spray.count);
+    expect(spray.geometry.getAttribute('aVelocity').count).toBe(spray.count);
+    runtime.dispose();
+  });
+
+  it('runs tapered rain and ballistic spray lifecycles entirely in shaders', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const rain = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-rain'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const spray = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-spray'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+
+    expect(rain.material.vertexShader).toContain('fract(uTime * 0.17 * aSpeed + aSeed)');
+    expect(rain.material.vertexShader).toContain('mix(11.0, -1.8, age)');
+    expect(rain.material.vertexShader).toContain('(age - 0.5) * uWind');
+    expect(rain.material.vertexShader).toContain('birthFade * deathFade');
+    expect(rain.material.fragmentShader).toContain('taperedHalfWidth');
+    expect(rain.material.fragmentShader).toContain('capsuleDistance');
+    expect(spray.material.vertexShader).toContain('fract(uTime * 0.23 * aSpeed + aSeed)');
+    expect(spray.material.vertexShader).toContain('0.5 * gravity * flightTime * flightTime');
+    expect(spray.material.vertexShader).toContain('aLaunch');
+    expect(spray.material.vertexShader).toContain('aVelocity');
+    expect(spray.material.fragmentShader).toContain('teardropDistance');
+    for (const particles of [rain, spray]) {
+      expect(particles.material.vertexShader).toContain('#include <fog_pars_vertex>');
+      expect(particles.material.vertexShader).toContain('#include <fog_vertex>');
+      expect(particles.material.fragmentShader).toContain('#include <tonemapping_fragment>');
+      expect(particles.material.fragmentShader).toContain('#include <colorspace_fragment>');
+      expect(particles.material.fragmentShader).toContain('#include <fog_fragment>');
+    }
+    runtime.dispose();
+  });
+
+  it('updates particle drawing-buffer resolution and settings uniforms', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const rain = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-rain'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const spray = findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-spray'
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const nextSettings: VoxelWaterSettings = {
+      ...voxelWaterDefaults,
+      weather: 'storm',
+      rain: 0.82,
+      wind: 2.35,
+      foam: 0.91,
+      surfaceDetail: 0.77,
+    };
+
+    runtime.resize({ width: 1600, height: 900, pixelRatio: 0.55 });
+    runtime.updateSettings(nextSettings);
+
+    expect(rain.material.uniforms.uResolution.value.x).toBeCloseTo(880);
+    expect(rain.material.uniforms.uResolution.value.y).toBeCloseTo(495);
+    expect(spray.material.uniforms.uResolution.value.x).toBeCloseTo(880);
+    expect(spray.material.uniforms.uResolution.value.y).toBeCloseTo(495);
+    expect(rain.material.vertexShader).toContain('1.25 + aScale * 0.55');
+    expect(rain.material.uniforms.uOpacity.value).toBeCloseTo(0.64);
+    expect(rain.material.uniforms.uLength.value).toBeCloseTo(14 + 0.82 * 11 + 0.77 * 3);
+    expect(rain.material.uniforms.uWind.value).toBe(nextSettings.wind);
+    expect(spray.material.uniforms.uOpacity.value).toBeCloseTo(0.36);
+    expect(spray.material.uniforms.uLength.value).toBeCloseTo(3.8 + 0.91 * 4.2);
+    expect(spray.material.uniforms.uWind.value).toBe(nextSettings.wind);
+    expect(spray.material.uniforms.uFoam.value).toBe(nextSettings.foam);
+    runtime.dispose();
+  });
+
+  it('keeps particle transforms static and freezes shared particle time at motionScale zero', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const plane = findObject(
+      objects,
+      (object): object is Mesh<BufferGeometry, ShaderMaterial> =>
+        object.name === 'voxel-water-surface'
+        && object instanceof Mesh
+        && object.material instanceof ShaderMaterial,
+    );
+    const particles = ['voxel-water-rain', 'voxel-water-spray'].map((name) => findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === name
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    ));
+    const snapshots = particles.map((object) => ({
+      matrix: object.matrix.toArray(),
+      position: object.position.toArray(),
+      quaternion: object.quaternion.toArray(),
+      instanceMatrix: object.instanceMatrix.array.slice(),
+      instanceMatrixVersion: object.instanceMatrix.version,
+    }));
+
+    runtime.render({ elapsed: 1, delta: 1 });
+    const advancedTime = plane.material.uniforms.uTime.value as number;
+    expect(advancedTime).toBeGreaterThan(0);
+    for (let index = 0; index < particles.length; index += 1) {
+      const object = particles[index];
+      expect(object.material.uniforms.uTime).toBe(plane.material.uniforms.uTime);
+      expect(object.matrix.toArray()).toEqual(snapshots[index].matrix);
+      expect(object.position.toArray()).toEqual(snapshots[index].position);
+      expect(object.quaternion.toArray()).toEqual(snapshots[index].quaternion);
+      expect(object.instanceMatrix.array).toEqual(snapshots[index].instanceMatrix);
+      expect(object.instanceMatrix.version).toBe(snapshots[index].instanceMatrixVersion);
+    }
+    runtime.setMotionScale(0);
+    runtime.render({ elapsed: 11, delta: 10 });
+    expect(plane.material.uniforms.uTime.value).toBe(advancedTime);
+    runtime.dispose();
   });
 
   it('keeps column transforms static while GPU wave uniforms advance continuously', () => {
@@ -731,6 +933,26 @@ describe('voxel water runtime contracts', () => {
     runtime.dispose();
 
     expect(disposeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('disposes each particle batch and its unique resources exactly once', () => {
+    const { objects, runtime } = createRuntimeHarness();
+    const particles = ['voxel-water-rain', 'voxel-water-spray'].map((name) => findObject(
+      objects,
+      (object): object is InstancedMesh<BufferGeometry, ShaderMaterial> =>
+        object.name === name
+        && object instanceof InstancedMesh
+        && object.material instanceof ShaderMaterial,
+    ));
+    const spies = particles.flatMap((object) => [
+      vi.spyOn(object, 'dispose'),
+      vi.spyOn(object.geometry, 'dispose'),
+      vi.spyOn(object.material, 'dispose'),
+    ]);
+
+    runtime.dispose();
+
+    for (const disposeSpy of spies) expect(disposeSpy).toHaveBeenCalledTimes(1);
   });
 
   it('disposes every unique landmark and shared cloud resource exactly once', () => {
