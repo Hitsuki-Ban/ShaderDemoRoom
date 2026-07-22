@@ -61,7 +61,7 @@ jobs:
           QA_SETTLE_SCALE: '2'
           SHOWROOM_URL: http://127.0.0.1:4173/ShaderDemoRoom
         run: |
-          mkdir -p output/playwright output/water-qa output/water-value-qa
+          mkdir -p output/playwright output/water-qa output/water-value-qa output/weather-identity
           preview_log="output/showroom-preview.log"
           pnpm preview > "$preview_log" 2>&1 &
           preview_pid=$!
@@ -89,6 +89,7 @@ jobs:
           pnpm qa:visual
           pnpm qa:water
           pnpm qa:water-value
+          pnpm qa:water-weather-identity -- --mode gate
           pnpm qa:ninth-tide
           pnpm qa:ninth-tide-near-black
           pnpm qa:ninth-tide-quality
@@ -104,6 +105,7 @@ jobs:
             output/playwright
             output/water-qa
             output/water-value-qa
+            output/weather-identity
             output/showroom-preview.log
           if-no-files-found: error
           retention-days: 14

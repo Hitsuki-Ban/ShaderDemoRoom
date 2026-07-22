@@ -14,6 +14,8 @@
     "qa:exhibits": "node scripts/exhibit-smoke.mjs",
     "qa:water": "node scripts/water-qa.mjs",
     "qa:water-value": "node scripts/water-value-qa.mjs",
+    "qa:water-weather-identity": "node scripts/water-weather-identity.mjs",
+    "qa:water-weather-performance": "node scripts/water-weather-performance.mjs",
     "qa:water-landmark-performance": "node scripts/water-landmark-performance.mjs",
     "qa:water-particle-performance": "node scripts/water-particle-performance.mjs",
     "qa:glass": "node scripts/glass-optics-qa-runner.mjs",
