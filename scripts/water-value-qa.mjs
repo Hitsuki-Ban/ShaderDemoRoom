@@ -133,6 +133,12 @@ async function captureState(browser, state) {
   await page.locator('.canvas-loader').waitFor({ state: 'hidden', timeout: 10_000 });
   await page.locator('.language-select select').selectOption('en');
 
+  await page.clock.runFor(WARM_UP_MS);
+  await page.locator('[data-telemetry-state="live"]').waitFor({
+    state: 'visible',
+    timeout: 10_000,
+  });
+
   await page.waitForFunction(({ css, backing }) => {
     const shell = document.querySelector('.canvas-shell');
     const target = document.querySelector('.shader-canvas');
@@ -158,7 +164,6 @@ async function captureState(browser, state) {
     };
   });
 
-  await page.clock.runFor(WARM_UP_MS);
   await page.waitForTimeout(RENDER_SETTLE_MS);
   const frames = [];
   let clockTime = WARM_UP_MS;
