@@ -73,7 +73,7 @@ float rainRipple(vec2 uv, vec2 center, vec2 rippleState) {
   vec2 delta = (uv - center) * vec2(1.0, 1.36);
   float distanceFromImpact = length(delta);
   float radius = rippleState.x;
-  float ringWidth = max(0.0022, fwidth(distanceFromImpact) * 1.25);
+  float ringWidth = max(0.0026, fwidth(distanceFromImpact) * 1.45);
   float ring = 1.0 - smoothstep(ringWidth, ringWidth * 2.4, abs(distanceFromImpact - radius));
   return ring * rippleState.y;
 }
@@ -211,7 +211,7 @@ void main() {
       noise(vWorldPosition.xz * 0.055 + vec2(-uTime * 0.08, uTime * 0.035))
     ) * uRainCurtain;
     color += rainSpark * vec3(0.28, 0.54, 0.78);
-    float rippleAccent = clamp(ripple * uRain * uWeatherRippleStrength * 1.8, 0.0, 0.78);
+    float rippleAccent = clamp(ripple * uRain * uWeatherRippleStrength * 3.0, 0.0, 0.78);
     color = mix(color, vec3(0.62, 0.92, 1.08), rippleAccent);
     color = mix(color, uWeatherFogColor, rainCurtain * 0.14);
   }
@@ -430,9 +430,9 @@ void main() {
   foamMask = max(foamMask, max(distantRainFoamRidge, distantStormWhitecap));
   foamMask *= 1.0 - nearClearFoamSuppression;
   foamMask *= 1.0 - foregroundStormWindow * 0.9;
-  float stormWhitecapPatch = smoothstep(0.03, 0.16, toonEdgeAccent + vSlope * 0.35)
-    * smoothstep(0.56, 0.7, stormSurfaceNoise)
-    * smoothstep(0.42, 0.64, uFoam)
+  float stormWhitecapPatch = smoothstep(0.015, 0.1, toonEdgeAccent + vSlope * 0.35)
+    * smoothstep(0.42, 0.6, stormSurfaceNoise)
+    * smoothstep(0.32, 0.56, uFoam)
     * stormValuePhase;
   foamMask = max(foamMask, stormWhitecapPatch);
   float headlandDistance = abs(signedDistanceToHeadland(vOceanXZ));

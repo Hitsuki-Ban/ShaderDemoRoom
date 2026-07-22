@@ -248,7 +248,7 @@ export const WEATHER_LOOKS = {
     cloudCoverage: 0.82,
     cloudBaseHeight: 3.8,
     cloudHeightScale: 1.16,
-    cloudJaggedness: 0.86,
+    cloudJaggedness: 1.05,
     landmarkEmissive: new Color(0x040a10),
     landmarkEmissiveIntensity: 0.12,
     landmarkEmissiveLift: 1,
