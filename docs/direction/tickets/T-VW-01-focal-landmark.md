@@ -71,3 +71,10 @@ research-exhibition-direction.md §3(weenie=視覚磁石)・§2(値ヒエラル�
 - 実装側の暫定推奨は `balanced`。`sheltered` は岬角が軽い反面、広いslab roofが煙突寄りに読まれやすい。`monumental` はspireで灯台性が強い反面、左暗質量が最も重い。`balanced` は3天候で同じidentityを保ち、岬角の重量と階段roofの識別の中間にある。ただし「3秒で最初にランドマークを読むか」は自動指標で確定しない。
 - **人間への疑問（本票のGate A）**: `sheltered` / `balanced` / `monumental` のどれを段階2へ進めるか。判断は「最初に灯台+岬角を読む」「煙突やUI柱に見えない」「左の暗質量が海面を潰さない」「3天候で同じidentity」の4点だけで行う。3案すべてが不合格なら、その旨を記録して段階1を再設計する。選択前にbeacon、接触泡、weather材質、ROI再較正、performance比較へ進まない。
 - 既存 `qa:water-value` を最終暫定balancedで再実行すると4件失敗した（rain/storm crest p90、default waterLuma、default-rain separation）。これは旧 `WATER_REGION` が新landmarkを水面として、ridge探索域がlandmark edgeをcrestとして集計し、旧 `COLUMN_SIDE_ROI` も本来のcolumn-sideではなくlandmark暗部へ変わる、着手時に予測済みの意味衝突である。既存閾値は変更していない。Gate A後に採用silhouetteを固定してからlandmark/water/crest ROIを分離し、同じ門を再成立させる。
+
+## Gate A 裁定（2026-07-22、ユーザー決定 — BLOCK解除）
+
+**採用: `balanced`**（コンタクトシート SHA-256 `71cfbb1d…` を実見の上、規定4基準のみで判断）。
+
+- 判断根拠: `sheltered` は広いslab roofが160pxサムネイルで煙突キャップに読まれるリスクが最も高く（基準2に抵触の懸念）、`monumental` は左暗質量が最重でストームの4値表現において海面を最も潰す（基準3に抵触の懸念）。`balanced` は3天候で同一identityを保ちつつ両懸念の中間にあり、実装側暫定推奨とも一致。
+- 段階2へ進行可: beacon glow、接触泡、weather材質（固定neutral unlit → Ambient/Directional/Fog応答の単一opaque `MeshStandardMaterial`）、ROI再較正（`landmarkDarkAnchor` 分離・water/crest ROI再定義）、performance AB/BA計測（paired speed ratio median ≥0.90、draw calls default 19→21 / storm 20→22以内）。未採用候補（`sheltered` / `monumental`）と段階1グレーボックス材質はコードから削除する。
