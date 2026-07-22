@@ -431,7 +431,7 @@ void main() {
   foamMask *= 1.0 - nearClearFoamSuppression;
   foamMask *= 1.0 - foregroundStormWindow * 0.9;
   float stormWhitecapPatch = smoothstep(0.03, 0.16, toonEdgeAccent + vSlope * 0.35)
-    * smoothstep(0.6, 0.72, stormSurfaceNoise)
+    * smoothstep(0.56, 0.7, stormSurfaceNoise)
     * smoothstep(0.42, 0.64, uFoam)
     * stormValuePhase;
   foamMask = max(foamMask, stormWhitecapPatch);
