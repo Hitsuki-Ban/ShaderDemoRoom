@@ -42,21 +42,22 @@ void main() {
   vec3 direction = normalize(vWorldDirection);
   float vertical = clamp(direction.y * 0.5 + 0.5, 0.0, 1.0);
   float dayStrength = smoothstep(0.05, 0.82, sin(uSkyTime * 3.14159265));
+  float stormPhase = smoothstep(0.52, 0.92, uStorm);
   float warmEdge = 1.0 - smoothstep(0.18, 0.52, abs(uSkyTime - 0.5));
   float coolMix = smoothstep(0.0, 1.0, -uColorTemperature);
   float warmMix = smoothstep(0.0, 1.0, uColorTemperature);
 
-  vec3 nightZenith = vec3(0.018, 0.04, 0.075);
-  vec3 dayZenith = mix(vec3(0.09, 0.3, 0.52), vec3(0.16, 0.44, 0.68), 1.0 - coolMix);
-  vec3 stormZenith = vec3(0.09, 0.12, 0.15);
+  vec3 nightZenith = vec3(0.002, 0.011, 0.034);
+  vec3 dayZenith = mix(vec3(0.7, 0.88, 0.68), vec3(0.82, 1.0, 0.76), 1.0 - coolMix);
+  vec3 stormZenith = vec3(0.006, 0.042, 0.084);
   vec3 zenith = mix(nightZenith, dayZenith, dayStrength);
-  zenith = mix(zenith, stormZenith, uStorm * 0.62 + uCloudCover * 0.12);
+  zenith = mix(zenith, stormZenith, stormPhase * 0.62 + uCloudCover * 0.12);
   zenith = mix(zenith, uWeatherSkyTint, 0.18 + uStorm * 0.22 + uCloudCover * 0.08);
 
-  vec3 horizon = mix(vec3(0.04, 0.14, 0.18), vec3(0.48, 0.82, 0.86), dayStrength);
-  horizon = mix(horizon, vec3(0.82, 0.56, 0.34), warmEdge * (0.18 + warmMix * 0.28));
-  horizon = mix(horizon, vec3(0.14, 0.18, 0.2), uStorm * 0.48);
-  horizon = mix(horizon, uWeatherHorizonTint, 0.32 + uStorm * 0.2 + uCloudCover * 0.12);
+  vec3 horizon = mix(vec3(0.024, 0.168, 0.198), vec3(1.08, 1.0, 0.82), dayStrength);
+  horizon = mix(horizon, vec3(1.0, 0.687, 0.328), warmEdge * (0.08 + warmMix * 0.12));
+  horizon = mix(horizon, vec3(0.238, 0.61, 0.434), stormPhase * 0.34);
+  horizon = mix(horizon, uWeatherHorizonTint, 0.12 + uStorm * 0.14 + uCloudCover * 0.06);
 
   vec3 color = mix(horizon, zenith, smoothstep(0.28, 0.96, vertical));
 
@@ -64,16 +65,19 @@ void main() {
   float cloudNoise = fbm(cloudUv * 2.4 + vec2(uTime * 0.012, -uTime * 0.006));
   float cloudMask = smoothstep(0.47, 0.74, cloudNoise + uCloudCover * 0.42 + uStorm * 0.16);
   float cloudBand = smoothstep(0.18, 0.44, vertical) * (1.0 - smoothstep(0.86, 1.0, vertical));
-  vec3 cloudColor = mix(vec3(0.28, 0.42, 0.48), vec3(0.78, 0.92, 0.9), dayStrength);
-  cloudColor = mix(cloudColor, vec3(0.22, 0.26, 0.3), uStorm * 0.58);
-  cloudColor = mix(cloudColor, uWeatherCloudTint, 0.42 + uStorm * 0.22);
+  vec3 cloudColor = mix(vec3(0.084, 0.198, 0.238), vec3(0.847, 0.888, 0.694), dayStrength);
+  cloudColor = mix(cloudColor, vec3(0.168, 0.434, 0.352), stormPhase * 0.46);
+  cloudColor = mix(cloudColor, uWeatherCloudTint, 0.24 + uStorm * 0.14);
   color = mix(color, cloudColor, cloudMask * cloudBand * (0.12 + uCloudCover * 0.36 + uStorm * 0.12));
 
-  float sunAlignment = dot(normalize(direction.xz), normalize(uSunDirection.xz));
-  float sunGlow = smoothstep(0.78, 1.0, sunAlignment) * smoothstep(0.18, 0.7, vertical);
-  float sunDisc = smoothstep(0.998, 1.0, sunAlignment) * smoothstep(0.32, 0.8, vertical);
-  color += sunGlow * (1.0 - uStorm) * vec3(0.16, 0.18, 0.14) * (0.12 + warmMix * 0.12);
-  color += sunDisc * (1.0 - uStorm) * vec3(0.56, 0.42, 0.26) * (0.18 + warmMix * 0.16);
+  float sunAngle = acos(clamp(dot(direction, normalize(uSunDirection)), -1.0, 1.0));
+  float sunGlow = 1.0 - smoothstep(0.04, 0.085, sunAngle);
+  float sunDisc = 1.0 - smoothstep(0.032, 0.04, sunAngle);
+  float sunVisibility = 1.0 - uStorm * 0.78;
+  color += sunGlow * sunVisibility * vec3(1.0, 0.687, 0.328) * (0.018 + warmMix * 0.012);
+  color = mix(color, vec3(1.0, 0.687, 0.328), sunDisc * sunVisibility);
+  float clearMorningLift = (1.0 - smoothstep(0.28, 0.48, uSkyTime)) * (1.0 - uStorm);
+  color += clearMorningLift * vec3(0.12, 0.11, 0.07);
   color += uLightningPulse * uWeatherLightningTint * (0.18 + cloudBand * 0.46);
 
   gl_FragColor = vec4(color, 1.0);

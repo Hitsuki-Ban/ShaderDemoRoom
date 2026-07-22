@@ -23,7 +23,7 @@ void main() {
   vWave = normalizedWave;
   vRawWave = normalizedWave;
   vSlope = clamp(length(wave.gradient), 0.0, 1.0);
-  vFoam = smoothstep(0.78 - uFoam * 0.12, 0.98, normalizedWave + vSlope * 0.18);
+  vFoam = smoothstep(0.34 - uFoam * 0.1, 0.62, normalizedWave + vSlope * 0.25);
   float elevationScale = waveElevationScale();
   vec3 localWaterNormal = normalize(vec3(
     -wave.gradient.x * elevationScale,

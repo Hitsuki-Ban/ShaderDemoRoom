@@ -2,7 +2,7 @@
 
 - 分類: QA
 - 優先度: P1（Pages deploy gate の診断不能を解消）
-- 状態: 実装・ローカル検証完了（PR 待ち）
+- 状態: 完了（PR #44 merge・main Pages deploy 検証済み、2026-07-22）
 - 評価軸: TA「QA担保」/ CI 運用性
 - 依存: T-QA-02 / T-EMB-02 / T-NT-10（完了済み）
 
@@ -61,4 +61,9 @@ T-VW-04 の production regression gate で `pnpm qa:exhibits` を連続実行し
 - production preview で最終コードの `pnpm qa:exhibits` を連続2回実行し、`268.5秒 / 254.4秒` で全7 stage が通過した。両回とも silent request/load/source は `0 / 0 / null`、9章 preview と bridge lifecycle、Orb gesture を維持し、console/page error は `0 / 0`。`Final canvas and error audit` は browser close 完了後にそれぞれ `216ms / 233ms` で PASS した。
 - 独立 reviewer の初回审查は、(1) top-level close failure が primary failure を置換しうる、(2) browser close 中の late error を final audit が見落とす、(3) primary + deferred-cleanup 同時失敗時に secondary error が消える、の P2 3件を指摘した。try 境界を context/page/mkdir まで拡張し、final stage cleanup 内で browser close 後に error audit、外層で primary + browser cleanup を `AggregateError` として保持、stage runner で全 cleanup errors を記録するよう修正した。組合せ failure test を追加後、再审查は全 finding closed、`APPROVE`。
 
-PR Actions の stage log と deploy gate は PR 上で確認し、merge 後に本票へ追記する。
+### PR・merge・deploy 報告
+
+- PR [#44](https://github.com/Hitsuki-Ban/ShaderDemoRoom/pull/44) で独立 reviewer の全 finding を閉じ、最終 `APPROVE` 後に squash merge した。merge commit は `3bb4ccaf27e8051b4259c3297b999cb84c8a5871`。
+- PR Actions run `29885428944` は lint、typecheck、420 tests、production build、exhibit snapshot sync、全 production visual QA を通過した。実ログで7 stage の `START` / `PASS` / elapsed と final audit を確認し、PR event の deploy skip も workflow 契約どおりだった。
+- merge 後の main push run `29886804437` は build / 全 production visual QA / Pages deploy をすべて通過した。`https://hitsuki-ban.github.io/ShaderDemoRoom/` は再確認時も HTTP 200 / `text/html` を返した。
+- PR conversation に独立審査、merge 時の検証、main deploy 完了の簡易レポートを残した。未解決の疑問・BLOCK はない。
