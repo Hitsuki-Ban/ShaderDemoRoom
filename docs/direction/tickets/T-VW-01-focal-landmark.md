@@ -1,6 +1,6 @@
 # [T-VW-01] 焦点ランドマークを導入する(構図再建)
 
-- 状態: 段階2実装・Gate B・独立レビュー完了（PR/CI待ち、2026-07-22）
+- 状態: 完了（PR #47、main `90c298a`、Pages deploy・live検証済み、2026-07-22）
 - 分類: AD
 - 優先度: P1
 - 評価軸: 焦点階層 / 構図 / ヒーローショット成立性
@@ -113,3 +113,9 @@ research-exhibition-direction.md §3(weenie=視覚磁石)・§2(値ヒエラル�
 - 初回reviewはcrest/foamの意味的重複と、暗roofを必須にしていないtower detectorを阻断として指摘した。両方を測定器・fixture・64-frame Gateへ反映し、元reviewerの増分再審査と別verifierの増分検証はいずれも阻断なしでPASSした。
 - reviewer独立再計算の代表frame crest supportはclear/rain/storm/solarで `2656 / 2489 / 1868 / 2494`、foam overlapは全て `0`。roof gapは `0 / 1 / 2px` を許容し `3px` を拒否することも別probeで確認した。
 - 非阻断follow-up: 生産値 `strongerBoundaryMinimumNeighbors=4` は実装・本票・64-frame挙動で一致するが、将来のcontract provenanceをさらに強めるならreport fieldまたは専用unit assertionへ固定できる。本票の受入条件外であり、現実装の合否には影響しない。
+
+### Merge / deploy
+
+- PR #47 は head `a57c92c` の独立APPROVEとGitHub build/production visual QA成功後、squash mergeされ、main `90c298a` となった。main workflow `29930678068` はlint/typecheck/450 tests/build/exhibit sync/全production visual QAを通過し、Pages deploy jobも成功した。
+- live `https://hitsuki-ban.github.io/ShaderDemoRoom/` はHTTP 200。配信bundle `index-CeF03xTn.js` のSHA-256 `7e4ced853cc3d138c158241954e912cb26ca725ecceb8d054731a1605462a383` はlocal main buildと一致した。
+- liveに対する `pnpm qa:water-value` はdefault/rain/storm/solar各16 frame、合計64 frameで `passed=true` / failures 0。これにより実装、CI artifact、配信物の3点を結び、本票を完了とする。
