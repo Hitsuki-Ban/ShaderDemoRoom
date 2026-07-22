@@ -151,6 +151,24 @@ function sha256(buffer) {
   return createHash('sha256').update(buffer).digest('hex');
 }
 
+async function prepareDeterministicPage(page, baseUrl) {
+  const epoch = new Date(CLOCK_EPOCH);
+  await page.clock.install({ time: epoch });
+  await page.clock.pauseAt(epoch);
+  await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'load' });
+  await page.locator('.language-select select').selectOption('en');
+  await page.clock.runFor(BOOT_TIME_MS);
+
+  const canvas = page.locator('.shader-canvas');
+  await canvas.waitFor({ state: 'visible', timeout: 10_000 });
+  await page.locator('.canvas-loader').waitFor({ state: 'hidden', timeout: 10_000 });
+  await page.locator('[data-telemetry-state="live"]').waitFor({
+    state: 'visible',
+    timeout: 10_000,
+  });
+  return canvas;
+}
+
 async function prewarmRenderer(browser, baseUrl) {
   const context = await browser.newContext({
     viewport: VIEWPORT,
@@ -159,8 +177,6 @@ async function prewarmRenderer(browser, baseUrl) {
     reducedMotion: 'no-preference',
   });
   const page = await context.newPage();
-  const epoch = new Date(CLOCK_EPOCH);
-  await page.clock.install({ time: epoch });
   const browserErrors = [];
   page.on('console', (message) => {
     if (message.type() === 'error') browserErrors.push(`console: ${message.text()}`);
@@ -168,12 +184,7 @@ async function prewarmRenderer(browser, baseUrl) {
   page.on('pageerror', (error) => browserErrors.push(`pageerror: ${error.message}`));
 
   try {
-    await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'load' });
-    const canvas = page.locator('.shader-canvas');
-    await canvas.waitFor({ state: 'visible', timeout: 10_000 });
-    await page.locator('.canvas-loader').waitFor({ state: 'hidden', timeout: 10_000 });
-    await page.locator('.language-select select').selectOption('en');
-    await page.clock.pauseAt(new Date(epoch.getTime() + BOOT_TIME_MS));
+    const canvas = await prepareDeterministicPage(page, baseUrl);
 
     let elapsedMs = 0;
     const checks = [];
@@ -231,8 +242,6 @@ async function captureState(browser, baseUrl, outputDir, weather) {
     reducedMotion: 'no-preference',
   });
   const page = await context.newPage();
-  const epoch = new Date(CLOCK_EPOCH);
-  await page.clock.install({ time: epoch });
   const browserErrors = [];
   page.on('console', (message) => {
     if (message.type() === 'error') browserErrors.push(`console: ${message.text()}`);
@@ -240,12 +249,7 @@ async function captureState(browser, baseUrl, outputDir, weather) {
   page.on('pageerror', (error) => browserErrors.push(`pageerror: ${error.message}`));
 
   try {
-    await page.goto(`${baseUrl}/#/room/voxel-water`, { waitUntil: 'load' });
-    const canvas = page.locator('.shader-canvas');
-    await canvas.waitFor({ state: 'visible', timeout: 10_000 });
-    await page.locator('.canvas-loader').waitFor({ state: 'hidden', timeout: 10_000 });
-    await page.locator('.language-select select').selectOption('en');
-    await page.clock.pauseAt(new Date(epoch.getTime() + BOOT_TIME_MS));
+    const canvas = await prepareDeterministicPage(page, baseUrl);
     await page.getByTestId(`voxel-water-weather-${weather}`).click();
     let elapsedMs = 0;
     const frameCaptures = [];
@@ -452,6 +456,11 @@ export async function runWeatherIdentity({
     thumbnail: THUMBNAIL,
     clockEpoch: CLOCK_EPOCH,
     bootTimeMs: BOOT_TIME_MS,
+    deterministicBoot: {
+      freezeAtClockEpochBeforeNavigation: true,
+      advanceMethod: 'clock.runFor',
+      readinessWaitsAfterBootAdvance: true,
+    },
     prewarmTimesMs: WEATHER_IDENTITY_PREWARM_TIMES_MS,
     requiredConsecutiveRenderablePrewarmFrames:
       REQUIRED_CONSECUTIVE_RENDERABLE_PREWARM_FRAMES,

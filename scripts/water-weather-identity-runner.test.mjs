@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import {
   assertRenderableContent,
@@ -64,5 +65,42 @@ describe('weather identity runner contracts', () => {
     expect(WEATHER_IDENTITY_SAMPLE_TIMES_MS).toEqual([
       1600, 2400, 3200, 4000, 4800, 5600, 6400, 7200,
     ]);
+  });
+
+  it('freezes the epoch before navigation and advances boot timers before readiness waits', async () => {
+    const source = await readFile('scripts/water-weather-identity.mjs', 'utf8');
+    const setupStart = source.indexOf('async function prepareDeterministicPage');
+    const setupEnd = source.indexOf('\n}\n\nasync function prewarmRenderer', setupStart);
+    const setup = source.slice(setupStart, setupEnd);
+    const orderedSetup = [
+      'await page.clock.install({ time: epoch });',
+      'await page.clock.pauseAt(epoch);',
+      'await page.goto(',
+      "selectOption('en')",
+      'await page.clock.runFor(BOOT_TIME_MS);',
+      "await canvas.waitFor({ state: 'visible'",
+      "await page.locator('.canvas-loader').waitFor({ state: 'hidden'",
+      "await page.locator('[data-telemetry-state=\"live\"]')",
+    ];
+    let previous = -1;
+    for (const operation of orderedSetup) {
+      const position = setup.indexOf(operation);
+      expect(position, `${operation} must exist after the preceding deterministic setup step`).toBeGreaterThan(
+        previous,
+      );
+      previous = position;
+    }
+
+    const captureStart = source.indexOf('async function captureState');
+    const captureEnd = source.indexOf('\n}\n\nfunction assertEquivalentControls', captureStart);
+    const capture = source.slice(captureStart, captureEnd);
+    const deterministicSetup = capture.indexOf('await prepareDeterministicPage(page, baseUrl)');
+    const weatherClick = capture.indexOf(
+      'await page.getByTestId(`voxel-water-weather-${weather}`).click()',
+    );
+    expect(deterministicSetup).toBeGreaterThan(-1);
+    expect(weatherClick).toBeGreaterThan(deterministicSetup);
+    expect(source).toContain('deterministicBoot: {');
+    expect(source).toContain("advanceMethod: 'clock.runFor'");
   });
 });
