@@ -1,0 +1,227 @@
+{
+  "baseUrl": "http://127.0.0.1:4173/ShaderDemoRoom",
+  "label": "3acfed9-storm",
+  "locale": "en",
+  "preset": "storm",
+  "reducedMotion": "no-preference",
+  "screenshots": {
+    "page": "C:\\Users\\LilyH\\AppData\\Local\\Temp\\t-vw-08-3acfed9-final/3acfed9-storm-page.png",
+    "canvas": "C:\\Users\\LilyH\\AppData\\Local\\Temp\\t-vw-08-3acfed9-final/3acfed9-storm-canvas.png"
+  },
+  "canvas": {
+    "width": 862,
+    "height": 735
+  },
+  "frameCount": 20,
+  "frameDelayMs": 120,
+  "sampleScale": 4,
+  "meanDelta": 38.08,
+  "strongRatio": 0.34757,
+  "maxDelta": 240.7,
+  "regionMetrics": {
+    "sky": {
+      "lumaMean": 135.05,
+      "skyLuma": 135.05,
+      "saturationRange": 0.7742,
+      "colorSignature": {
+        "rMean": 123.16,
+        "gMean": 139.71,
+        "bMean": 123.94,
+        "hueMean": 123.07,
+        "saturationMean": 0.0946,
+        "cyanBias": 0.034,
+        "warmCoolBias": -0.003
+      }
+    },
+    "horizon": {
+      "lumaMean": 124.78,
+      "waterCoverage": 0.28229,
+      "saturationRange": 1,
+      "colorSignature": {
+        "rMean": 117.19,
+        "gMean": 126.84,
+        "bMean": 126.64,
+        "hueMean": 188.17,
+        "saturationMean": 0.2062,
+        "cyanBias": 0.0375,
+        "warmCoolBias": -0.0371
+      }
+    },
+    "water": {
+      "lumaMean": 57.7,
+      "waterLuma": 57.7,
+      "waterCoverage": 0.41667,
+      "saturationRange": 1,
+      "waterSaturationRange": 1,
+      "toonBandSeparation": 19.376,
+      "voxelLocalContrast": 17.622,
+      "hueMean": 209.41,
+      "colorSignature": {
+        "rMean": 42.82,
+        "gMean": 60.66,
+        "bMean": 72.14,
+        "hueMean": 209.41,
+        "saturationMean": 0.4954,
+        "cyanBias": 0.0925,
+        "warmCoolBias": -0.115
+      }
+    }
+  },
+  "waterCoverage": 0.41667,
+  "waterLuma": 57.7,
+  "waterSaturationRange": 1,
+  "toonBandSeparation": 19.376,
+  "hueMean": 209.41,
+  "colorSignature": {
+    "rMean": 42.82,
+    "gMean": 60.66,
+    "bMean": 72.14,
+    "hueMean": 209.41,
+    "saturationMean": 0.4954,
+    "cyanBias": 0.0925,
+    "warmCoolBias": -0.115
+  },
+  "weatherSeparation": {
+    "preset": "storm",
+    "waterHue": 209.41,
+    "skyHue": 123.07,
+    "cyanBias": 0.0925,
+    "warmCoolBias": -0.115
+  },
+  "skyLuma": 135.05,
+  "voxelLocalContrast": 17.622,
+  "verticalSeam": {
+    "score": 0,
+    "maxAllowed": 1,
+    "scan": "storm-foreground",
+    "frameIndex": 0,
+    "path": {
+      "xTop": 670,
+      "yTop": 529,
+      "xBottom": 646,
+      "yBottom": 689,
+      "slope": -0.15
+    },
+    "fullWaterMax": 1.667,
+    "stormForegroundMax": 0,
+    "frameScores": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "diffs": [
+    {
+      "meanDelta": 36.954,
+      "strongRatio": 0.3284,
+      "maxDelta": 239.3
+    },
+    {
+      "meanDelta": 36.701,
+      "strongRatio": 0.32473,
+      "maxDelta": 241.3
+    },
+    {
+      "meanDelta": 39.574,
+      "strongRatio": 0.33864,
+      "maxDelta": 241.3
+    },
+    {
+      "meanDelta": 38.163,
+      "strongRatio": 0.33736,
+      "maxDelta": 239.7
+    },
+    {
+      "meanDelta": 38.8,
+      "strongRatio": 0.32601,
+      "maxDelta": 241
+    },
+    {
+      "meanDelta": 37.34,
+      "strongRatio": 0.33348,
+      "maxDelta": 239.7
+    },
+    {
+      "meanDelta": 37.225,
+      "strongRatio": 0.3318,
+      "maxDelta": 241.3
+    },
+    {
+      "meanDelta": 37.076,
+      "strongRatio": 0.33316,
+      "maxDelta": 242
+    },
+    {
+      "meanDelta": 37.706,
+      "strongRatio": 0.3363,
+      "maxDelta": 241.3
+    },
+    {
+      "meanDelta": 37.955,
+      "strongRatio": 0.34294,
+      "maxDelta": 241.3
+    },
+    {
+      "meanDelta": 35.802,
+      "strongRatio": 0.3238,
+      "maxDelta": 241
+    },
+    {
+      "meanDelta": 38.774,
+      "strongRatio": 0.34649,
+      "maxDelta": 240.7
+    },
+    {
+      "meanDelta": 37.484,
+      "strongRatio": 0.3353,
+      "maxDelta": 241
+    },
+    {
+      "meanDelta": 36.693,
+      "strongRatio": 0.32425,
+      "maxDelta": 241.3
+    },
+    {
+      "meanDelta": 35.411,
+      "strongRatio": 0.3119,
+      "maxDelta": 241
+    },
+    {
+      "meanDelta": 36.752,
+      "strongRatio": 0.32158,
+      "maxDelta": 241.3
+    },
+    {
+      "meanDelta": 37.372,
+      "strongRatio": 0.31253,
+      "maxDelta": 239
+    },
+    {
+      "meanDelta": 42.533,
+      "strongRatio": 0.49663,
+      "maxDelta": 240
+    },
+    {
+      "meanDelta": 45.207,
+      "strongRatio": 0.49852,
+      "maxDelta": 240
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-22T17:05:59.8101689Z",
+  "comparison": "T-VW-01 accepted baseline vs T-VW-08 GPU particle candidate",
+  "room": {
+    "id": "voxel-water",
+    "preset": "storm"
+  },
+  "builds": {
+    "baseline": {
+      "sourceRevision": "2b4dc0a9a706608cf6fdf4e47ba6ba47186176d3",
+      "url": "https://hitsuki-ban.github.io/ShaderDemoRoom/"
+    },
+    "candidate": {
+      "sourceRevision": "3acfed9c9bd805757a42255875d7591838338921",
+      "url": "http://127.0.0.1:4173/ShaderDemoRoom"
+    }
+  },
+  "method": {
+    "independentRuns": 2,
+    "pairsPerRun": 5,
+    "combinedPairs": 10,
+    "order": "AB/BA interleaved and alternating within each run",
+    "warmupSecondsPerPage": 5,
+    "measurementSecondsPerPage": 15,
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "rawReports": [
+      "t-vw-08-performance-run-1.json",
+      "t-vw-08-performance-run-2.json"
+    ]
+  },
+  "aggregates": {
+    "run1PairedSpeedRatioMedian": 0.9769585253456221,
+    "run2PairedSpeedRatioMedian": 0.9637960887696801,
+    "baselineFpsMedian": 14.079057171371394,
+    "candidateFpsMedian": 13.395988544488787,
+    "combinedPairedSpeedRatioMedian": 0.9679712100924429,
+    "pairedSpeedRatioMinimum": 0.9175247639838527,
+    "pairedSpeedRatioMaximum": 0.9964340528980926,
+    "sortedPairedSpeedRatios": [
+      0.9175247639838527,
+      0.9407087863132557,
+      0.9463572790610614,
+      0.9631272336717719,
+      0.9637960887696801,
+      0.9721463314152058,
+      0.9769585253456221,
+      0.9792303095608711,
+      0.9835966128533564,
+      0.9964340528980926
+    ]
+  },
+  "runtimeIntegrity": {
+    "pageSamples": 20,
+    "expectedDrawCalls": 21,
+    "drawCallMismatches": 0,
+    "browserErrors": 0
+  },
+  "gate": {
+    "metric": "combinedPairedSpeedRatioMedian",
+    "minimum": 0.95,
+    "actual": 0.9679712100924429,
+    "passed": true
+  },
+  "tuningAudit": {
+    "discardedConcurrentRevision": "dbe580e29523394aed56c6cc53c468af2502139b",
+    "discardedReason": "A shell timeout left an orphan performance process, so overlapping runs were invalidated rather than selected.",
+    "failedRevision": "171395232061573417f4190bbcc1177eb7a404bd",
+    "failedCombinedPairedSpeedRatioMedian": 0.949784828711068,
+    "failedRawReports": [
+      "t-vw-08-performance-1713952-run-1-fail.json",
+      "t-vw-08-performance-1713952-run-2-fail.json"
+    ]
+  }
+}
