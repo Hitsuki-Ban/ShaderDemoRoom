@@ -18,8 +18,6 @@ import {
   MeshStandardMaterial,
   PerspectiveCamera,
   PlaneGeometry,
-  Points,
-  PointsMaterial,
   Scene,
   ShaderMaterial,
   SphereGeometry,
@@ -45,6 +43,12 @@ import {
   LANDMARK_MODEL,
   landmarkCoversVoxelColumnWorldOcean,
 } from './landmarkModel';
+import {
+  rainParticleFragmentShader,
+  rainParticleVertexShader,
+  sprayParticleFragmentShader,
+  sprayParticleVertexShader,
+} from './particleShaders';
 import {
   buildColumnVertexShader,
   buildColumnFragmentShader,
@@ -200,7 +204,8 @@ export const WEATHER_LOOKS = {
 
 const PRESENTATION_DRIFT_AMPLITUDE = 0.003;
 const PRESENTATION_DRIFT_SPEED = 0.035;
-const RAIN_DROP_COUNT = 420;
+const RAIN_DROP_COUNT = 200;
+const SPRAY_DROP_COUNT = 96;
 const WATER_PLANE_SIZE = 156;
 const WATER_PLANE_SEGMENTS = 72;
 const VOXEL_GRID_SIDE = 64;
@@ -234,7 +239,7 @@ function disposeSceneResources(scene: Scene) {
 
   scene.traverse((object) => {
     if (object instanceof InstancedMesh) instancedMeshes.add(object);
-    if (!(object instanceof Mesh || object instanceof Points || object instanceof LineSegments)) return;
+    if (!(object instanceof Mesh || object instanceof LineSegments)) return;
     geometries.add(object.geometry);
     const objectMaterials = Array.isArray(object.material) ? object.material : [object.material];
     objectMaterials.forEach((material) => materials.add(material));
@@ -603,42 +608,119 @@ export function createRoomRuntime(
   gridOverlay.renderOrder = 5;
   root.add(gridOverlay);
 
-  const rainGeometry = new BufferGeometry();
-  const rainPositions = new Float32Array(RAIN_DROP_COUNT * 3);
-  for (let i = 0; i < rainPositions.length; i += 3) {
-    rainPositions[i] = (random() - 0.5) * (WATER_PLANE_SIZE * 0.84);
-    rainPositions[i + 1] = random() * 9 + 2;
-    rainPositions[i + 2] = (random() - 0.5) * (WATER_PLANE_SIZE * 0.72);
+  const rainRandom = createSeededRandom(0x71a5eed);
+  const rainGeometry = new PlaneGeometry(1, 1);
+  const rainSeeds = new Float32Array(RAIN_DROP_COUNT);
+  const rainSpeeds = new Float32Array(RAIN_DROP_COUNT);
+  const rainScales = new Float32Array(RAIN_DROP_COUNT);
+  const rainMatrices: Matrix4[] = [];
+  for (let index = 0; index < RAIN_DROP_COUNT; index += 1) {
+    matrix.makeTranslation(
+      (rainRandom() - 0.5) * (WATER_PLANE_SIZE * 0.84),
+      0,
+      (rainRandom() - 0.5) * (WATER_PLANE_SIZE * 0.72),
+    );
+    rainMatrices.push(matrix.clone());
+    rainSeeds[index] = rainRandom();
+    rainSpeeds[index] = 0.7 + rainRandom();
+    rainScales[index] = 0.68 + rainRandom() * 0.64;
   }
-  rainGeometry.setAttribute('position', new BufferAttribute(rainPositions, 3));
-  const rainMaterial = new PointsMaterial({
-    color: 0xa8ddf5,
-    size: 0.03,
+  rainGeometry.setAttribute('aSeed', new InstancedBufferAttribute(rainSeeds, 1));
+  rainGeometry.setAttribute('aSpeed', new InstancedBufferAttribute(rainSpeeds, 1));
+  rainGeometry.setAttribute('aScale', new InstancedBufferAttribute(rainScales, 1));
+  const rainResolutionUniform = { value: new Vector2(1, 1) };
+  const rainMaterial = new ShaderMaterial({
+    vertexShader: rainParticleVertexShader,
+    fragmentShader: rainParticleFragmentShader,
     transparent: true,
-    opacity: 0.36,
+    depthTest: true,
     depthWrite: false,
+    fog: true,
+    toneMapped: true,
+    uniforms: {
+      uTime: waveUniforms.uTime,
+      uResolution: rainResolutionUniform,
+      uColor: { value: new Color(0xa8ddf5) },
+      uOpacity: { value: 0.36 },
+      uLength: { value: 18 },
+      uWind: { value: settings.wind },
+      fogDensity: { value: initialWeatherLook.fogDensity },
+      fogNear: { value: initialWeatherLook.fogNear },
+      fogFar: { value: initialWeatherLook.fogFar },
+      fogColor: { value: initialWeatherLook.fogColor.clone() },
+    },
   });
-  const rain = new Points(rainGeometry, rainMaterial);
+  const rain = new InstancedMesh(rainGeometry, rainMaterial, RAIN_DROP_COUNT);
+  for (let index = 0; index < RAIN_DROP_COUNT; index += 1) {
+    rain.setMatrixAt(index, rainMatrices[index]);
+  }
+  rain.instanceMatrix.needsUpdate = true;
+  rain.frustumCulled = false;
   rain.name = 'voxel-water-rain';
   rain.renderOrder = 4;
   root.add(rain);
 
-  const sprayGeometry = new BufferGeometry();
-  const sprayPositions = new Float32Array(220 * 3);
-  for (let i = 0; i < sprayPositions.length; i += 3) {
-    sprayPositions[i] = (random() - 0.5) * 14;
-    sprayPositions[i + 1] = random() * 1.4 + 0.05;
-    sprayPositions[i + 2] = (random() - 0.5) * 14;
+  const sprayRandom = createSeededRandom(0x5f2a91);
+  const sprayGeometry = new PlaneGeometry(1, 1);
+  const spraySeeds = new Float32Array(SPRAY_DROP_COUNT);
+  const spraySpeeds = new Float32Array(SPRAY_DROP_COUNT);
+  const sprayScales = new Float32Array(SPRAY_DROP_COUNT);
+  const sprayLaunches = new Float32Array(SPRAY_DROP_COUNT * 3);
+  const sprayVelocities = new Float32Array(SPRAY_DROP_COUNT * 3);
+  const sprayMatrices: Matrix4[] = [];
+  for (let index = 0; index < SPRAY_DROP_COUNT; index += 1) {
+    const angle = sprayRandom() * Math.PI * 2;
+    const radialSpeed = 0.28 + sprayRandom() * 0.82;
+    matrix.makeTranslation(
+      (sprayRandom() - 0.5) * 13.5,
+      0,
+      (sprayRandom() - 0.5) * 13.5,
+    );
+    sprayMatrices.push(matrix.clone());
+    sprayLaunches[index * 3] = (sprayRandom() - 0.5) * 0.65;
+    sprayLaunches[index * 3 + 1] = 0.06 + sprayRandom() * 0.32;
+    sprayLaunches[index * 3 + 2] = (sprayRandom() - 0.5) * 0.65;
+    sprayVelocities[index * 3] = Math.cos(angle) * radialSpeed;
+    sprayVelocities[index * 3 + 1] = 1.2 + sprayRandom() * 1.65;
+    sprayVelocities[index * 3 + 2] = Math.sin(angle) * radialSpeed;
+    spraySeeds[index] = sprayRandom();
+    spraySpeeds[index] = 0.7 + sprayRandom();
+    sprayScales[index] = 0.64 + sprayRandom() * 0.72;
   }
-  sprayGeometry.setAttribute('position', new BufferAttribute(sprayPositions, 3));
-  const sprayMaterial = new PointsMaterial({
-    color: 0xd6fbff,
-    size: 0.05,
+  sprayGeometry.setAttribute('aSeed', new InstancedBufferAttribute(spraySeeds, 1));
+  sprayGeometry.setAttribute('aSpeed', new InstancedBufferAttribute(spraySpeeds, 1));
+  sprayGeometry.setAttribute('aScale', new InstancedBufferAttribute(sprayScales, 1));
+  sprayGeometry.setAttribute('aLaunch', new InstancedBufferAttribute(sprayLaunches, 3));
+  sprayGeometry.setAttribute('aVelocity', new InstancedBufferAttribute(sprayVelocities, 3));
+  const sprayResolutionUniform = { value: new Vector2(1, 1) };
+  const sprayMaterial = new ShaderMaterial({
+    vertexShader: sprayParticleVertexShader,
+    fragmentShader: sprayParticleFragmentShader,
     transparent: true,
-    opacity: 0.28,
+    depthTest: true,
     depthWrite: false,
+    fog: true,
+    toneMapped: true,
+    uniforms: {
+      uTime: waveUniforms.uTime,
+      uResolution: sprayResolutionUniform,
+      uColor: { value: new Color(0xd6fbff) },
+      uOpacity: { value: 0.28 },
+      uLength: { value: 5.5 },
+      uWind: { value: settings.wind },
+      uFoam: waveUniforms.uFoam,
+      fogDensity: { value: initialWeatherLook.fogDensity },
+      fogNear: { value: initialWeatherLook.fogNear },
+      fogFar: { value: initialWeatherLook.fogFar },
+      fogColor: { value: initialWeatherLook.fogColor.clone() },
+    },
   });
-  const spray = new Points(sprayGeometry, sprayMaterial);
+  const spray = new InstancedMesh(sprayGeometry, sprayMaterial, SPRAY_DROP_COUNT);
+  for (let index = 0; index < SPRAY_DROP_COUNT; index += 1) {
+    spray.setMatrixAt(index, sprayMatrices[index]);
+  }
+  spray.instanceMatrix.needsUpdate = true;
+  spray.frustumCulled = false;
   spray.name = 'voxel-water-spray';
   spray.renderOrder = 3;
   root.add(spray);
@@ -691,12 +773,15 @@ export function createRoomRuntime(
     skyMaterial.uniforms.uWeatherLightningTint.value.copy(weatherLook.lightningTint);
     columnWeatherStrengthUniform.value = weatherLook.strength;
 
-    rainMaterial.opacity = Math.min(0.64, settings.rain * 0.62 + weatherLook.strength * 0.2);
+    rainMaterial.uniforms.uOpacity.value = Math.min(0.64, settings.rain * 0.62 + weatherLook.strength * 0.2);
     rain.visible = settings.rain > 0.02 || settings.weather !== 'clear';
-    rainMaterial.size = 0.024 + settings.rain * 0.022 + settings.surfaceDetail * 0.006;
+    rainMaterial.uniforms.uLength.value = 12 + settings.rain * 9 + settings.surfaceDetail * 2;
+    rainMaterial.uniforms.uWind.value = settings.wind;
     spray.visible = settings.foam > 0.52 || settings.weather === 'storm';
-    sprayMaterial.opacity = Math.min(0.36, settings.foam * 0.24 + settings.rain * 0.12 + weatherLook.strength * 0.16);
-    sprayMaterial.size = 0.03 + settings.foam * 0.05;
+    sprayMaterial.uniforms.uOpacity.value = Math.min(0.36, settings.foam * 0.24 + settings.rain * 0.12 + weatherLook.strength * 0.16);
+    sprayMaterial.uniforms.uLength.value = 3.4 + settings.foam * 3.6;
+    sprayMaterial.uniforms.uWind.value = settings.wind;
+    sprayMaterial.uniforms.uFoam.value = settings.foam;
     cloudMaterial.opacity = weatherLook.cloudOpacityBase + settings.cloudCover * 0.44 + weatherLook.strength * 0.12;
     const lightingCompression = Math.min(1, Math.max(0, (weatherLook.strength - 0.65) / 0.23));
     ambient.color.copy(weatherLook.ambientColor);
@@ -787,9 +872,11 @@ export function createRoomRuntime(
     setMotionScale(scale) {
       motionScale = scale;
     },
-    resize({ width, height }: RoomSize) {
+    resize({ width, height, pixelRatio }: RoomSize) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
+      rainResolutionUniform.value.set(width * pixelRatio, height * pixelRatio);
+      sprayResolutionUniform.value.set(width * pixelRatio, height * pixelRatio);
     },
     render({ delta }: RoomFrame) {
       motionElapsed += delta * motionScale;
@@ -829,12 +916,6 @@ export function createRoomRuntime(
         lastColumnColorStep = columnColorSample.step;
         colorRefreshRequested = false;
       }
-      rain.position.y -= delta * motionScale * (5 + settings.wind * 1.8);
-      if (rain.position.y < -4) {
-        rain.position.y = 1.5;
-      }
-      spray.rotation.y += delta * motionScale * (0.18 + settings.wind * 0.04);
-      spray.position.y = Math.sin(motionElapsed * 0.45) * 0.05;
       cloudDeck.position.x = Math.sin(motionElapsed * 0.08) * 0.6;
       gridOverlay.position.y = Math.sin(motionElapsed * 0.28) * 0.012;
       root.rotation.y = Math.sin(motionElapsed * PRESENTATION_DRIFT_SPEED) * PRESENTATION_DRIFT_AMPLITUDE;

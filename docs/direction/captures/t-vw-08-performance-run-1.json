@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-22T17:01:11.812Z",
+  "comparison": "T-VW-01 accepted baseline vs T-VW-08 GPU particle candidate",
+  "room": {
+    "id": "voxel-water",
+    "preset": "storm",
+    "route": "#/room/voxel-water?v=3&weather=storm&wind=2.1&rain=0.74&waveHeight=1.08&cloudCover=0.78&swell=0.9&chop=0.82&foam=0.78&clarity=0.52&surfaceDetail=0.86&currentDirection=58&currentStrength=0.78&skyTime=0.24&colorTemperature=-0.22&voxelColorVariance=0.46"
+  },
+  "environment": {
+    "classification": "software",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+  },
+  "builds": {
+    "baseline": {
+      "sourceRevision": "2b4dc0a9a706608cf6fdf4e47ba6ba47186176d3",
+      "url": "https://hitsuki-ban.github.io/ShaderDemoRoom"
+    },
+    "candidate": {
+      "sourceRevision": "3acfed9c9bd805757a42255875d7591838338921",
+      "url": "http://127.0.0.1:4173/ShaderDemoRoom"
+    }
+  },
+  "method": {
+    "pairs": 5,
+    "order": "AB/BA interleaved and alternating in one browser process",
+    "warmupSeconds": 5,
+    "measurementSeconds": 15,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1
+    }
+  },
+  "aggregates": {
+    "baselineFpsMedian": 14.317965383821365,
+    "candidateFpsMedian": 14.020585675081232,
+    "pairedSpeedRatioMedian": 0.9769585253456221,
+    "pairedSpeedRatioMinimum": 0.9175247639838527,
+    "pairedSpeedRatioMaximum": 0.9964340528980926
+  },
+  "gate": {
+    "metric": "pairedSpeedRatioMedian",
+    "minimum": 0.95,
+    "passed": true
+  },
+  "expectedDrawCalls": {
+    "baseline": 21,
+    "candidate": 21
+  },
+  "pairs": [
+    {
+      "pair": 1,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15032.699999999999,
+        "fps": 14.435197935168002,
+        "frameTimeMs": 69.27511520737326,
+        "intervals": 217
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15032.699999999999,
+        "fps": 14.1025896878139,
+        "frameTimeMs": 70.90896226415094,
+        "intervals": 212
+      },
+      "speedRatio": 0.9769585253456221
+    },
+    {
+      "pair": 2,
+      "order": [
+        "candidate",
+        "baseline"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15032.7,
+        "fps": 14.435197935168,
+        "frameTimeMs": 69.27511520737328,
+        "intervals": 217
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15032.800000000001,
+        "fps": 13.90293225480283,
+        "frameTimeMs": 71.92727272727274,
+        "intervals": 209
+      },
+      "speedRatio": 0.9631272336717719
+    },
+    {
+      "pair": 3,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15016.1,
+        "fps": 14.317965383821365,
+        "frameTimeMs": 69.84232558139536,
+        "intervals": 215
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15049.300000000001,
+        "fps": 14.020585675081232,
+        "frameTimeMs": 71.32369668246446,
+        "intervals": 211
+      },
+      "speedRatio": 0.9792303095608711
+    },
+    {
+      "pair": 4,
+      "order": [
+        "candidate",
+        "baseline"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15032.7,
+        "fps": 14.235632986755538,
+        "frameTimeMs": 70.24626168224299,
+        "intervals": 214
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15016,
+        "fps": 14.1848694725626,
+        "frameTimeMs": 70.49765258215963,
+        "intervals": 213
+      },
+      "speedRatio": 0.9964340528980926
+    },
+    {
+      "pair": 5,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "label": "baseline",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15082.800000000001,
+        "fps": 14.122046304399712,
+        "frameTimeMs": 70.8112676056338,
+        "intervals": 213
+      },
+      "candidate": {
+        "label": "candidate",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "drawCalls": 21,
+        "browserErrors": [],
+        "elapsedMs": 15049.4,
+        "fps": 12.957327202413385,
+        "frameTimeMs": 77.17641025641025,
+        "intervals": 195
+      },
+      "speedRatio": 0.9175247639838527
+    }
+  ]
+}
