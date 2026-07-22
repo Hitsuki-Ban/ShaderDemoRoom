@@ -430,9 +430,9 @@ void main() {
   foamMask = max(foamMask, max(distantRainFoamRidge, distantStormWhitecap));
   foamMask *= 1.0 - nearClearFoamSuppression;
   foamMask *= 1.0 - foregroundStormWindow * 0.9;
-  float stormWhitecapPatch = smoothstep(0.015, 0.1, toonEdgeAccent + vSlope * 0.35)
-    * smoothstep(0.42, 0.6, stormSurfaceNoise)
-    * smoothstep(0.32, 0.56, uFoam)
+  float stormWhitecapPatch = smoothstep(0.03, 0.16, toonEdgeAccent + vSlope * 0.35)
+    * smoothstep(0.6, 0.72, stormSurfaceNoise)
+    * smoothstep(0.42, 0.64, uFoam)
     * stormValuePhase;
   foamMask = max(foamMask, stormWhitecapPatch);
   float headlandDistance = abs(signedDistanceToHeadland(vOceanXZ));

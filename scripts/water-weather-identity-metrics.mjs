@@ -6,6 +6,7 @@ export const WEATHER_IDENTITY_THRESHOLDS = Object.freeze({
   rainSkyStreaks: 3,
   rainWaterRings: 1,
   rainRingSupportMultiplier: 1.25,
+  rainRippleBlueLift: 15,
   stormSkyStreaks: 3,
   cloudBoundaryCoverage: 0.48,
   cloudBoundaryRange: 5,
@@ -14,7 +15,7 @@ export const WEATHER_IDENTITY_THRESHOLDS = Object.freeze({
   stormCloudTurns: 3,
   minimumStormCloudPassRate: 0.75,
   maximumClearCloudPassRate: 0.625,
-  foamLocalContrast: 20,
+  foamLumaAboveWaterMedian: 60,
   foamSupportRatio: 0.0015,
   foamSpatialCells: 3,
   stormFoamSupportPixels: 100,
@@ -57,6 +58,14 @@ function lumaAt(frame, x, y) {
   return encodedRec709Luma(
     frame.pixels[offset], frame.pixels[offset + 1], frame.pixels[offset + 2],
   );
+}
+
+function rippleBlueLiftAt(frame, x, y) {
+  const offset = (y * frame.width + x) * frame.bytesPerPixel;
+  const red = frame.pixels[offset];
+  const green = frame.pixels[offset + 1];
+  const blue = frame.pixels[offset + 2];
+  return blue - (red + green) / 2;
 }
 
 function localMean(frame, x, y, radius) {
@@ -164,31 +173,6 @@ export function measureSkyStreaks(
   };
 }
 
-function ringGeometry(component, width) {
-  const halfWidth = Math.max(1, component.bbox.width / 2);
-  const halfHeight = Math.max(1, component.bbox.height / 2);
-  const radii = [];
-  const angleBins = new Uint8Array(16);
-  for (const index of component.pixels) {
-    const x = index % width;
-    const y = Math.floor(index / width);
-    const normalizedX = (x - component.centroid.x) / halfWidth;
-    const normalizedY = (y - component.centroid.y) / halfHeight;
-    radii.push(Math.hypot(normalizedX, normalizedY));
-    const angle = (Math.atan2(normalizedY, normalizedX) + Math.PI * 2) % (Math.PI * 2);
-    angleBins[Math.floor(angle / (Math.PI * 2) * angleBins.length)] = 1;
-  }
-  const radiusMean = radii.reduce((sum, radius) => sum + radius, 0) / radii.length;
-  const radiusVariance = radii.reduce(
-    (sum, radius) => sum + (radius - radiusMean) ** 2, 0,
-  ) / radii.length;
-  return {
-    angularBins: angleBins.reduce((sum, occupied) => sum + occupied, 0),
-    radiusMean,
-    radiusCv: Math.sqrt(radiusVariance) / Math.max(radiusMean, 0.001),
-  };
-}
-
 function bitCount(value) {
   let count = 0;
   let remaining = value >>> 0;
@@ -213,7 +197,7 @@ function longestCircularRun(bits, binCount = 16) {
   return longest;
 }
 
-function measureBrokenEllipseSupports(source, components) {
+function measureImpactRingSupports(source, components) {
   const eligible = components.filter((component) => component.area >= 2 && component.area <= 140);
   const samples = [];
   eligible.forEach((component, componentIndex) => {
@@ -227,9 +211,9 @@ function measureBrokenEllipseSupports(source, components) {
   });
   if (samples.length < 10) return [];
   const configurations = [];
-  const aspects = [0.3, 0.45, 0.6];
-  for (let centerY = 4; centerY < source.height - 4; centerY += 2) {
-    for (let centerX = 4; centerX < source.width - 4; centerX += 2) {
+  const aspects = [0.45, 0.6, 0.75, 0.9];
+  for (let centerY = -4; centerY < source.height + 4; centerY += 2) {
+    for (let centerX = -8; centerX < source.width + 8; centerX += 2) {
       for (const aspect of aspects) {
         const support = new Uint16Array(23);
         const angularBits = new Uint16Array(23);
@@ -256,9 +240,9 @@ function measureBrokenEllipseSupports(source, components) {
             / neighboringSupport.length;
           const radialProminence = support[radius] / Math.max(1, neighboringMean);
           if (support[radius] < 10
-            || angularBins < 7
-            || longestArcBins < 3
-            || radialProminence < 1.45) continue;
+            || angularBins < 10
+            || longestArcBins < 6
+            || radialProminence < 1.6) continue;
           configurations.push({
             centerX,
             centerY,
@@ -281,7 +265,7 @@ function measureBrokenEllipseSupports(source, components) {
       Math.hypot(
         candidate.centerX - configuration.centerX,
         candidate.centerY - configuration.centerY,
-      ) <= Math.min(candidate.radius, configuration.radius) * 0.55
+      ) <= MAX_LOCAL_RING_RADIUS
     ))) continue;
     const componentSupport = new Map();
     for (const sample of samples) {
@@ -293,15 +277,14 @@ function measureBrokenEllipseSupports(source, components) {
         (componentSupport.get(sample.componentIndex) ?? 0) + 1,
       );
     }
-    const supportingComponents = [...componentSupport.values()].filter((count) => count >= 3);
+    const supportingComponents = [...componentSupport.values()].filter((count) => count >= 2);
     if (supportingComponents.length < 2
       || supportingComponents.reduce((total, count) => total + count, 0) < 10) continue;
     qualifying.push({
-      kind: 'broken-ellipse',
+      kind: 'impact-ring',
       ...configuration,
       componentCount: supportingComponents.length,
     });
-    if (qualifying.length >= 8) break;
   }
   return qualifying;
 }
@@ -313,31 +296,16 @@ export function measureRadialRings(
 ) {
   assertFrame(frame);
   const source = localMask(frame, region, exclusion, (x, y) => (
-    lumaAt(frame, x, y) - localMean(frame, x, y, 3) >= 12
+    rippleBlueLiftAt(frame, x, y) >= WEATHER_IDENTITY_THRESHOLDS.rainRippleBlueLift
   ));
-  const components = connectedComponents(source.mask, source.width, source.height)
-    .map((component) => ({ ...component, ring: ringGeometry(component, source.width) }));
-  const directRings = components.filter((component) => (
-    component.area >= 14
-    && component.bbox.width >= 7
-    && component.bbox.height >= 4
-    && component.bbox.width / component.bbox.height >= 0.55
-    && component.bbox.width / component.bbox.height <= 4.5
-    && component.ring.angularBins >= 10
-    && component.ring.radiusMean >= 0.62
-    && component.ring.radiusCv <= 0.28
-  ));
-  const brokenEllipses = measureBrokenEllipseSupports(source, components);
+  const components = connectedComponents(source.mask, source.width, source.height);
+  const impactRings = measureImpactRingSupports(source, components);
   return {
-    qualifyingCount: directRings.length + brokenEllipses.length,
-    supportPixels: directRings.reduce((total, component) => total + component.area, 0)
-      + brokenEllipses.reduce((total, candidate) => total + candidate.supportPixels, 0),
-    candidates: directRings.map((component) => ({
-      kind: 'connected-ring',
-      area: component.area,
-      bbox: component.bbox,
-      ...component.ring,
-    })).concat(brokenEllipses),
+    qualifyingCount: impactRings.length,
+    supportPixels: impactRings.reduce(
+      (total, candidate) => total + candidate.supportPixels, 0,
+    ),
+    candidates: impactRings,
   };
 }
 
@@ -462,19 +430,24 @@ export function measureFoamSupport(
   exclusion = LANDMARK_EXCLUSION_ROI,
 ) {
   assertFrame(frame);
-  const source = localMask(frame, region, exclusion, (x, y) => {
-    const luma = lumaAt(frame, x, y);
-    return luma - localMean(frame, x, y, 3)
-      >= WEATHER_IDENTITY_THRESHOLDS.foamLocalContrast;
-  });
-  const qualifying = connectedComponents(source.mask, source.width, source.height).filter(
-    (component) => component.area >= 12
-      && component.bbox.width >= 7
-      && (component.bbox.width >= component.bbox.height * 1.25 || component.bbox.width >= 14),
-  );
-  const supportPixels = qualifying.reduce((total, component) => total + component.area, 0);
+  const regionBounds = bounds(frame, region);
+  const waterLuma = [];
+  for (let y = regionBounds.y0; y < regionBounds.y1; y += 1) {
+    for (let x = regionBounds.x0; x < regionBounds.x1; x += 1) {
+      if (!inside(frame, exclusion, x, y)) waterLuma.push(lumaAt(frame, x, y));
+    }
+  }
+  if (waterLuma.length === 0) throw new Error('Foam detector has no unobstructed water samples.');
+  const waterMedianLuma = percentile(waterLuma, 0.5);
+  const highlightThresholdLuma = waterMedianLuma
+    + WEATHER_IDENTITY_THRESHOLDS.foamLumaAboveWaterMedian;
+  const source = localMask(frame, region, exclusion, (x, y) => (
+    lumaAt(frame, x, y) >= highlightThresholdLuma
+  ));
+  const components = connectedComponents(source.mask, source.width, source.height);
+  const supportPixels = components.reduce((total, component) => total + component.area, 0);
   const occupiedCells = new Set();
-  for (const component of qualifying) {
+  for (const component of components) {
     for (const index of component.pixels) {
       const x = index % source.width;
       const y = Math.floor(index / source.width);
@@ -483,14 +456,16 @@ export function measureFoamSupport(
   }
   const supportRatio = supportPixels / (source.width * source.height);
   const spatialCells = occupiedCells.size;
-  const passesShape = supportRatio >= WEATHER_IDENTITY_THRESHOLDS.foamSupportRatio
+  const passesArea = supportRatio >= WEATHER_IDENTITY_THRESHOLDS.foamSupportRatio
     && spatialCells >= WEATHER_IDENTITY_THRESHOLDS.foamSpatialCells;
   return {
+    waterMedianLuma,
+    highlightThresholdLuma,
     supportPixels,
     supportRatio,
-    componentCount: qualifying.length,
+    componentCount: components.length,
     spatialCells,
-    passesShape,
+    passesArea,
   };
 }
 
@@ -602,7 +577,7 @@ export function evaluateWeatherIdentity(frames) {
     stormCloudLowerEdge: cues.storm.cloudLowerEdge.passesShape
       && cues.storm.cloudLowerEdge.turns >= WEATHER_IDENTITY_THRESHOLDS.stormCloudTurns
       && !cues.clear.cloudLowerEdge.passesShape,
-    stormFoam: cues.storm.foam.passesShape
+    stormFoam: cues.storm.foam.passesArea
       && cues.storm.foam.supportPixels >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSupportPixels
       && cues.storm.foam.spatialCells >= WEATHER_IDENTITY_THRESHOLDS.stormFoamSpatialCells
       && comparisons.stormFoamSupportRatioMinusClear
@@ -652,11 +627,13 @@ function summarizeCueSeries(cues) {
         .reduce((sum, value) => sum + value, 0) / cues.length,
     },
     foam: {
+      waterMedianLuma: robustStats(values((cue) => cue.foam.waterMedianLuma)),
+      highlightThresholdLuma: robustStats(values((cue) => cue.foam.highlightThresholdLuma)),
       supportPixels: robustStats(values((cue) => cue.foam.supportPixels)),
       supportRatio: robustStats(values((cue) => cue.foam.supportRatio)),
       componentCount: robustStats(values((cue) => cue.foam.componentCount)),
       spatialCells: robustStats(values((cue) => cue.foam.spatialCells)),
-      passRate: values((cue) => cue.foam.passesShape ? 1 : 0)
+      passRate: values((cue) => cue.foam.passesArea ? 1 : 0)
         .reduce((sum, value) => sum + value, 0) / cues.length,
     },
   };

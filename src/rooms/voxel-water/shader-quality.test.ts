@@ -576,7 +576,7 @@ describe('voxel water runtime contracts', () => {
     expect(WEATHER_LOOKS.rain.rippleStrength).toBeGreaterThanOrEqual(0.9);
     expect(WEATHER_LOOKS.storm.foamFloor).toBeGreaterThanOrEqual(0.76);
     expect(WEATHER_LOOKS.storm.cloudJaggedness).toBeGreaterThanOrEqual(1.05);
-    expect(voxelWaterFragmentShader).toContain('smoothstep(0.42, 0.6, stormSurfaceNoise)');
+    expect(voxelWaterFragmentShader).toContain('smoothstep(0.6, 0.72, stormSurfaceNoise)');
     expect(skyFragmentShader).toContain('uniform float uSunVisibility;');
     expect(voxelWaterFragmentShader).not.toContain('normalize(uSunDirection)');
     expect(voxelWaterFragmentShader).toContain('uniform vec2 uCurrentDirectionXZ;');

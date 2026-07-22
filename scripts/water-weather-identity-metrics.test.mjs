@@ -93,46 +93,56 @@ describe('weather identity metrics', () => {
   });
 
   it('requires annular angular support so random water splashes cannot pass as rings', () => {
-    const splashes = makeFrame();
+    const water = [70, 90, 90, 255];
+    const ripple = [70, 115, 145, 255];
+    const splashes = makeFrame(160, 136, water);
     let value = 17;
     for (let point = 0; point < 90; point += 1) {
       value = (value * 73 + 19) % 997;
       const x = 8 + (value % 144);
       value = (value * 73 + 19) % 997;
       const y = 72 + (value % 55);
-      setPixel(splashes, x, y, [235, 245, 245, 255]);
+      setPixel(splashes, x, y, ripple);
     }
     expect(measureRadialRings(splashes).qualifyingCount).toBe(0);
 
-    const rings = makeFrame();
-    for (let angle = 0; angle < Math.PI * 2; angle += 0.055) {
-      setPixel(
-        rings,
-        Math.round(82 + Math.cos(angle) * 18),
-        Math.round(98 + Math.sin(angle) * 8),
-        [235, 245, 245, 255],
-      );
-    }
-    expect(measureRadialRings(rings).qualifyingCount).toBeGreaterThanOrEqual(1);
+    const ordinaryWaves = makeFrame(160, 136, water);
+    paint(ordinaryWaves, (_x, y) => y >= 72 && y % 9 < 2, ripple);
+    expect(measureRadialRings(ordinaryWaves).qualifyingCount).toBe(0);
 
-    const brokenRing = makeFrame();
+    const impactRing = makeFrame(160, 136, water);
     for (let angle = 0; angle < Math.PI * 2; angle += 0.035) {
       if (angle % 0.9 > 0.5) continue;
       setPixel(
-        brokenRing,
+        impactRing,
         Math.round(84 + Math.cos(angle) * 14),
-        Math.round(99 + Math.sin(angle) * 5),
-        [235, 245, 245, 255],
+        Math.round(99 + Math.sin(angle) * 6),
+        ripple,
       );
     }
-    const brokenResult = measureRadialRings(brokenRing);
-    expect(brokenResult.qualifyingCount).toBeGreaterThanOrEqual(1);
-    expect(brokenResult.candidates.some((candidate) => candidate.kind === 'broken-ellipse')).toBe(true);
+    const impactResult = measureRadialRings(impactRing);
+    expect(impactResult.qualifyingCount).toBeGreaterThanOrEqual(1);
+    expect(impactResult.candidates.every((candidate) => candidate.kind === 'impact-ring')).toBe(true);
+
+    const strongerImpactRing = makeFrame(160, 136, water);
+    for (let angle = 0; angle < Math.PI * 2; angle += 0.035) {
+      if (angle % 0.9 > 0.5) continue;
+      for (const widthOffset of [-1, 0, 1]) {
+        setPixel(
+          strongerImpactRing,
+          Math.round(84 + Math.cos(angle) * (14 + widthOffset)),
+          Math.round(99 + Math.sin(angle) * (6 + widthOffset * 0.4)),
+          ripple,
+        );
+      }
+    }
+    expect(measureRadialRings(strongerImpactRing).supportPixels)
+      .toBeGreaterThan(impactResult.supportPixels);
 
     const quietFrames = Array.from({ length: 8 }, () => makeFrame());
     const series = evaluateWeatherIdentitySeries({
       clear: quietFrames,
-      rain: [brokenRing, ...quietFrames.slice(1)],
+      rain: [impactRing, ...quietFrames.slice(1)],
       storm: quietFrames,
     }, [1600, 2400, 3200, 4000, 4800, 5600, 6400, 7200]);
     expect(series.aggregation.medoids.rain.index).not.toBe(0);
@@ -152,25 +162,37 @@ describe('weather identity metrics', () => {
     expect(measureCloudLowerEdge(clustered).passesShape).toBe(true);
   });
 
-  it('requires spatially distributed local-contrast foam support so uniform water fails', () => {
+  it('measures whitecaps above the frame water median so uniform brightness shifts cancel', () => {
     const dark = makeFrame(160, 136, [14, 30, 40, 255]);
-    expect(measureFoamSupport(dark).passesShape).toBe(false);
+    const bright = makeFrame(160, 136, [210, 220, 225, 255]);
+    expect(measureFoamSupport(dark).passesArea).toBe(false);
+    expect(measureFoamSupport(bright).passesArea).toBe(false);
 
     const darkFoam = foamFrame([82], [30, 30, 30, 255], [110, 110, 110, 255]);
     const brightFoam = foamFrame([82], [150, 150, 150, 255], [230, 230, 230, 255]);
     const darkResult = measureFoamSupport(darkFoam);
     const brightResult = measureFoamSupport(brightFoam);
-    expect(darkResult.passesShape).toBe(true);
+    expect(darkResult.passesArea).toBe(true);
     expect(brightResult.supportPixels).toBe(darkResult.supportPixels);
+    expect(brightResult.waterMedianLuma - darkResult.waterMedianLuma).toBeCloseTo(120);
   });
 
   it('requires Storm foam support to increase over aligned Clear support', () => {
     const background = [25, 65, 80, 255];
     const crest = [220, 245, 235, 255];
+    const noWhitecaps = makeFrame(160, 136, background);
     const clear = foamFrame([82], background, crest);
     const strongerStorm = foamFrame([82, 105], background, crest);
     const sampleTimesMs = [1600, 2400, 3200];
     const repeated = (frame) => [frame, frame, frame];
+
+    const absent = evaluateWeatherIdentity({
+      clear: noWhitecaps,
+      rain: noWhitecaps,
+      storm: noWhitecaps,
+    });
+    expect(absent.cues.storm.foam.passesArea).toBe(false);
+    expect(absent.gates.stormFoam).toBe(false);
 
     const noGain = evaluateWeatherIdentitySeries({
       clear: repeated(clear),
