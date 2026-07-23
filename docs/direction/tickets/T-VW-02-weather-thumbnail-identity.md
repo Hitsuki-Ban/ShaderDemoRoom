@@ -20,16 +20,36 @@
   どちらも報告し、両方を合格条件とする。環境正規化した paired 値で absolute 未達を置き換えない。
 - 人間判断が別途必要になるのは、同一 controls の彩色 / grayscale 160px sheet が機械門を満たした後も
   3状態の意味読みが競合する場合だけとする。それまでは上記既定判断で進める。
-- **疑問3 — absolute FPS を再現できるアイドル環境が確保できない**: 候補 `20a4abd` は同一環境
-  AB/BA paired median を weather-only Storm `0.9753x`、full Storm `0.9610x` で通過した一方、absolute
-  median は `13.7395 / 13.3560 FPS` で未達。固定基線 `328cc638` 自体も直近各 run でおおむね
-  `13.70–14.17 FPS`、full Storm は `13.70–13.84 FPS` と absolute 門 `13.833 FPS` 付近または未満まで
-  低下した。Playwright / SwiftShader の孤児は0件、preview は候補・基線各1件まで清掃済みだが、Windows
+- **疑問3 — absolute FPS を再現できるアイドル環境が確保できない**: 最終候補 `36f2f57` は同一環境
+  AB/BA paired median を weather-only Storm `0.9741x`、full Storm `0.9821x` で通過した一方、absolute
+  median は `13.0758 / 12.2928 FPS` で未達。同じ最終 run の固定基線 `328cc638` も
+  `13.4077 / 12.5586 FPS` と absolute 門 `13.833 FPS` を再現できなかった。候補 topology は
+  `8 calls / 61,972 triangles / 1 texture / 8 geometries / 8 programs` を維持した。Playwright / SwiftShader
+  の孤児は0件、preview は候補・基線各1件まで清掃済みだが、Windows
   5秒サンプルでは非プロジェクト負荷を含む active CPU が20論理コア中およそ3–8コア相当で継続している。
   **確認事項**: 非プロジェクトアプリを停止したアイドル窓で同じ5組 AB/BA を再実行してよいか。
   **既定判断**: 本票の権限で無関係なユーザープロセスを終了せず、identity / paired / topology 合格を
   保持したまま absolute gate のみ BLOCK とする。アイドル窓または明示的な停止許可が得られたら、閾値を
   変更せず同一 protocol を再実行する。
+
+## 最終検収の進行状況 (2026-07-23)
+
+- 最終 revision `36f2f57` の deterministic weather identity は、prewarm 3 frame と formal 24 frame が
+  すべて content validation を通過し、source revision を report に固定した。6 gate は全て通過:
+  Clear の ring count / support は8 frame 全て0、Rain ring count P25 は `1 >= 1`、support 比は
+  `28.75x >= 1.25x`、Storm cloud turns P25 `3.75 >= 3`、
+  Storm−Clear whitecap support-ratio 増分 P25 `0.01047 >= 0.004`。
+- Rain ring detector は固定 camera / 160×136 契約で画面外 impact から入る可視弧に位置を限定し、青緑の
+  impact accent と径方向・角方向の整合を要求する。通常の平行波、隣接2 pixel の connected random splash、
+  および旧 Clear frame 型の位置外 crest を負 fixture で排除した。Storm foam は水面 ROI の median +60 luma を
+  白波面積として数え、全体明度の平行移動を
+  相殺する。最初の広域 whitecap 候補は value QA の Storm water-mid P90 を `156.32 > 127` に崩したため破棄し、
+  製品の中間調を維持したまま計測語義を修正した。
+- value QA、motion QA、default / Rain / weather-only Storm / full Storm の water QA、
+  全482 test、lint、typecheck、build、exhibit sync は通過した。最終 performance は paired / topology を通過し、
+  absolute のみ上記「疑問3」の環境 BLOCK を維持する。
+- 永続証拠は `docs/direction/captures/t-vw-02-weather-identity-final.{png,json}` と
+  `docs/direction/captures/t-vw-02-weather-performance-final.json` に保存した。
 
 ## 現状(証拠)
 

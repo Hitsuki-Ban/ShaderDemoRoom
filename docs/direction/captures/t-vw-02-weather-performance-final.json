@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-07-23T00:30:39.425Z",
+  "pass": false,
+  "artifacts": {
+    "raw": "output/t-vw-02-weather-performance-final-v3/water-weather-performance-raw.json",
+    "report": "output/t-vw-02-weather-performance-final-v3/water-weather-performance-report.json"
+  },
+  "builds": {
+    "baseline": {
+      "sourceRevision": "328cc6384b3f83e7d4c40f2c51733a723b7ee788",
+      "url": "http://127.0.0.1:4174/ShaderDemoRoom"
+    },
+    "candidate": {
+      "sourceRevision": "36f2f57687f77fbbea8b5715f636e181b5afd0d4",
+      "url": "http://127.0.0.1:4173/ShaderDemoRoom"
+    }
+  },
+  "method": {
+    "pairsPerScenario": 5,
+    "order": "AB/BA interleaved and alternating in one SwiftShader browser process",
+    "warmupSeconds": 5,
+    "measurementSeconds": 15,
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1
+    },
+    "finalGateAggregation": "minimum of the two scenario medians"
+  },
+  "candidateTopology": {
+    "drawCalls": 8,
+    "drawCallsMax": 8,
+    "trianglesAvg": 61972,
+    "textures": 1,
+    "geometries": 8,
+    "programs": 8
+  },
+  "scenarios": [
+    {
+      "id": "weather-only-storm",
+      "baselineFpsMedian": 13.407672905880792,
+      "candidateFpsMedian": 13.075799814151068,
+      "pairedSpeedRatioMedian": 0.9741094511053284,
+      "pairedSpeedRatioMinimum": 0.9390876773314728,
+      "pairedSpeedRatioMaximum": 1.003837784906936,
+      "gates": {
+        "absoluteFps": {
+          "actual": 13.075799814151068,
+          "minimum": 13.833,
+          "passed": false
+        },
+        "pairedSpeedRatio": {
+          "actual": 0.9741094511053284,
+          "minimum": 0.95,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "full-storm",
+      "baselineFpsMedian": 12.558640211569898,
+      "candidateFpsMedian": 12.292848884340904,
+      "pairedSpeedRatioMedian": 0.9820887485527441,
+      "pairedSpeedRatioMinimum": 0.9581279304113441,
+      "pairedSpeedRatioMaximum": 1.0154746135893904,
+      "gates": {
+        "absoluteFps": {
+          "actual": 12.292848884340904,
+          "minimum": 13.833,
+          "passed": false
+        },
+        "pairedSpeedRatio": {
+          "actual": 0.9820887485527441,
+          "minimum": 0.95,
+          "passed": true
+        }
+      }
+    }
+  ],
+  "gates": {
+    "minimumScenarioCandidateFpsMedian": {
+      "actual": 12.292848884340904,
+      "minimum": 13.833,
+      "passed": false
+    },
+    "minimumScenarioPairedSpeedRatioMedian": {
+      "actual": 0.9741094511053284,
+      "minimum": 0.95,
+      "passed": true
+    }
+  }
+}

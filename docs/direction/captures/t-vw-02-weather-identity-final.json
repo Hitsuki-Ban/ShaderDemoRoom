@@ -1,0 +1,1027 @@
+{
+  "generatedAt": "2026-07-23T00:30:29.394Z",
+  "sourceRevision": "36f2f57687f77fbbea8b5715f636e181b5afd0d4",
+  "pass": true,
+  "mode": "gate",
+  "prewarm": {
+    "route": "#/room/voxel-water",
+    "checks": [
+      {
+        "index": 0,
+        "sampleTimeMs": 1600,
+        "sha256": "78f80c74bfcfeee861d741b408de2de32813cb3354eae196a9ebf233907f9699",
+        "validation": {
+          "mean": 158.0599525919102,
+          "standardDeviation": 59.34876594831717,
+          "p05": 41.4854,
+          "p95": 239.4998,
+          "dynamicRange": 198.0144,
+          "nearWhiteRatio": 0.007261029411764706,
+          "nearBlackRatio": 0,
+          "activeLumaBins": 14,
+          "valid": true
+        }
+      },
+      {
+        "index": 1,
+        "sampleTimeMs": 3200,
+        "sha256": "0faee843241f7324e0737797501e834867010bf3d2ba20a2bfa6e526f11dd66d",
+        "validation": {
+          "mean": 157.17857056065992,
+          "standardDeviation": 59.40263064369592,
+          "p05": 42.5026,
+          "p95": 239.3808,
+          "dynamicRange": 196.8782,
+          "nearWhiteRatio": 0.0061121323529411764,
+          "nearBlackRatio": 0,
+          "activeLumaBins": 14,
+          "valid": true
+        }
+      },
+      {
+        "index": 2,
+        "sampleTimeMs": 4800,
+        "sha256": "e8ef4040591a3e3bcce41f6435113761688ca95b1d91a133cee12ea2ec6671aa",
+        "validation": {
+          "mean": 156.59180820771832,
+          "standardDeviation": 59.59617588090303,
+          "p05": 42.5026,
+          "p95": 239.3808,
+          "dynamicRange": 196.8782,
+          "nearWhiteRatio": 0.006479779411764706,
+          "nearBlackRatio": 0,
+          "activeLumaBins": 14,
+          "valid": true
+        }
+      }
+    ],
+    "validation": {
+      "requiredConsecutiveRenderableFrames": 2,
+      "evaluatedSampleTimesMs": [
+        3200,
+        4800
+      ],
+      "passed": true
+    },
+    "browserErrors": []
+  },
+  "artifacts": {
+    "sheet": "output/t-vw-02-weather-identity-final-v10/weather-identity-sheet.png",
+    "raw": "output/t-vw-02-weather-identity-final-v10/weather-identity-raw.json",
+    "states": {
+      "clear": {
+        "page": "output/t-vw-02-weather-identity-final-v10/clear-page.png",
+        "frames": [
+          {
+            "index": 0,
+            "sampleTimeMs": 1600,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-00.png",
+            "sha256": "78f80c74bfcfeee861d741b408de2de32813cb3354eae196a9ebf233907f9699",
+            "validation": {
+              "mean": 158.0599525919102,
+              "standardDeviation": 59.34876594831717,
+              "p05": 41.4854,
+              "p95": 239.4998,
+              "dynamicRange": 198.0144,
+              "nearWhiteRatio": 0.007261029411764706,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 14,
+              "valid": true
+            }
+          },
+          {
+            "index": 1,
+            "sampleTimeMs": 2400,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-01.png",
+            "sha256": "f590235490b8af39ba716dfe0491195d89f53300e4c263a4b6d7e1972d826116",
+            "validation": {
+              "mean": 157.53539058823242,
+              "standardDeviation": 59.25926868873578,
+              "p05": 42.5026,
+              "p95": 239.57459999999998,
+              "dynamicRange": 197.07199999999997,
+              "nearWhiteRatio": 0.006709558823529411,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 14,
+              "valid": true
+            }
+          },
+          {
+            "index": 2,
+            "sampleTimeMs": 3200,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-02.png",
+            "sha256": "0faee843241f7324e0737797501e834867010bf3d2ba20a2bfa6e526f11dd66d",
+            "validation": {
+              "mean": 157.17857056065992,
+              "standardDeviation": 59.40263064369592,
+              "p05": 42.5026,
+              "p95": 239.3808,
+              "dynamicRange": 196.8782,
+              "nearWhiteRatio": 0.0061121323529411764,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 14,
+              "valid": true
+            }
+          },
+          {
+            "index": 3,
+            "sampleTimeMs": 4000,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-03.png",
+            "sha256": "7551c506b13e983c98733ffeac7554ef32806134613794b9ccf069f8daa8d83a",
+            "validation": {
+              "mean": 157.11925387867308,
+              "standardDeviation": 59.107036622764745,
+              "p05": 42.5026,
+              "p95": 239.5934,
+              "dynamicRange": 197.0908,
+              "nearWhiteRatio": 0.0078125,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 14,
+              "valid": true
+            }
+          },
+          {
+            "index": 4,
+            "sampleTimeMs": 4800,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-04.png",
+            "sha256": "e8ef4040591a3e3bcce41f6435113761688ca95b1d91a133cee12ea2ec6671aa",
+            "validation": {
+              "mean": 156.59180820771832,
+              "standardDeviation": 59.59617588090303,
+              "p05": 42.5026,
+              "p95": 239.3808,
+              "dynamicRange": 196.8782,
+              "nearWhiteRatio": 0.006479779411764706,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 14,
+              "valid": true
+            }
+          },
+          {
+            "index": 5,
+            "sampleTimeMs": 5600,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-05.png",
+            "sha256": "79965a51e075b1ff108e3aa7adb6dbd3c81b9e2532100bcb1a44f90a2a7ca458",
+            "validation": {
+              "mean": 156.80675493565838,
+              "standardDeviation": 59.805158142497525,
+              "p05": 42.619640000000004,
+              "p95": 239.57686999999993,
+              "dynamicRange": 196.95722999999992,
+              "nearWhiteRatio": 0.007169117647058823,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 14,
+              "valid": true
+            }
+          },
+          {
+            "index": 6,
+            "sampleTimeMs": 6400,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-06.png",
+            "sha256": "44c5074790c1a7ed5a4595905687c175749c50a4ef535663c2e7e9523f9e069d",
+            "validation": {
+              "mean": 157.23055459558665,
+              "standardDeviation": 59.17988433261265,
+              "p05": 42.69800000000001,
+              "p95": 239.5934,
+              "dynamicRange": 196.8954,
+              "nearWhiteRatio": 0.007261029411764706,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 14,
+              "valid": true
+            }
+          },
+          {
+            "index": 7,
+            "sampleTimeMs": 7200,
+            "path": "output/t-vw-02-weather-identity-final-v10/clear-frame-07.png",
+            "sha256": "a3e01758c1483c48ec6ea3a4339368ee6ca58fc58e91db4245f11817b52436a9",
+            "validation": {
+              "mean": 156.0857721507334,
+              "standardDeviation": 59.71523237628007,
+              "p05": 37.03293,
+              "p95": 239.3808,
+              "dynamicRange": 202.34787,
+              "nearWhiteRatio": 0.007215073529411765,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          }
+        ],
+        "canvas": "output/t-vw-02-weather-identity-final-v10/clear-canvas.png",
+        "canvasSha256": "78f80c74bfcfeee861d741b408de2de32813cb3354eae196a9ebf233907f9699",
+        "representativeIndex": 0,
+        "representativeSampleTimeMs": 1600
+      },
+      "rain": {
+        "page": "output/t-vw-02-weather-identity-final-v10/rain-page.png",
+        "frames": [
+          {
+            "index": 0,
+            "sampleTimeMs": 1600,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-00.png",
+            "sha256": "591e1d9104c31695a22c503ba5f8d1d6ff546facd54d23e20e7a9ecd410b96d4",
+            "validation": {
+              "mean": 125.58097480698717,
+              "standardDeviation": 69.48281636495055,
+              "p05": 22.872799999999998,
+              "p95": 224.69879999999998,
+              "dynamicRange": 201.82599999999996,
+              "nearWhiteRatio": 0.009329044117647059,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          },
+          {
+            "index": 1,
+            "sampleTimeMs": 2400,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-01.png",
+            "sha256": "2ec37e75e175bcbdd1c9a295006eabe67845ddaac85cd136dd7a90a8737ed4b5",
+            "validation": {
+              "mean": 126.31680936581256,
+              "standardDeviation": 68.9657182164802,
+              "p05": 23.588,
+              "p95": 223.42479999999998,
+              "dynamicRange": 199.83679999999998,
+              "nearWhiteRatio": 0.008501838235294117,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          },
+          {
+            "index": 2,
+            "sampleTimeMs": 3200,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-02.png",
+            "sha256": "c17175a3c3e0b9b0d6e63b7f3ee332c9ff661d3d8b0761540a5d145c1a1236f3",
+            "validation": {
+              "mean": 127.17119277573761,
+              "standardDeviation": 69.04330191333959,
+              "p05": 23.588,
+              "p95": 224.22512999999998,
+              "dynamicRange": 200.63712999999998,
+              "nearWhiteRatio": 0.010845588235294117,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          },
+          {
+            "index": 3,
+            "sampleTimeMs": 4000,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-03.png",
+            "sha256": "60f22eb20baf8c1bd422b4fa01542107425f1826e43ed7bf043259a00a4bcb62",
+            "validation": {
+              "mean": 125.72849302389994,
+              "standardDeviation": 69.39057377038603,
+              "p05": 22.872799999999998,
+              "p95": 226.50981,
+              "dynamicRange": 203.63700999999998,
+              "nearWhiteRatio": 0.007536764705882353,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          },
+          {
+            "index": 4,
+            "sampleTimeMs": 4800,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-04.png",
+            "sha256": "50d09d8ee01ae06a12f3a268ff4cb369ace6fd0c62b3c762c437ed1e8f499853",
+            "validation": {
+              "mean": 123.62998617647848,
+              "standardDeviation": 69.6114045652174,
+              "p05": 22.6694,
+              "p95": 222.2154,
+              "dynamicRange": 199.546,
+              "nearWhiteRatio": 0.008363970588235294,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          },
+          {
+            "index": 5,
+            "sampleTimeMs": 5600,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-05.png",
+            "sha256": "2a367060990b472bb0c35639f14c2c3967f71b5c8517b579e02990193a6a7f22",
+            "validation": {
+              "mean": 124.24118650735716,
+              "standardDeviation": 69.37753598749455,
+              "p05": 22.872799999999998,
+              "p95": 222.07252999999997,
+              "dynamicRange": 199.19973,
+              "nearWhiteRatio": 0.008272058823529412,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          },
+          {
+            "index": 6,
+            "sampleTimeMs": 6400,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-06.png",
+            "sha256": "ea42d6729269ba9c21b131538b6035aa80870f1f131a54fb39817433b7f11bf1",
+            "validation": {
+              "mean": 126.3809762591947,
+              "standardDeviation": 69.16143777611819,
+              "p05": 23.3846,
+              "p95": 222.2656,
+              "dynamicRange": 198.881,
+              "nearWhiteRatio": 0.00818014705882353,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          },
+          {
+            "index": 7,
+            "sampleTimeMs": 7200,
+            "path": "output/t-vw-02-weather-identity-final-v10/rain-frame-07.png",
+            "sha256": "e60691f7842938d4fbb4c7d64e181f9114b722b54479e6026391ab7f52a3cdb6",
+            "validation": {
+              "mean": 124.46890272059102,
+              "standardDeviation": 69.54489817081031,
+              "p05": 22.872799999999998,
+              "p95": 219.8648,
+              "dynamicRange": 196.99200000000002,
+              "nearWhiteRatio": 0.006893382352941176,
+              "nearBlackRatio": 0,
+              "activeLumaBins": 15,
+              "valid": true
+            }
+          }
+        ],
+        "canvas": "output/t-vw-02-weather-identity-final-v10/rain-canvas.png",
+        "canvasSha256": "e60691f7842938d4fbb4c7d64e181f9114b722b54479e6026391ab7f52a3cdb6",
+        "representativeIndex": 7,
+        "representativeSampleTimeMs": 7200
+      },
+      "storm": {
+        "page": "output/t-vw-02-weather-identity-final-v10/storm-page.png",
+        "frames": [
+          {
+            "index": 0,
+            "sampleTimeMs": 1600,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-00.png",
+            "sha256": "93676979b506b95544a9b3d786a4e90a37b92d09b32f9be973f4ac540cc81c66",
+            "validation": {
+              "mean": 77.97291381434702,
+              "standardDeviation": 70.78766092340818,
+              "p05": 9.1616,
+              "p95": 231.3582,
+              "dynamicRange": 222.19660000000002,
+              "nearWhiteRatio": 0.005193014705882353,
+              "nearBlackRatio": 0.002113970588235294,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          },
+          {
+            "index": 1,
+            "sampleTimeMs": 2400,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-01.png",
+            "sha256": "1be59383f1f2bfd2cd993e38d42c062f58f5be49105211103fd45606a2e6acd7",
+            "validation": {
+              "mean": 77.01246709559744,
+              "standardDeviation": 69.85116430410191,
+              "p05": 9.1616,
+              "p95": 228.2862,
+              "dynamicRange": 219.12460000000002,
+              "nearWhiteRatio": 0.004641544117647059,
+              "nearBlackRatio": 0.0013786764705882354,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          },
+          {
+            "index": 2,
+            "sampleTimeMs": 3200,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-02.png",
+            "sha256": "587a640e547044180a94dbf44f5fc6470187dd1ef382ff9d9788d56a63070f33",
+            "validation": {
+              "mean": 77.51590516545086,
+              "standardDeviation": 69.76619762556768,
+              "p05": 9.1616,
+              "p95": 226.35859999999997,
+              "dynamicRange": 217.19699999999997,
+              "nearWhiteRatio": 0.00505514705882353,
+              "nearBlackRatio": 0.0006433823529411765,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          },
+          {
+            "index": 3,
+            "sampleTimeMs": 4000,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-03.png",
+            "sha256": "2baec14e88f0e4fdebd2e762c6ab17700284d3f9d32ddcda8e75de089f22bc3a",
+            "validation": {
+              "mean": 76.52327833640634,
+              "standardDeviation": 69.19069680082586,
+              "p05": 9.1616,
+              "p95": 224.651,
+              "dynamicRange": 215.48940000000002,
+              "nearWhiteRatio": 0.003998161764705882,
+              "nearBlackRatio": 0.0006433823529411765,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          },
+          {
+            "index": 4,
+            "sampleTimeMs": 4800,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-04.png",
+            "sha256": "6508e703046c12a389f9bf34f8305dc7c64be66d68ad72242a692c06b67bdbb0",
+            "validation": {
+              "mean": 77.3084400827291,
+              "standardDeviation": 70.28718567170384,
+              "p05": 9.1616,
+              "p95": 228.5788,
+              "dynamicRange": 219.4172,
+              "nearWhiteRatio": 0.004641544117647059,
+              "nearBlackRatio": 0.0015625,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          },
+          {
+            "index": 5,
+            "sampleTimeMs": 5600,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-05.png",
+            "sha256": "de875955cbd5cf3dc70e1a4ce8c863f556b87407b945a91fccf357abbe17fab6",
+            "validation": {
+              "mean": 78.2359055422884,
+              "standardDeviation": 70.68366400287519,
+              "p05": 9.1616,
+              "p95": 232.29111999999992,
+              "dynamicRange": 223.12951999999993,
+              "nearWhiteRatio": 0.005238970588235294,
+              "nearBlackRatio": 0.0027573529411764708,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          },
+          {
+            "index": 6,
+            "sampleTimeMs": 6400,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-06.png",
+            "sha256": "6a3bcfc9512598b36b6b24498f9ede213bd76798e63185c27d9fccfaaa2da884",
+            "validation": {
+              "mean": 79.12243792280435,
+              "standardDeviation": 71.36361077893284,
+              "p05": 9.1616,
+              "p95": 231.7874,
+              "dynamicRange": 222.6258,
+              "nearWhiteRatio": 0.004917279411764706,
+              "nearBlackRatio": 0.003170955882352941,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          },
+          {
+            "index": 7,
+            "sampleTimeMs": 7200,
+            "path": "output/t-vw-02-weather-identity-final-v10/storm-frame-07.png",
+            "sha256": "576c86fa36f39f21944dfa8b0e28ff52f05d8d8e93b46c004603f14067a7899d",
+            "validation": {
+              "mean": 76.78461729780238,
+              "standardDeviation": 69.49636019602185,
+              "p05": 9.1616,
+              "p95": 226.2864,
+              "dynamicRange": 217.1248,
+              "nearWhiteRatio": 0.0033547794117647057,
+              "nearBlackRatio": 0.003952205882352941,
+              "activeLumaBins": 16,
+              "valid": true
+            }
+          }
+        ],
+        "canvas": "output/t-vw-02-weather-identity-final-v10/storm-canvas.png",
+        "canvasSha256": "1be59383f1f2bfd2cd993e38d42c062f58f5be49105211103fd45606a2e6acd7",
+        "representativeIndex": 1,
+        "representativeSampleTimeMs": 2400
+      }
+    }
+  },
+  "protocol": {
+    "mode": "gate",
+    "baseUrl": "http://127.0.0.1:4173/ShaderDemoRoom",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "thumbnail": {
+      "width": 160,
+      "height": 136
+    },
+    "clockEpoch": "2026-01-01T00:00:00.000Z",
+    "bootTimeMs": 12000,
+    "deterministicBoot": {
+      "freezeAtClockEpochBeforeNavigation": true,
+      "advanceMethod": "clock.runFor",
+      "readinessWaitsAfterBootAdvance": true
+    },
+    "prewarmTimesMs": [
+      1600,
+      3200,
+      4800
+    ],
+    "requiredConsecutiveRenderablePrewarmFrames": 2,
+    "prewarmPolicy": "independent context before all weather captures; excluded from statistics",
+    "sampleTimesMs": [
+      1600,
+      2400,
+      3200,
+      4000,
+      4800,
+      5600,
+      6400,
+      7200
+    ],
+    "frameCountPerState": 8,
+    "representativePolicy": "within-state structure medoid",
+    "robustGateQuantile": 0.25,
+    "minimumPassRate": 0.75,
+    "renderableContentThresholds": {
+      "maximumNearWhiteRatio": 0.9,
+      "maximumNearBlackRatio": 0.9,
+      "minimumLumaStandardDeviation": 10,
+      "minimumLumaDynamicRange": 35,
+      "minimumActiveLumaBins": 4
+    },
+    "weatherOnly": true,
+    "stateOrder": [
+      "clear",
+      "rain",
+      "storm"
+    ]
+  },
+  "thresholds": {
+    "minimumPairwiseStructureDistance": 0.025,
+    "rainSkyStreaks": 3,
+    "rainWaterRings": 1,
+    "rainRingSupportMultiplier": 1.25,
+    "rainRippleBlueLift": 15,
+    "stormSkyStreaks": 3,
+    "cloudBoundaryCoverage": 0.48,
+    "cloudBoundaryRange": 5,
+    "cloudBoundaryRoughness": 0.32,
+    "cloudBoundaryTurns": 3,
+    "stormCloudTurns": 3,
+    "minimumStormCloudPassRate": 0.75,
+    "maximumClearCloudPassRate": 0.625,
+    "foamLumaAboveWaterMedian": 60,
+    "foamSupportRatio": 0.0015,
+    "foamSpatialCells": 3,
+    "stormFoamSupportPixels": 100,
+    "stormFoamSpatialCells": 2,
+    "minimumStormFoamPassRate": 0.625,
+    "minimumStormFoamSupportGainRatio": 0.004
+  },
+  "aggregation": {
+    "frameCount": 8,
+    "robustGateQuantile": 0.25,
+    "minimumPassRate": 0.75,
+    "medoids": {
+      "clear": {
+        "index": 0,
+        "totalDistances": [
+          0.16527428999808724,
+          0.20251046884085364,
+          0.20080957951014056,
+          0.17486451276361367,
+          0.18023047896537886,
+          0.16875904673746775,
+          0.17820324709417623,
+          0.17784327833715255
+        ],
+        "sampleTimeMs": 1600
+      },
+      "rain": {
+        "index": 7,
+        "totalDistances": [
+          0.18764100872614384,
+          0.18013583904051084,
+          0.19384076484513943,
+          0.1789441467503514,
+          0.16612654929764403,
+          0.19333372992743508,
+          0.1648892131365441,
+          0.1583367452715684
+        ],
+        "sampleTimeMs": 7200
+      },
+      "storm": {
+        "index": 1,
+        "totalDistances": [
+          0.24416003565599856,
+          0.19845764310513317,
+          0.19956204491212945,
+          0.20302947029440657,
+          0.22771699494610964,
+          0.22509180035760035,
+          0.21836444423925291,
+          0.20934148614873208
+        ],
+        "sampleTimeMs": 2400
+      }
+    }
+  },
+  "structure": {
+    "pass": true,
+    "pairwise": {
+      "clearRain": 0.04665759838578552,
+      "rainStorm": 0.08412312720028883,
+      "clearStorm": 0.10117811672068108
+    },
+    "minimumPairwiseDistance": 0.04665759838578552
+  },
+  "cues": {
+    "clear": {
+      "skyStreaks": {
+        "qualifyingCount": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0
+        },
+        "supportPixels": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0
+        },
+        "longest": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0
+        }
+      },
+      "waterRings": {
+        "qualifyingCount": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0
+        },
+        "supportPixels": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0
+        }
+      },
+      "cloudLowerEdge": {
+        "coverage": {
+          "min": 0,
+          "p25": 0.35,
+          "median": 0.4380952380952381,
+          "p75": 0.5738095238095238,
+          "max": 0.9619047619047619
+        },
+        "range": {
+          "min": 0,
+          "p25": 8,
+          "median": 9.5,
+          "p75": 13.75,
+          "max": 16
+        },
+        "roughness": {
+          "min": 0,
+          "p25": 1,
+          "median": 1,
+          "p75": 1.4375,
+          "max": 2
+        },
+        "turns": {
+          "min": 0,
+          "p25": 0.75,
+          "median": 2.5,
+          "p75": 4.25,
+          "max": 8
+        },
+        "passRate": 0.5
+      },
+      "foam": {
+        "waterMedianLuma": {
+          "min": 134.6556,
+          "p25": 134.84845,
+          "median": 135.18745,
+          "p75": 135.691025,
+          "max": 141.20080000000002
+        },
+        "highlightThresholdLuma": {
+          "min": 194.6556,
+          "p25": 194.84845,
+          "median": 195.18745,
+          "p75": 195.69102499999997,
+          "max": 201.20080000000002
+        },
+        "supportPixels": {
+          "min": 156,
+          "p25": 168,
+          "median": 174,
+          "p75": 217.75,
+          "max": 262
+        },
+        "supportRatio": {
+          "min": 0.01597051597051597,
+          "p25": 0.017199017199017202,
+          "median": 0.017813267813267815,
+          "p75": 0.02229217854217854,
+          "max": 0.026822276822276822
+        },
+        "componentCount": {
+          "min": 26,
+          "p25": 28.5,
+          "median": 30,
+          "p75": 32.25,
+          "max": 35
+        },
+        "spatialCells": {
+          "min": 5,
+          "p25": 5,
+          "median": 6,
+          "p75": 7,
+          "max": 7
+        },
+        "passRate": 1
+      }
+    },
+    "rain": {
+      "skyStreaks": {
+        "qualifyingCount": {
+          "min": 12,
+          "p25": 13.75,
+          "median": 15.5,
+          "p75": 19.25,
+          "max": 23
+        },
+        "supportPixels": {
+          "min": 177,
+          "p25": 192.25,
+          "median": 232.5,
+          "p75": 284.75,
+          "max": 333
+        },
+        "longest": {
+          "min": 20.14602319398416,
+          "p25": 21.373864117426088,
+          "median": 23.487487721986273,
+          "p75": 26.97929010655344,
+          "max": 29.97644775290043
+        }
+      },
+      "waterRings": {
+        "qualifyingCount": {
+          "min": 0,
+          "p25": 1,
+          "median": 2,
+          "p75": 2,
+          "max": 3
+        },
+        "supportPixels": {
+          "min": 0,
+          "p25": 28.75,
+          "median": 37.5,
+          "p75": 50.5,
+          "max": 54
+        }
+      },
+      "cloudLowerEdge": {
+        "coverage": {
+          "min": 0.1523809523809524,
+          "p25": 0.7142857142857143,
+          "median": 0.7142857142857143,
+          "p75": 0.7142857142857143,
+          "max": 0.7714285714285715
+        },
+        "range": {
+          "min": 4,
+          "p25": 8.75,
+          "median": 10.5,
+          "p75": 13,
+          "max": 20
+        },
+        "roughness": {
+          "min": 1,
+          "p25": 1,
+          "median": 1,
+          "p75": 2,
+          "max": 2.5
+        },
+        "turns": {
+          "min": 0,
+          "p25": 4,
+          "median": 4.5,
+          "p75": 5.5,
+          "max": 7
+        },
+        "passRate": 0.875
+      },
+      "foam": {
+        "waterMedianLuma": {
+          "min": 72.64769999999999,
+          "p25": 78.219325,
+          "median": 79.49405,
+          "p75": 80.391725,
+          "max": 84.18699999999998
+        },
+        "highlightThresholdLuma": {
+          "min": 132.6477,
+          "p25": 138.219325,
+          "median": 139.49405000000002,
+          "p75": 140.391725,
+          "max": 144.18699999999998
+        },
+        "supportPixels": {
+          "min": 1940,
+          "p25": 1986,
+          "median": 2007,
+          "p75": 2059.5,
+          "max": 2171
+        },
+        "supportRatio": {
+          "min": 0.1986076986076986,
+          "p25": 0.20331695331695332,
+          "median": 0.20546683046683045,
+          "p75": 0.21084152334152334,
+          "max": 0.22225634725634727
+        },
+        "componentCount": {
+          "min": 34,
+          "p25": 34,
+          "median": 36.5,
+          "p75": 40,
+          "max": 43
+        },
+        "spatialCells": {
+          "min": 8,
+          "p25": 8,
+          "median": 8,
+          "p75": 8,
+          "max": 8
+        },
+        "passRate": 1
+      }
+    },
+    "storm": {
+      "skyStreaks": {
+        "qualifyingCount": {
+          "min": 4,
+          "p25": 5,
+          "median": 5.5,
+          "p75": 7.25,
+          "max": 8
+        },
+        "supportPixels": {
+          "min": 48,
+          "p25": 68.5,
+          "median": 88.5,
+          "p75": 100.25,
+          "max": 117
+        },
+        "longest": {
+          "min": 16.1245154965971,
+          "p25": 19.292196619488955,
+          "median": 19.595917942265423,
+          "p75": 20.71218966524076,
+          "max": 20.752509888364507
+        }
+      },
+      "waterRings": {
+        "qualifyingCount": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0
+        },
+        "supportPixels": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0
+        }
+      },
+      "cloudLowerEdge": {
+        "coverage": {
+          "min": 0.7142857142857143,
+          "p25": 0.7142857142857143,
+          "median": 0.7142857142857143,
+          "p75": 0.7142857142857143,
+          "max": 0.7142857142857143
+        },
+        "range": {
+          "min": 11,
+          "p25": 19,
+          "median": 25,
+          "p75": 25,
+          "max": 26
+        },
+        "roughness": {
+          "min": 1,
+          "p25": 1.75,
+          "median": 2,
+          "p75": 2,
+          "max": 2
+        },
+        "turns": {
+          "min": 3,
+          "p25": 3.75,
+          "median": 6,
+          "p75": 7.25,
+          "max": 9
+        },
+        "passRate": 1
+      },
+      "foam": {
+        "waterMedianLuma": {
+          "min": 27.087699999999998,
+          "p25": 27.254150000000003,
+          "median": 28.3083,
+          "p75": 29.058099999999996,
+          "max": 29.1318
+        },
+        "highlightThresholdLuma": {
+          "min": 87.0877,
+          "p25": 87.25415,
+          "median": 88.3083,
+          "p75": 89.0581,
+          "max": 89.1318
+        },
+        "supportPixels": {
+          "min": 249,
+          "p25": 288.75,
+          "median": 365,
+          "p75": 403.25,
+          "max": 452
+        },
+        "supportRatio": {
+          "min": 0.02549140049140049,
+          "p25": 0.02956081081081081,
+          "median": 0.037366912366912364,
+          "p75": 0.04128276003276003,
+          "max": 0.046273546273546275
+        },
+        "componentCount": {
+          "min": 9,
+          "p25": 9.75,
+          "median": 10,
+          "p75": 13.5,
+          "max": 21
+        },
+        "spatialCells": {
+          "min": 4,
+          "p25": 4,
+          "median": 5,
+          "p75": 5.25,
+          "max": 6
+        },
+        "passRate": 1
+      }
+    }
+  },
+  "comparisons": {
+    "rainRingSupportVsClear": {
+      "min": 0,
+      "p25": 28.75,
+      "median": 37.5,
+      "p75": 50.5,
+      "max": 54
+    },
+    "rainRingP25SupportVsClearP25": 28.75,
+    "stormCloudTurnsMinusClear": {
+      "min": -3,
+      "p25": -0.25,
+      "median": 2.5,
+      "p75": 6.25,
+      "max": 9
+    },
+    "stormFoamSupportRatioMinusClear": {
+      "min": 0.008599508599508598,
+      "p25": 0.010467854217854216,
+      "median": 0.018632268632268634,
+      "p75": 0.02027027027027027,
+      "max": 0.024058149058149056
+    }
+  },
+  "gates": {
+    "structure": true,
+    "rainSkyStreaks": true,
+    "rainWaterRings": true,
+    "stormSkyStreaks": true,
+    "stormCloudLowerEdge": true,
+    "stormFoam": true
+  }
+}
