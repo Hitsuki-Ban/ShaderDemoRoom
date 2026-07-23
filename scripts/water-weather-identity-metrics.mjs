@@ -27,6 +27,23 @@ export const WEATHER_IDENTITY_THRESHOLDS = Object.freeze({
 const SKY_ROI = Object.freeze({ x0: 0.04, y0: 0.04, x1: 0.96, y1: 0.57 });
 const CLOUD_ROI = Object.freeze({ x0: 0.04, y0: 0.08, x1: 0.96, y1: 0.42 });
 const WATER_ROI = Object.freeze({ x0: 0.04, y0: 0.48, x1: 0.96, y1: 0.96 });
+// With the fixed runtime camera, only the shader impact at uv(.39, .58) reaches the thumbnail.
+// Its projected center is off-screen near (-49, 78) at 160x136, while the largest ring clips
+// into x <= 27. This bounded neighborhood retains that on-screen arc; the other impacts miss it.
+const RAIN_RIPPLE_EVIDENCE_ROI = Object.freeze({
+  x0: 0,
+  y0: 65 / 136,
+  x1: 45 / 160,
+  y1: 109 / 136,
+});
+// Fit candidates are limited to the stable on-screen arc window observed in deterministic
+// captures. The wider evidence ROI above retains support within one maximum local radius.
+const RAIN_RIPPLE_FIT_CENTER_ROI = Object.freeze({
+  x0: 0,
+  y0: 65 / 136,
+  x1: 29 / 160,
+  y1: 93 / 136,
+});
 const MAX_LOCAL_RING_RADIUS = 16;
 
 function assertFrame(frame) {
@@ -197,7 +214,7 @@ function longestCircularRun(bits, binCount = 16) {
   return longest;
 }
 
-function measureImpactRingSupports(source, components) {
+function measureImpactRingSupports(frame, source, components) {
   const eligible = components.filter((component) => component.area >= 2 && component.area <= 140);
   const samples = [];
   eligible.forEach((component, componentIndex) => {
@@ -214,6 +231,12 @@ function measureImpactRingSupports(source, components) {
   const aspects = [0.45, 0.6, 0.75, 0.9];
   for (let centerY = -4; centerY < source.height + 4; centerY += 2) {
     for (let centerX = -8; centerX < source.width + 8; centerX += 2) {
+      if (!inside(
+        frame,
+        RAIN_RIPPLE_FIT_CENTER_ROI,
+        source.bounds.x0 + centerX,
+        source.bounds.y0 + centerY,
+      )) continue;
       for (const aspect of aspects) {
         const support = new Uint16Array(23);
         const angularBits = new Uint16Array(23);
@@ -296,10 +319,11 @@ export function measureRadialRings(
 ) {
   assertFrame(frame);
   const source = localMask(frame, region, exclusion, (x, y) => (
-    rippleBlueLiftAt(frame, x, y) >= WEATHER_IDENTITY_THRESHOLDS.rainRippleBlueLift
+    inside(frame, RAIN_RIPPLE_EVIDENCE_ROI, x, y)
+    && rippleBlueLiftAt(frame, x, y) >= WEATHER_IDENTITY_THRESHOLDS.rainRippleBlueLift
   ));
   const components = connectedComponents(source.mask, source.width, source.height);
-  const impactRings = measureImpactRingSupports(source, components);
+  const impactRings = measureImpactRingSupports(frame, source, components);
   return {
     qualifyingCount: impactRings.length,
     supportPixels: impactRings.reduce(

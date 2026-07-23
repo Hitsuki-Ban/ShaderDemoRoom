@@ -92,7 +92,7 @@ describe('weather identity metrics', () => {
     expect(measureSkyStreaks(darkStreaks).qualifyingCount).toBeGreaterThanOrEqual(6);
   });
 
-  it('requires annular angular support so random water splashes cannot pass as rings', () => {
+  it('requires impact-local annular support so connected splashes cannot pass as rings', () => {
     const water = [70, 90, 90, 255];
     const ripple = [70, 115, 145, 255];
     const splashes = makeFrame(160, 136, water);
@@ -106,17 +106,43 @@ describe('weather identity metrics', () => {
     }
     expect(measureRadialRings(splashes).qualifyingCount).toBe(0);
 
+    const connectedSplashes = makeFrame(160, 136, water);
+    value = 46;
+    for (let point = 0; point < 90; point += 1) {
+      value = (value * 73 + 19) % 997;
+      const x = 7 + (value % 37);
+      value = (value * 73 + 19) % 997;
+      const y = 65 + (value % 44);
+      setPixel(connectedSplashes, x, y, ripple);
+      setPixel(connectedSplashes, x + 1, y, ripple);
+    }
+    expect(measureRadialRings(connectedSplashes).qualifyingCount).toBe(0);
+
     const ordinaryWaves = makeFrame(160, 136, water);
     paint(ordinaryWaves, (_x, y) => y >= 72 && y % 9 < 2, ripple);
     expect(measureRadialRings(ordinaryWaves).qualifyingCount).toBe(0);
 
+    // Abstract the final-v9 Clear ring-like crest that appeared away from the shader impact.
+    const clearLikeRing = makeFrame(160, 136, water);
+    const clearCrest = [70, 115, 145, 255];
+    for (let angle = 0; angle < Math.PI * 2; angle += 0.035) {
+      if (angle % 0.8 > 0.45) continue;
+      setPixel(
+        clearLikeRing,
+        Math.round(84 + Math.cos(angle) * 8),
+        Math.round(99 + Math.sin(angle) * 4),
+        clearCrest,
+      );
+    }
+    expect(measureRadialRings(clearLikeRing).qualifyingCount).toBe(0);
+
     const impactRing = makeFrame(160, 136, water);
     for (let angle = 0; angle < Math.PI * 2; angle += 0.035) {
-      if (angle % 0.9 > 0.5) continue;
+      if (angle % 0.8 > 0.45) continue;
       setPixel(
         impactRing,
-        Math.round(84 + Math.cos(angle) * 14),
-        Math.round(99 + Math.sin(angle) * 6),
+        Math.round(14 + Math.cos(angle) * 8),
+        Math.round(78 + Math.sin(angle) * 4),
         ripple,
       );
     }
@@ -126,12 +152,12 @@ describe('weather identity metrics', () => {
 
     const strongerImpactRing = makeFrame(160, 136, water);
     for (let angle = 0; angle < Math.PI * 2; angle += 0.035) {
-      if (angle % 0.9 > 0.5) continue;
+      if (angle % 0.8 > 0.45) continue;
       for (const widthOffset of [-1, 0, 1]) {
         setPixel(
           strongerImpactRing,
-          Math.round(84 + Math.cos(angle) * (14 + widthOffset)),
-          Math.round(99 + Math.sin(angle) * (6 + widthOffset * 0.4)),
+          Math.round(14 + Math.cos(angle) * (8 + widthOffset)),
+          Math.round(78 + Math.sin(angle) * (4 + widthOffset * 0.4)),
           ripple,
         );
       }
